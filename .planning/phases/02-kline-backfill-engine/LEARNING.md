@@ -96,12 +96,12 @@
 
 ## Open Questions / Phase 3 Handoff
 
-1. **Cron execution strategy** (MUST DECIDE): GitHub Actions blocked → choose one:
-   - **(A) Local launchd/crontab** (recommended): same fetcher script runs on your Mac at 2 AM UTC daily. Already proven (4 successful local runs). Requires machine to be on.
-   - **(B) Self-hosted runner**: rent AWS/use home server, run fetcher on GitHub but from non-blocked IP.
-   - **(C) Dual-source fallback** (Phase 4): add CoinGecko client, Binance→CoinGecko fallback if 451 (follows etf-flow Phase 6 pattern).
+1. **Cron execution strategy** (DECIDED ✅): GitHub Actions blocked → **owner chose (A) Local launchd**
    
-   **Recommendation**: Start with (A) for Phase 3, add (C) as future resilience.
+   **Phase 3 Two-Stage Plan**:
+   - **Stage 1: Historical Backfill** (2021-03-25 → 2026-08-31) — one-time crawl using the fetcher, completing the crawl already proved (3000 BTCUSDT rows seeded). Target: fill remote D1 with 4+ years of history.
+   - **Stage 2: Daily Schedule** (2026-09-01 onward) — launchd plist runs `backfill-fetcher.mts` every 2 AM UTC, syncing prior day's latest candles. No geo-block, zero cost, proven locally.
+   - **Future (Phase 4+)**: Consider CoinGecko dual-source fallback for resilience (if Binance changes blocking policies).
 
 2. **"50 queries per invocation" empirically proven**: Phase 2 Task 2 verify confirmed 1000-candle ingest runs ≤50 queries via 2 `db.batch()` calls. D1 Free tier is confirmed to sustain chunked backfill.
 
