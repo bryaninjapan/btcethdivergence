@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BTC/ETH Divergence Tracker — K線圖</title>
     <link rel="stylesheet" href="/css/style.css" />
-    <script src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js" integrity="sha384-tLyEwV3sTMEH/L0EHtYWKQMNLaOGRlIEf+IbQzC5YLAzr1GhYCGC7MKKFRC7f9dd" crossorigin="anonymous"></script>
   </head>
   <body>
     <header>
@@ -13,6 +13,7 @@
       <a href="/">← 記錄表</a>
     </header>
     <main>
+      <p id="chart-loading" style="color: #666;">載入中...</p>
       <p id="chart-error" hidden></p>
       <section class="chart-pane">
         <h3>BTCUSDT 1h</h3>

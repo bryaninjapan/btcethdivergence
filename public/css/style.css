@@ -6,6 +6,7 @@
   --muted: #59636e;
   --accent: #1f6feb;
   --danger: #d1242f;
+  --chart-height: 420px;
 }
 
 * {
@@ -173,7 +174,7 @@ dialog fieldset label {
 
 .chart-pane > div {
   position: relative;
-  height: 420px;
+  height: var(--chart-height);
 }
 
 #chart-error {

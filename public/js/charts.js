@@ -13,10 +13,12 @@ function toCandle(row) {
   };
 }
 
-async function loadWindow(symbol) {
+async function loadWindow(symbol, controller) {
   const endMs = Date.now();
   const startMs = endMs - DEFAULT_WINDOW_SECONDS * 1000;
-  return api(`/api/klines?symbol=${encodeURIComponent(symbol)}&start=${startMs}&end=${endMs}`);
+  return api(`/api/klines?symbol=${encodeURIComponent(symbol)}&start=${startMs}&end=${endMs}`, {
+    signal: controller?.signal,
+  });
 }
 
 function renderChart(containerId, candles) {
@@ -42,24 +44,32 @@ function renderChart(containerId, candles) {
 
 async function init() {
   const errorEl = document.getElementById('chart-error');
+  const loadingEl = document.getElementById('chart-loading');
+  if (loadingEl) loadingEl.hidden = false;
   try {
-    const [btcRows, ethRows] = await Promise.all([loadWindow('BTCUSDT'), loadWindow('ETHUSDT')]);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const [btcRows, ethRows] = await Promise.all([
+      loadWindow('BTCUSDT', controller),
+      loadWindow('ETHUSDT', controller),
+    ]);
+    clearTimeout(timeoutId);
+    if (loadingEl) loadingEl.hidden = true;
+
     const btcChart = renderChart('btc-chart', btcRows.map(toCandle));
     const ethChart = renderChart('eth-chart', ethRows.map(toCandle));
 
     const btcScale = btcChart.chart.timeScale();
     const ethScale = ethChart.chart.timeScale();
 
-    window.btcChart = btcChart.chart;
-    window.ethChart = ethChart.chart;
-
     const initial = btcScale.getVisibleLogicalRange();
     if (initial) ethScale.setVisibleLogicalRange(initial);
 
     const sync = createRangeSync();
-    sync.link(btcScale, ethScale);
-    sync.link(ethScale, btcScale);
+    const unsubBtc = sync.link(btcScale, ethScale);
+    const unsubEth = sync.link(ethScale, btcScale);
   } catch (error) {
+    if (loadingEl) loadingEl.hidden = true;
     errorEl.textContent = `載入 K 線失敗：${error.message}`;
     errorEl.hidden = false;
   }
