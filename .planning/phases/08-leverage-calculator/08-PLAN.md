@@ -66,7 +66,7 @@ Margin:         [input: number] USDT
 Entry Price:    [input: number] (decimal, e.g., 42000.50)
 Stop-Loss:      [input: number] (decimal)
 Take-Profit:    [input: number] (decimal)
-Leverage:       [dropdown: 1x, 2x, 3x, 5x, 10x, 25x, 50x, 75x, 100x, 125x]
+Leverage:       [dropdown: 1x, 2x, 3x, 5x, 10x, 20x, 25x, 50x, 75x, 100x, 125x]
 ```
 
 **Real-Time Display (read-only output)**
@@ -147,6 +147,8 @@ Gain Rate %:          [display]
 
 ## Task Breakdown
 
+**3 Sequential Tasks** (tracer-first vertical slicing, ~60 min total)
+
 ### Task 08-01: HTML Page + Form Scaffolding + Basic UI Layout
 
 **Objective**: Build the static page shell and form structure. Establish the foundation that 08-02 will wire up with calculations.
@@ -158,7 +160,7 @@ Gain Rate %:          [display]
 **Deliverables**:
 
 1. **public/calculator.html**
-   - DOCTYPE, lang="zh-Hant" (matching records.html/charts.html)
+   - DOCTYPE, lang="zh-Hant" (matching index.html (served at /)/charts.html)
    - Meta charset, viewport (mobile-responsive)
    - Title: "BTC/ETH Divergence Tracker — 槓桿計算機"
    - Header with app title and back link to records page
@@ -179,11 +181,11 @@ Gain Rate %:          [display]
    - Warning sections:
      - `<div id="rr-warning" hidden>` → "Risk/Reward < 1.0 — consider adjusting SL or TP"
      - `<div id="liquidation-warning" hidden>` → "Stop-Loss amount exceeds margin — liquidation risk"
-   - Module scripts at end of body: `<script type="module" src="/js/calculator.js"></script>`
+   - No script tags in 08-01 (pure HTML structure)
 
 2. **public/css/style.css** (additions)
    - `.calculator-form` → flex container, gap between inputs and results
-   - `.form-group` → label + input styling (consistent with records.html)
+   - `.form-group` → label + input styling (consistent with index.html (served at /))
    - `.results` → display grid/flex, read-only field styling (gray bg, no border, indicates output)
    - `.warning` → red/yellow border or highlight, visible when unhidden
    - Mobile breakpoint → stack form and results vertically
@@ -201,8 +203,9 @@ Gain Rate %:          [display]
 
 **Files Modified**:
 - `public/js/calculator.js` (new)
+- `public/js/calculator-init.js` (new, pure module loader)
 - `public/js/calculator.test.ts` (new, vitest suite)
-- `public/calculator.html` (updated to wire events)
+- `public/calculator.html` (updated to include init script)
 
 **Deliverables**:
 
@@ -245,19 +248,19 @@ Gain Rate %:          [display]
    - All tests use `vitest` assertions (e.g., `expect(result.positionSize).toBeCloseTo(...)`)
    - Coverage target: 100% of calculator.js logic
 
-3. **Wire Form to Calculations** (in calculator.html or separate init script)
+3. **Wire Form to Calculations** — create `public/js/calculator-init.js`
    - On every `input` event on margin/entryPrice/stopLoss/takeProfitPrice/leverage/longShort:
      - Read all form values
      - Call `calculatePosition(params)`
      - Update display fields with formatted results
      - Show/hide warnings based on `warnings` object
 
-4. **Module Loader**
-   - `<script type="module">` at the end of calculator.html that:
-     - Imports `calculatePosition` from `public/js/calculator.js`
-     - Caches DOM references (form inputs, output elements)
-     - Attaches event listeners
-     - Calls `calculatePosition` and updates display on form changes
+4. **Module Loader** — `public/js/calculator-init.js`
+   - `<script type="module" src="/js/calculator-init.js"></script>` at the end of calculator.html body
+   - Imports `calculatePosition` from `public/js/calculator.js`
+   - Caches DOM references (form inputs, output elements)
+   - Attaches event listeners
+   - Calls `calculatePosition` and updates display on form changes
 
 **Checkpoints**:
 - `npm run test` passes all 9 vitest tests
@@ -328,19 +331,17 @@ Gain Rate %:          [display]
 - Error messages are clear and actionable (not technical jargon)
 - No NaN or Infinity displayed to the user
 
----
+## Verification Track (Part of 08-02 and 08-03)
 
-### Task 08-04: Testing (Vitest Unit Tests + Manual E2E)
+**Objective**: Verify calculation accuracy, edge-case handling, and end-to-end user flows through automated and manual testing.
 
-**Objective**: Verify calculation accuracy, edge-case handling, and end-to-end user flows through manual browser testing.
+**Files Modified** (by 08-02/08-03 tasks):
+- `public/js/calculator.test.ts` (written in 08-02/08-03)
+- No additional source code changes in verification phase
 
-**Files Modified**:
-- `public/js/calculator.test.ts` (final suite)
-- No source code changes; tests already written in 08-02 and 08-03
+### Verification Tests
 
-**Test Coverage Summary**:
-
-**Unit Tests (vitest)**
+**Unit Tests (vitest)** — run after 08-02/08-03 complete
 - 16+ test cases covering:
   - Position size calculation (long, short)
   - SL/TP amounts
@@ -385,11 +386,12 @@ Gain Rate %:          [display]
    - Form and results stack vertically, readable, no overflow
    - All inputs accessible, results visible without horizontal scroll
 
-**Verification Track**
-- `npm run test` output: "16 tests passed"
-- Browser checkpoint (deployed): All 7 E2E flows complete as expected, no console errors
-- Warnings appear/disappear correctly as inputs change
+**Verification Checkpoints** (run after 08-03 completes)
+- `npm run test` → "16+ tests passed"
+- Browser checkpoint (deployed calculator.html): All 7 E2E flows execute correctly, no console errors
+- Warnings appear/disappear correctly as inputs change (R:R < 1.0, liquidation risk)
 - No NaN, Infinity, or undefined in displayed results
+- Mobile responsive: form/results stack vertically on 375px viewport, all inputs accessible
 
 ---
 
