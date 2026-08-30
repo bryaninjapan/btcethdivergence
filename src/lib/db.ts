@@ -84,6 +84,11 @@ export async function updateRecord(
   return merged;
 }
 
+export async function deleteRecord(db: D1Database, id: number): Promise<boolean> {
+  const res = await db.prepare('DELETE FROM divergence_records WHERE id = ?').bind(id).run();
+  return (res.meta.changes ?? 0) > 0;
+}
+
 export async function getBackfillCursor(db: D1Database, symbol: string): Promise<number | null> {
   return db
     .prepare('SELECT cursor_open_time FROM backfill_state WHERE symbol = ?')

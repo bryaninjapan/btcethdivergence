@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { createRecord, listRecords, updateRecord } from '../lib/db';
+import { createRecord, deleteRecord, listRecords, updateRecord } from '../lib/db';
 import { jsonError, jsonOk } from '../lib/response';
 import { createRecordSchema, updateRecordSchema, validationMessage } from '../lib/validate';
 import type { Env } from '../types';
@@ -59,6 +59,23 @@ records.put('/api/records/:id', async (c) => {
     return jsonOk(row);
   } catch (error) {
     console.error(`Failed to update record: ${String(error)}`);
+    return jsonError('Internal server error', 500);
+  }
+});
+
+records.delete('/api/records/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) {
+    return jsonError('Invalid record id', 400);
+  }
+  try {
+    const deleted = await deleteRecord(c.env.DB, id);
+    if (!deleted) {
+      return jsonError('Record not found', 404);
+    }
+    return jsonOk({ id });
+  } catch (error) {
+    console.error(`Failed to delete record: ${String(error)}`);
     return jsonError('Internal server error', 500);
   }
 });
