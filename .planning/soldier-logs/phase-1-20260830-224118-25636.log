@@ -1,0 +1,27 @@
+I'll start by reading the planning files in order.
+Let me read the planning documents in order.
+Now let me read the plan-check warnings, PROJECT.md, and the root PLAN.md for context.
+I have full context now. Let me set up the task list and begin execution.
+**Plan 01-01, Task 1: Scaffold Worker project.** Running npm init and installing deps.
+Now configuring package.json per plan.
+Now create the `public/` directory (W-01 fix so the dry-run sees a valid assets directory):
+Now verifying Task 1:
+Task 1 verified (typecheck 0, dry-run 0, deps installed). Committing.
+**01-01 Task 2: Add index.html and deploy.** Writing the asset bundle entry and checking workers.dev availability.
+Worker doesn't exist yet (expected — first deploy). Deploying:
+Deploy failed: error 10021 — a module worker needs a default export, not a named `fetch`. Fixing (minor deviation from plan text, required for the deploy precondition):
+Deployed at `https://btcethdivergence.swadmin31.workers.dev`. Verifying SC1:
+`/index.html` serves via the binding (307 canonical redirect to `/`; content confirms). Pages list shows no `btcethdivergence` project — the "no separate Pages" clause is proven. Committing Task 2.
+**01-01 Task 3: Git hygiene.** Creating `.dev.vars` and verifying ignore rules.
+All three paths ignored; `.dev.vars` and `.wrangler/` absent from porcelain. Committing Task 3.
+`.dev.vars` is properly ignored (that's the point). Committing only `.gitignore`:
+No changes needed — `.gitignore` from T1 already contains every required entry, and `.dev.vars` is intentionally untracked. Verifying the full entry set:
+All entries present and ignored — Task 3 complete (no new commit needed since `.gitignore` from T1 already satisfied the requirement; `.dev.vars` is intentionally untracked).
+
+**Plan 01-02, Task 1: Create D1 database + migrations.**
+D1 created with id `c5e8aaf3-966b-42c6-8975-1bdf234a07d8`. Adding the `DB` binding to wrangler.jsonc and writing migrations.
+Both applied. Verifying table existence locally and remotely:
+Both tables present in local and remote D1. Committing Task 1.
+**01-02 Task 2: Envelope helpers, DB repository, API skeleton.** Writing source files.
+All envelope checks pass. Committing Task 2.
+**01-02 Task 3: Zod validation.** Writing schemas and record write paths.

@@ -1,0 +1,13 @@
+The summary states commit range `b171783..27f5534` (2 commits), but commit `8fb7ccc` ("feat(phase-4): add deleteRecord...") is also a phase-4 commit that this phase's backend deliverable is built on. Let me examine all the phase-4 code.
+All verification complete. Confirming findings: tests green, typecheck green, deployment is live with no auth on records routes, and I empirically confirmed a partial-PUT data-loss bug in the Zod schema. Writing the review report.
+Review complete. Report written to `.planning/phases/04-records-core-crud/4-REVIEW.md`.
+
+**Findings** (verified against working-tree files, not just diffs): 0 CRITICAL, **1 HIGH**, 2 MEDIUM, 5 LOW.
+
+- **HIGH** — Partial `PUT /api/records/:id` silently wipes `notes`/`tags`. Zod v4 applies field-level `.default('')` even when the key is absent in a `.partial()` object (confirmed empirically), so `updateRecord`'s `payload.notes ?? existing.notes` overwrites stored values with `""`. UI sends full fields so the app path is safe; any client using the locked partial-update contract loses data. Tests 9/9 green but don't cover this case.
+- **MEDIUM** — `/api/records` routes have no auth while the Worker is deployed and publicly reachable (`curl …/api/records` → 200); anyone with the URL can read/create/edit/delete records. Deferred to Phase 9 per roadmap, but live now. Also `api.js:3` throws a cryptic `SyntaxError` on non-JSON error bodies and the initial `loadRecords()` is unhandled.
+- **LOW** — hex/scientific id forms pass the integer guard, timezone-less ISO parsed as local time, payload build outside try/catch, unbounded list, test FakeD1 ignores bind params.
+
+Verified clean: typecheck exit 0, tests green, bound-parameter SQL only, no `innerHTML` in `public/`, single `api()` fetch chokepoint, no secrets tracked, fixtures cleaned up (remote count 0).
+
+1 HIGH issue(s) found — must fix before merge.

@@ -1,0 +1,15 @@
+All evidence gathered. Writing the fresh verification report (the existing `1-PLAN-CHECK.md` is stale relative to the current plan revisions, so I'm replacing it with an independent check of current state).
+Fresh adversarial check of the current plan revisions written to `1-PLAN-CHECK.md`. Key findings:
+
+**Coverage (all PASS):** All 5 phase requirements (INFRA-01/02/03/05, DATA-07) and all 5 success criteria map to concrete tasks across 9 tasks / 3 plans. Load-bearing claims verified against real source: klines + divergence_records schemas match PLAN.md exactly; REC-02 partial-update contract, wrangler v4 `--batch-size` removal, .vision/external-fetcher fallback ladder, string-number coercion, and IP-block intermittency all confirmed against research files.
+
+**Previously flagged items already resolved in current revisions:** workers.dev subdomain in user_setup, `parseKline` `Number()`/`parseFloat()` coercion (now with `typeof === 'number'` vitest assert), and PROJECT.md:54 tech-stack constraint now matches the lock.
+
+**3 warnings found (0 blockers):**
+- W-01: 01-01 T1's `wrangler deploy --dry-run` runs before `public/` exists — wrangler rejects a missing `assets.directory` (workers-sdk#8100), so the phase's first verify gate can fail before T2 creates it.
+- W-02: 01-03 T2 verify contradicts its own action — the blocked case returns 502/`ok:false` but verify expects `"ok":true` via `curl -sf`, so the legitimate SC5 blocked outcome would red-flag.
+- W-03: 01-02 T3 verify only curl-tests POST; SC3's PUT guard is specified but never exercised.
+
+Plus 7 INFO items (stale ROADMAP plan list, no Pages-project command, remote test-record residue, persistent unauthenticated spike endpoint, unused vitest pool, missing Content-Type headers, uncoerced klines params).
+
+Plans verified. Ready to execute.

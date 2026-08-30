@@ -1,0 +1,25 @@
+I'll start by reading the required planning files in order.
+Let me look at the actual directory structure and find phase files, research docs, and any existing plan format conventions.
+No phase 4 directory yet, and research lives in `.planning/research/`. Let me read the existing plan files to match format, plus the research docs and requirements.
+Now let me read the research docs relevant to Phase 4 and examine the actual codebase state.
+There's already a `records.ts` route and a `divergence_records` migration. Let me read the existing code to build on what's there.
+The backend CRUD is largely scaffolded already. Let me check the remaining plan files and the actual repo state to understand what's built vs. pending.
+Let me check the test conventions, package.json, and the root PLAN.md (the original spec that research references for the records API contract).
+Let me check the plan-check files to understand what the adversarial reviewer flags, plus confirm no CONTEXT.md exists.
+No CONTEXT.md exists for this phase. Let me check the klines test to match the D1-mock convention used in the repo, then I'll have full context.
+Let me check the deployed URL and current worker config to use accurate references in verify commands.
+I now have full context. Let me create the phase directory and write the plan files.
+Now let me update the ROADMAP Phase 4 section to list the actual plans (the checker flags stale "Plans: TBD" tracking as an issue).
+Let me verify the ROADMAP edits and do a final self-review pass of both plan files.
+Both plan files are written and ROADMAP tracking updated. Coverage is complete:
+
+**Plans written** (in `.planning/phases/04-records-core-crud/`):
+- **04-01-PLAN.md** (2 tasks, wave 1) — backend completion: adds `deleteRecord()` + `DELETE /api/records/:id` (REC-03), plus a 9-case `records.test.ts` route suite locking create/edit/delete/list and the SC5 `start<end` rejection (400 before any D1 write).
+- **04-02-PLAN.md** (3 tasks, wave 2) — records UI: `api.js` envelope chokepoint + newest-first table (SC4), create/edit form with immediate re-render + inline validation message (SC1/SC2/SC5), delete confirmation dialog (SC3). Each task has files, concrete actions, automated verifies (curl/grep/vitest/d1-execute) plus browser checkpoints where interaction can't be automated.
+
+**Coverage:**
+- REC-01→04-02 T2, REC-02→04-02 T2, REC-03→04-01 T1 + 04-02 T3, REC-04→04-02 T1, REC-09→04-01 T2 + 04-02 T2.
+- SC1→04-02 T1+T2, SC2→04-02 T2, SC3→04-01 T1 + 04-02 T3, SC4→04-02 T1, SC5→04-01 T2 + 04-02 T2.
+- Dependencies acyclic (01-02 → 04-01 → 04-02); locked decisions honored (single Worker + Static Assets, envelope, no build step); REC-07/08 dropdowns, filters, deep-link, nav bar explicitly phase-gated out.
+
+**Summary:** 2 plan files, 5 tasks total, 0 [PLAN-GATE] blockers (no OPEN research inputs or unresolved decisions — backend CRUD already exists from plan 01-02; only DELETE + UI remain). Every requirement (REC-01/02/03/04/09) and all 5 success criteria have concrete covering tasks.

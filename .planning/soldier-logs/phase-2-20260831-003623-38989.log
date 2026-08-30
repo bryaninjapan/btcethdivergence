@@ -1,0 +1,21 @@
+Now let me read the research files and inspect the actual source tree to fact-check the plans' load-bearing claims.
+Let me fact-check the `typecheck:scripts` feasibility claim by inspecting the installed workers-types package, and check whether `@types/node` is available.
+I've now verified all load-bearing claims against the source. Let me write the plan-check report.
+## Phase 2 Plan Check — Summary
+
+Verified `02-01-PLAN.md` and `02-02-PLAN.md` against ROADMAP Phase 2 (DATA-01/04/05/06, SC1-SC4), PROJECT.md, SPIKE-REPORT.md, and the real source tree.
+
+**Result: 0 blockers, 3 warnings, 6 info.**
+
+Coverage: all 4 requirements and all 4 success criteria map to concrete, wired tasks. Fact-checked against source: 7-column klines schema, PK `(symbol, open_time)`, `fetchKlines` signature + weight + 429/418 `BinanceError(retryAfter)`, `app.route('/', admin)` already mounted, existing workflow's `schedule:` stub, `@types/node`/`tsx` absent, workers-types has no `process` global, chunking math (14×7=98 ≤100; 1000→72 stmts→2 `db.batch()` calls) all confirmed. The earlier review's reached-now tail, files_modified, and `done`-flag issues are genuinely fixed in the current text.
+
+Three warnings:
+- **W-1** `typecheck:scripts` as specified (extend root, no `types` override) likely fails on the fetcher's `process` under workers-types, while `types:["node"]` breaks transitive `D1Database` — the isolation strategy must be pinned down.
+- **W-2** "GitHub's IPs reach Binance" is asserted but never executed; the real GH run is optional. Phase 2 SCs survive via the proven local path, but Phase 3's cron reuse is at risk.
+- **W-3** ROADMAP SC1's literal wording (endpoint fetches from Binance) is unsatisfiable under the locked external-fetcher architecture; amend the ROADMAP after owner sign-off.
+
+Both plans correctly gate on the pending owner confirmation of SPIKE-REPORT option (c) — do not start Task 1 before that sign-off.
+
+Report written to `.planning/phases/02-kline-backfill-engine/2-PLAN-CHECK.md`.
+
+Plans verified. Ready to execute.

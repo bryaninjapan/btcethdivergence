@@ -1,0 +1,41 @@
+I'll start by reading the planning files in order.
+Now let me find the phase 4 plan files.
+Now let me examine the existing codebase state to verify the plan's claims.
+All plan claims verified: typecheck green, 9/9 tests pass, deployed URL confirmed. Let me check wrangler auth/deploy status and set up tracking.
+All claims verified: typecheck green, 9/9 tests pass, worker deployed and authenticated. Setting up task tracking and beginning execution.
+Section A scans pass (no DEV_* flags, no secrets, no dead code). 04-01 T1: code already verified — now deploying.
+Deploy succeeded. Now running the curl verification sequence.
+All 04-01 Task 1 verifications pass (201/400/404/200, SC3 confirmed, D1 count 0). Moving to 04-01 T2.
+04-01 complete. Starting 04-02 T1 — writing the UI foundation files.
+Deployed. Now running Task 1 verifies: asset markers, seed fixture, table data source.
+All Task 1 automated verifies pass. Let me use the integrated browser to satisfy the SC4 browser checkpoint.
+Pencil browser isn't connected. Let me try a headless verification with Playwright if available.
+No headless browser available — browser checkpoints will be flagged for human confirmation in SUMMARY. Verifying newest-first ordering at the API level instead:
+Task 1 done (record id 4 is the ui-fixture). Now 04-02 T2: create/edit form wiring.
+All Task 2 automated verifies pass. Let me run an API-level SC1/SC2 round-trip (the exact endpoints the UI calls) as the strongest available proxy for the browser checkpoints.
+SC1/SC2 confirmed. Now 04-02 T3: delete confirmation dialog.
+All Task 3 verifies pass. Running the full verification track (grep disciplines, fixture cleanup) before committing.
+All verification track checks pass. Confirming fixture cleanup and running final test/typecheck before committing the UI.
+All green (47/47 tests, typecheck clean, dataset empty). Committing UI deliverables (WARNING-01 fix).
+All 4 UI files committed. Now writing the phase summary.
+Phase 4 complete — all 5 tasks done, 4-SUMMARY.md written.
+
+**Tasks completed (5/5):**
+- **04-01 T1**: Verified existing `deleteRecord` + `DELETE /api/records/:id`, deployed; curl-verified 201/400/404/200 and SC3 (deleted row gone from GET, D1 count 0).
+- **04-01 T2**: Committed `src/routes/records.test.ts` — 9/9 tests lock the CRUD contract + SC5 start<end 400-no-write.
+- **04-02 T1**: `api.js` chokepoint, page shell, styles, newest-first `renderTable`; deployed; markers + seeded fixture served.
+- **04-02 T2**: `parseEpoch`/`openForm`/`submitForm` wired to POST/PUT with immediate re-render and inline SC5 message; API-level SC1/SC2 round-trips verified.
+- **04-02 T3**: Delete confirmation dialog + DELETE wiring; SC3 verified; UI committed (WARNING-01 fix).
+
+**Security/cleanup fixes**: None needed (no `DEV_*` flags, secrets, or dead code in touched code).
+
+**Blocking checkpoints**: No task blocked. Three *browser* checkpoints (visual create/edit/delete/reversed-time) couldn't be automated — no Playwright/Puppeteer and the Pencil browser app wasn't connected. All the exact API calls those flows make were verified at HTTP level. **Needed to unblock**: owner opens `https://btcethdivergence.gn01968711.workers.dev/` and walks the 3 interactive flows (steps in `4-SUMMARY.md`).
+
+**Deviations (logged in SUMMARY)**: row-button event delegation instead of per-button listeners; digit-input epoch clamp (INFO-02); added `#delete-error` element.
+
+**Commits** (`b171783..HEAD`):
+```
+27f5534 feat(phase-4): records UI — table, create/edit form, delete dialog
+da38217 test(phase-4): add records CRUD route contract suite (9/9 tests)
+```
+Full suite green (47/47), typecheck exit 0, dataset cleaned (no fixture rows left).

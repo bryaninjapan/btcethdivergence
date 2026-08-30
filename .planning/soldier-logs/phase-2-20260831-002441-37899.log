@@ -1,0 +1,18 @@
+I'll start by reading the required planning files in order.
+Now let me read the requirements definitions and research/spike files, plus check for CONTEXT.md.
+No CONTEXT.md or RESEARCH.md for Phase 2. The spike research is in Phase 1. Let me read the SPIKE-REPORT, then explore the actual source tree to fact-check load-bearing claims.
+Now let me read the actual source files to fact-check the plans' load-bearing claims.
+Let me verify the remaining claims: vitest environment, the Phase 1 check report's INFO-05, tsconfig, migration 0002, PITFALLS references, and confirm files don't already exist.
+Let me check the root PLAN.md, STATE.md, config.json, and the Phase 2 soldier-log for context.
+I have all the evidence I need. Let me verify one final claim about tsconfig coverage before writing the report.
+All facts verified. Writing the plan-check report.
+Verified all 10 dimensions against the actual source (klines schema, `binance.ts` signatures, `Env`, router mounts, GH workflow, tsconfig). Report written to `.planning/phases/02-kline-backfill-engine/2-PLAN-CHECK.md`.
+
+**Summary**: 0 blockers, 4 warnings, 4 info.
+
+- **Coverage**: All 4 requirements (DATA-01/04/05/06) and all 4 success criteria map to concrete tasks across 02-01/02-02; dependency chain (01-03 → 02-01 → 02-02) is acyclic and correctly ordered. Every load-bearing claim (7-column klines table, `fetchKlines` weight/429/418 handling, `app.route('/', admin)`, migration numbering, 1000→72 stmts→2 batch calls) checks out against real files.
+- **Warnings**: (1) `npm run typecheck` covers only `src/` (tsconfig `include: ["src"]`), so `scripts/backfill-fetcher.mts` is never typechecked — needs `@types/node` + a scripts tsconfig. (2) "Reached-now" tail: when Binance returns 0 candles, the fetcher POSTs `[]` which fails Zod `.min(1)` → 400 → exits 1, so the final backfill run errors instead of completing cleanly (SC2 tail). (3) 02-01 `files_modified` omits `src/lib/validate.ts` while listing `src/index.ts` unchanged. (4) `done: klines.length < 1000` misreports at exact-1000 boundaries.
+- **Info**: SC1 wording predates the locked external-fetcher spike decision (documented deviation); duplicated origin constant; ungated spike route; stale root `PLAN.md`.
+- The plans responsibly handle the D1 50-query ambiguity via empirical verification with an explicit surface-as-blocker commitment.
+
+Plans verified. Ready to execute.

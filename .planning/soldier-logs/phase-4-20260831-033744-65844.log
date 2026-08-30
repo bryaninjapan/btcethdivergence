@@ -1,0 +1,24 @@
+Phase 4 directory is empty — no RESEARCH.md exists. Let me check research dir, CONTEXT.md, and existing plan formats.
+Let me read the Phase 1 and Phase 2 plan files to understand the established task/XML format conventions.
+Now let me examine the current codebase state and research docs relevant to records.
+There's already `src/routes/records.ts` and a `0002_create_divergence_records.sql` migration. Let me inspect current source and research docs for the records feature spec.
+The API layer partially exists already. Let me inspect the remaining source files and git state.
+Records API skeleton exists (GET/POST/PUT) but DELETE is missing, and there's no UI. Let me check test conventions and research docs for the records UI spec.
+I have the full picture now. Let me verify a few critical technical details before writing the plan: Zod partial-update behavior (does `PUT` with only `start_time` wipe notes/tags?), current test/build state, and the deployed API state.
+Confirmed a real bug: `PUT` with only `start_time` wipes `notes`/`tags` (Zod `.default()` beats `.partial()`), violating REC-02's partial-update support. Let me check the deployed state.
+Backend confirmed partially deployed. Let me check which Phase 1 plans created the records routes, so I can set `depends_on` correctly.
+All context gathered. Confirmed state:
+- **Backend partial**: GET/POST/PUT records exist + deployed; **DELETE missing**; **partial-update bug** (Zod `.default()` overrides `.partial()` → `PUT {start_time}` wipes notes/tags, violates REC-02)
+- **Frontend**: none (`public/index.html` is a Phase 1 placeholder)
+- No RESEARCH.md for Phase 4; records spec from `research/ARCHITECTURE.md`, `FEATURES.md`, root `PLAN.md`
+
+Writing the two plan files now.
+Both files written. Let me do a final integrity check on the plan files.
+**Phase 4 planning complete.** Wrote 2 plan files, 4 tasks total (2 per file, matching the 2-3 task budget):
+
+- **04-01-PLAN.md** — Backend completion (REC-02, REC-03, REC-09): adds `deleteRecord()` + `DELETE /api/records/:id`; fixes a **confirmed partial-update bug** (Zod `.default('')` beats `.partial()`, so `PUT {start_time}` wipes notes/tags — verified against installed zod v4); adds `records.test.ts` suite + deployed-worker curl UAT.
+- **04-02-PLAN.md** — Records UI (REC-01…04, REC-09): builds `public/index.html` records table + create/edit modal + delete `confirm()` dialog + error banner showing the API's `start_time must be before end_time` message; UTC-safe `datetime-local` inputs (dropdowns/UTC-label pass explicitly left to Phase 5 per ROADMAP).
+
+**[PLAN-GATE] blockers: none** — no open credentials or decisions needed; only pre-existing state was that `GET/POST/PUT` records were already deployed and `DELETE` returned 404.
+
+**Traceability:** all 5 requirements (REC-01/02/03/04/09) and all 5 success criteria (SC1–SC5) have at least one concrete covering task, each with files/action/verify/done. Dependencies are acyclic: 04-01 → 04-02.

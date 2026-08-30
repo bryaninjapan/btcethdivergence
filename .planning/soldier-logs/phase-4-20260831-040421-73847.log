@@ -1,0 +1,16 @@
+I'll start by reading the required files in order.
+Let me explore the planning directory structure.
+Now verifying the load-bearing claims against the actual source tree.
+Let me verify the remaining load-bearing claims: test pattern consistency, migrations/schema, types, and run the current test suite + typecheck as read-only state verification.
+All load-bearing claims verified. The current plans are the revised versions (the prior `4-PLAN-CHECK.md` reviewed an older draft). Writing the fresh report now.
+Report written to `.planning/phases/04-records-core-crud/4-PLAN-CHECK.md`.
+
+**Summary:** I re-verified both Phase 4 plans against the current source tree rather than taking prior claims at face value. The current drafts are the revised versions — the previously-flagged blockers are already fixed: 04-01 is now verification-only (no re-adding of existing code), `parseEpoch` divides `Date.parse` by 1000 (ms→s contract honored), and the fixture POST expects 201.
+
+Every load-bearing claim checked out: `deleteRecord` at db.ts:87-90, DELETE route at records.ts:66-81, import at records.ts:2, mount at index.ts:14, SC5 refine at validate.ts:15/:21, the untracked `records.test.ts` with exactly the 9 described cases (ran `vitest`: 9/9 green), `tsc --noEmit` exit 0, migration 0002 columns matching the seed INSERT, FakeD1 pattern in klines.test.ts/admin.test.ts, ARCHITECTURE.md Pattern 2, and the deployed URL confirmed in Phase 3 docs.
+
+All 5 requirements (REC-01/02/03/04/09) and all 5 success criteria have concrete, wired tasks with automated verifies; dependencies are acyclic; Phase-5 scope (REC-05/06/07/08) is correctly deferred; no scope-reduction hedging on in-scope work.
+
+Remaining findings: 1 warning (04-02 has no git commit step — new `public/` UI files would end the phase untracked) and 5 info items (files_modified attribution, parseEpoch digit-edge, residual "BLOCKER-02" meta-references in plan text, browser-checkpoint-only SC gates, no parseEpoch unit test).
+
+Plans verified. Ready to execute.

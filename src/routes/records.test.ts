@@ -140,6 +140,29 @@ describe('records CRUD route contract', () => {
     expect(body.data.notes).toBe('x');
   });
 
+  it('PUT omitting notes/tags → preserves existing notes/tags (regression: HIGH issue)', async () => {
+    const db = new FakeD1Database();
+    db.firstRow = { ...EXISTING_RECORD, notes: 'existing notes', tags: 'existing tags' };
+
+    const res = await records.request(
+      '/api/records/1',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'structural' }), // omit notes and tags
+      },
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: DivergenceRecord };
+    expect(body.ok).toBe(true);
+    // REGRESSION TEST: notes and tags should NOT be cleared
+    expect(body.data.notes).toBe('existing notes');
+    expect(body.data.tags).toBe('existing tags');
+    expect(body.data.type).toBe('structural');
+  });
+
   it('PUT with reversed times → 400 with SC5 message, no DB write', async () => {
     const db = new FakeD1Database();
 

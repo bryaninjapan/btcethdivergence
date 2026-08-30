@@ -1,0 +1,16 @@
+Now let me fact-check the plan's load-bearing claims against research and the root PLAN.md.
+Let me check STATE.md, config, and the soldier-log manifests to understand the current state.
+Let me quickly scan the plan-mode soldier log for any planner-noted uncertainties, and verify the research Pitfall 1 reference used by plan 01-03.
+I have everything needed. Writing the plan-check report.
+Plan check written to `.planning/phases/01-worker-foundation-binance-spike/1-PLAN-CHECK.md`.
+
+**Summary** — Phase 1 (3 plans, 9 tasks). All 5 requirements (INFRA-01/02/03/05, DATA-07) and all 5 success criteria have concrete, wired tasks with automated verify commands; dependency chain is acyclic (01-01→01-02→01-03); research claims the plans cite were all confirmed against STACK.md/PITFALLS.md/PLAN.md. **0 blockers.**
+
+Warnings (3):
+- **W-01** workers.dev subdomain isn't in user_setup — the only step that could halt an autonomous run, since every SC curl verify depends on the deployed URL.
+- **W-02** parseKline spec omits the string→number coercion research flags as the highest-leverage correctness trap (PITFALLS.md Lesson 5) — add `Number()`/assert in the vitest fixture.
+- **W-03** PROJECT.md:54 still says "Cloudflare Pages + Workers + D1", contradicting the locked single-Worker+Assets architecture the plan correctly implements; update at transition.
+
+Info (6): concrete "no Pages project" command, remote test-row cleanup, spike endpoint left unauthenticated post-phase, unused vitest-pool dep, missing Content-Type headers on some curl POSTs, optional app.fetch unit test.
+
+Plans verified. Ready to execute.

@@ -1,0 +1,19 @@
+I have everything I need. Let me verify one more claim set before writing the report — the current POST status code and the git state of the records test.
+All claims verified. Writing the report.
+Report written to `.planning/phases/04-records-core-crud/4-PLAN-CHECK.md`.
+
+## Summary
+
+Verified both Phase 4 plans goal-backward against ROADMAP, PROJECT.md, git history, and the current source. Coverage is complete — all 5 requirements (REC-01/02/03/04/09) and all 5 success criteria map to concrete, wired, verify-able tasks; dependencies are acyclic; scope stays within the phase boundary; locked decisions (single-Worker, no-build static UI, UTC-seconds contract) are honored.
+
+However, two blockers surfaced from fact-checking the plans against reality:
+
+1. **04-01 is stale (BLOCKER-01).** Its core premise — "DELETE is the only missing route" — is false. `deleteRecord` (db.ts:87), the DELETE route (records.ts:66), and the full `records.test.ts` suite already exist and pass 9/9 (typecheck green). Executing Task 1 verbatim would re-declare an existing function → duplicate-identifier errors → its own `typecheck exits 0` gate fails. Fix: rewrite as verify-existing + deploy + commit.
+
+2. **04-02 `parseEpoch` mixes ms/s (BLOCKER-02).** `Date.parse()` returns milliseconds, but the API contract and `formatTime` use unix seconds; the ISO path (guided by the placeholder) would silently store times 1000× wrong with no error. Fix: divide by 1000 and round-trip assert.
+
+Plus 1 warning (POST fixture expects 200 but route returns 201) and 4 info items (browser-checkpoint-only UI verification, ROADMAP bookkeeping, untracked test file, api.js JSON guard).
+
+The genuinely remaining work is 04-02's UI (`public/js/api.js`, `records.js`, `style.css` are all absent) plus deploy/commit of the already-written backend.
+
+2 blocker(s) found — plan needs revision before execution.

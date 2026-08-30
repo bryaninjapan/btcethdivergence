@@ -1,0 +1,15 @@
+I have all the context I need. Now let me create the phase 2 plan directory and write the plan files.
+Now the second plan file for the external fetcher:
+Let me clean up an awkward verify line in 02-02:
+Now let me re-read both plans to verify consistency:
+I spot an inconsistency in 02-01: some sections still reference the earlier 16-row/96-param/63-statement math, which is wrong once `symbol` is counted (7 params/row). Let me fix those:
+Plans written and self-checked. Summary:
+
+**Phase 2 plan output** — 2 plan files, 4 tasks total:
+
+- `02-01-PLAN.md` (wave 1, 2 tasks) — Worker persistence engine: `backfill_state` migration, pure chunked-insert builder (`14 rows/stmt = 98 params`, grouped ≤40 stmts per `db.batch()`), `insertKlinesBatch`/`getBackfillCursor`/`setBackfillCursor` in `db.ts`, then authenticated Zod-validated `POST /api/admin/ingest` + `GET /api/admin/backfill-cursor` routes.
+- `02-02-PLAN.md` (wave 2, 2 tasks) — external fetcher: `src/lib/backoff.ts` (429 honors `Retry-After`/60s floor, 418 aborts with no auto-retry) + `scripts/backfill-fetcher.mts` (cursor-aware, ≤1000 candles, weight logged), then rewrites `.github/workflows/fetch-binance.yml` to `workflow_dispatch`-only (no cron — that's Phase 3) and proves cursor advancement via two consecutive runs.
+
+**PLAN-GATE (1):** owner must confirm-or-override the spike's option (c) external-fetcher path in `SPIKE-REPORT.md` `## Phase 2 Path` before execution (still awaiting sign-off per `1-SUMMARY.md`). Both plans are built on it and mark it in `user_setup`.
+
+**Coverage:** DATA-01 → 02-02 T1/T2; DATA-04 → 02-01 T1/T2 + 02-02 T1; DATA-05 → 02-02 T1; DATA-06 → 02-01 T1. SC1 → 02-01 T2 + 02-02 T1/T2; SC2 → 02-01 T1/T2 + 02-02 T2; SC3 → 02-02 T1; SC4 → 02-01 T1. Every requirement and success criterion has a concrete covering task; no scope reduction (the fetch/store split is the locked spike architecture, not a cut).

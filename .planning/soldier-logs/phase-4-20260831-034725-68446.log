@@ -1,0 +1,16 @@
+I'll start by reading the planning files in order.
+Now let me check for PLAN-CHECK files and examine the existing codebase.
+No PLAN-CHECK file for phase 4. Let me examine the existing source files.
+Let me examine the existing test patterns and wrangler config.
+Now let me check the wrangler config and deployment status.
+Let me check git tracking state and confirm the remote DB/worker state.
+Worker is live and `/api/records` returns empty. Let me set up the task list and begin.
+Security scan: `.dev.vars` is gitignored, no `DEV_*` flags in touched files. Clean.
+
+**04-01 Task 1** — add `deleteRecord` and the DELETE route.
+Now run typecheck and deploy.
+Deployed. Now running the curl verification for the DELETE route.
+The success delete returned 404 unexpectedly. Let me investigate the DB state.
+I see — my verify command accidentally ran the DELETE twice (once for status, once for body), so the second hit a deleted row. The first returned 200 and the row is gone. Let me re-run cleanly to confirm.
+All verifications pass. Let me confirm no inline SQL in routes and commit.
+**04-01 Task 2** — create the records CRUD test suite.

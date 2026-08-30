@@ -1,0 +1,18 @@
+The BTCUSDT plist was modified at 03:23 JST — after the prior verification pass flagged it. Let me inspect the current state.
+The BTCUSDT plist was edited at 03:23 (during my verification window) but **still lacks the `cd`** and now has a stray `\`. Neither job has ever fired (no log/stdout/stderr files). Let me now verify the live D1 data state (SC1, SC2).
+Gaps confirmed: 7 identical per symbol, all single missing-hours. Now let me cross-check each missing hour live against Binance (the source of truth).
+SC1 (span + no unexplained gaps) and SC2 (no duplicates) confirmed live. Now let me read the crawl log to verify the idempotency evidence, and check the fetcher source for SC3's "only newer klines" logic.
+Crawl log confirms SC1/SC2 directly (started at BASE 2021-01-01, `inserted: 0, skipped: 1000` when re-covering the pre-loaded range, ended `reached now` for both symbols). Now the regression spot-check against Phase 2's verified items, plus the live Worker.
+All regression checks green. Let me confirm the source-level idempotency guarantee for SC2.
+All evidence gathered. Writing the verification report (sibling convention is `N-VERIFICATION.md`).
+**Phase 3 Verification — 2 of 3 criteria PASS; SC3 FAILS.**
+
+- **SC1 (2021-01→present, no unexplained gaps): PASS** — live D1: both symbols 49,613 rows, 2021-01-01 00:00 → 2026-08-30 18:00 UTC; 7 gaps/symbol, every one re-checked live against Binance (no candle exists there). Cursor == max stored candle.
+- **SC2 (no duplicates on re-run): PASS** — live `dup_groups = 0`; `INSERT OR IGNORE` + `PRIMARY KEY (symbol, open_time)`; crawl log shows the re-covered pre-loaded range logging `{ inserted: 0, skipped: 1000 }` twice.
+- **SC3 (daily cron, no manual trigger): FAIL** — launchd jobs are loaded but have **never fired** (no log/stdout/stderr files exist); the BTCUSDT plist is still misconfigured. An edit at 03:23 (after a prior verification flagged it) removed nothing and added a stray `\`: it still lacks the `cd /Users/bryan/Documents/btcethdivergence`, so its next 02:00 UTC trigger runs `./node_modules/.bin/tsx` from `/` and fails every day. ETHUSDT half is wired correctly.
+
+Regression check vs Phase 2: all green — typecheck, typecheck:scripts (prior blocker fixed), 38/38 tests, live Worker 200 + `/api/health` OK, gitignore hygiene intact.
+
+Recommendation (not applied, read-only pass): fix the BTCUSDT plist (add `cd` or `WorkingDirectory`, drop the stray `\`, then `launchctl unload`+`load`, verify with `launchctl kickstart`), then observe one real scheduled run for both symbols before declaring Phase 3 ready.
+
+**1 criterion FAILED — phase not ready.**

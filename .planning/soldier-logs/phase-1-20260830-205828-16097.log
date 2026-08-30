@@ -1,0 +1,25 @@
+No existing `*-PLAN.md` files exist yet (first phase). Let me check the GSD plan format convention and the `.claude` dir for any house rules.
+No existing `*-PLAN.md` files yet (first phase), so I'll follow the canonical GSD PLAN.md schema (frontmatter `phase/plan/type/wave/depends_on/files_modified/autonomous/requirements/must_haves` + `<task>` XML blocks). Now writing the three plan files.
+Now let me validate the plan structure with the GSD verifier if available.
+All three pass structural validation. Let me confirm the must_haves blocks parse correctly (not silently empty) and the wave/dependency graph is sound.
+The `verify references` failure is a false positive — it's grabbing npm package names from my `<action>` prose (`@cloudflare/workers-types`) and treating them as file references. Let me confirm the extraction pattern and reword to avoid the noise.
+The `verify references` failures are all plan-time false positives — the extractor grabs command strings and paths from `<verify>`/`<action>` blocks, but those files legitimately don't exist until the phase executes. The authoritative plan-time gate (`plan-structure`) passes for all three. Let me check the one remaining flag on `verify artifacts` for 01-02.
+Confirmed — all remaining `invalid` flags are plan-time-only (files don't exist until the phase executes); the authoritative structure gate passes for all three plans. The dependency chain is acyclic (01-01 → 01-02 → 01-03), and file ownership conflicts are avoided via wave ordering.
+
+## Summary
+
+**3 plan files, 9 tasks** written to `.planning/phases/01-worker-foundation-binance-spike/`:
+
+| Plan | Wave | Depends | Tasks | Covers |
+|------|------|---------|-------|--------|
+| `01-01-PLAN.md` (foundation) | 1 | — | 3 | INFRA-01, INFRA-05 → SC1, SC4 |
+| `01-02-PLAN.md` (feature) | 2 | 01-01 | 3 | INFRA-02, INFRA-03, D1 schema → SC2, SC3 |
+| `01-03-PLAN.md` (spike) | 3 | 01-02 | 3 | DATA-07 → SC5 |
+
+**Decision tree outcomes:**
+- **Approach:** single consolidated Worker + Static Assets (matches PROJECT.md/STATE.md lock; avoids the Pages-cron pitfall by construction).
+- **Schema task included** because the phase goal explicitly requires "D1 schema is live" (migrations for `klines` + `divergence_records`, local + remote).
+- **[PLAN-GATE] none blocking:** the Binance-reachability OPEN item is resolved *by executing* the spike (Task 2 tries `api.binance.com`, then `data-api.binance.vision`). The one-way architectural door — which host Phase 2 builds on — gets a `checkpoint:decision` (Task 3) with an embedded decision rule and `<resume-signal>` for owner sign-off, per GSD reversibility rules.
+- **Not in scope (roadmap-assigned elsewhere):** real Records/Chart/Calculator UI (Phases 4–8), backfill engine (Phase 2), cron (Phase 3), Cloudflare Access (Phase 9).
+
+Every task has concrete files, specific actions, an automated verify (curl/grep/tsc/vitest/git check-ignore), and done criteria; each plan carries a post-execution Verification Track. **All 5 requirements and all 5 success criteria have at least one covering task.** All 3 plans pass `verify plan-structure` (`valid`).

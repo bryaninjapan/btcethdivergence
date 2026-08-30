@@ -1,0 +1,66 @@
+I'll start by reading the required planning files in order.
+Now reading all plan files and the plan-check file.
+Now let me read the remaining context files and check the current repo state.
+Let me inspect the current state of the repo more deeply.
+Wrangler is authenticated with D1 write access. There's a leftover `src/lib/validate.ts` and `dist/` from a prior partial attempt. Let me set up task tracking and check environment prerequisites.
+An existing `btcethdivergence` Worker is already deployed from a prior attempt. Let me find its workers.dev URL and check existing D1 state.
+D1 database `btcethdivergence` already exists (0 tables). The `subdomain register` subcommand doesn't exist in wrangler v4. Let me find the workers.dev URL.
+Workers.dev subdomain is `swadmin31`, so the URL is `https://btcethdivergence.swadmin31.workers.dev`. Let me verify it's live.
+The worker is already live and serving the placeholder. Let me check exactly what scaffolding exists versus what's missing.
+Current state: wrangler is authenticated, D1 `btcethdivergence` exists (0 tables), worker already deployed with placeholder from a prior partial attempt, but **no package.json/tsconfig/wrangler.jsonc/.gitignore/src exist on disk**. I'll reconstruct per plan.
+
+Starting **01-01 Task 1** (scaffold). Applying WARNING-01 fix (create `public/` before dry-run).
+`npm init -y` absorbed the pre-existing node_modules. I'll write a clean package.json per plan.
+Now write tsconfig.json, wrangler.jsonc, src/index.ts stub, and .gitignore.
+Now sync the lockfile with the corrected package.json, then run Task 1's verify commands.
+Task 1 verify passes (typecheck ✓, dry-run with ASSETS binding ✓, hono+zod installed ✓). Committing.
+**01-01 Task 2**: Create `public/index.html` and deploy.
+Deployed at `https://btcethdivergence.swadmin31.workers.dev`. Running Task 2 verify + INFO-02 check (no Pages project).
+Verify ✓ (asset served via binding; `pages project list` confirms no `btcethdivergence` Pages project — INFO-02 verified). Committing.
+**01-01 Task 3**: Harden git hygiene. `.dev.vars` already exists (comment-only). Verifying ignore rules.
+Task 3 verify ✓ (`.dev.vars`, `.wrangler/`, `node_modules/` all ignored; absent from porcelain). Both files were already correct from Task 1/pre-existing, so no new commit needed.
+
+Now **01-02 Task 1**: D1 binding + migrations. The `btcethdivergence` D1 database already exists (id `c5e8aaf3-966b-42c6-8975-1bdf234a07d8`) from the prior partial attempt, so I'll bind that ID rather than re-run `d1 create` (deviation to log).
+Both report "no migrations to apply" — but remote showed 0 tables earlier. Let me verify the tables actually exist in both.
+Remote output was truncated. Let me see the full result.
+Both tables exist in local and remote D1 (the prior partial attempt had already applied the identical migrations). Verify ✓. Committing Task 1.
+**01-02 Task 2**: JSON envelope helpers, DB repository, API skeleton. Writing the files.
+Now typecheck, dry-run, and deploy. Note: I used `export default app` (Hono v4 recommended module format for Workers).
+Deployed with `DB` and `ASSETS` bindings. Running Task 2 verify.
+All three envelope checks pass. Committing Task 2.
+**01-02 Task 3**: Zod validation on POST/PUT. The `src/lib/validate.ts` from the prior attempt already matches the plan's schema exactly (and includes a `validationMessage` helper) — I'll use it. Adding the POST/PUT handlers to the records router (already mounted).
+index.ts already mounts the records router, so POST/PUT are live. Typecheck, deploy, and run Task 3 verify (including WARNING-03's PUT-invalid checks).
+All Task 3 checks pass (including the WARNING-03 PUT guard). Per INFO-03, purging the test record so Phase 4 starts clean.
+Test record purged, DB back to empty. Committing Task 3.
+Typecheck error on the 429 assertion. Let me fix it to use `instanceof` + property checks.
+Task 1 verify passes (typecheck ✓, 4/4 tests green). Committing.
+**01-03 Task 2**: Deploy + run the Binance spike endpoint. Applying WARNING-02 fix (accept the legitimate 502 blocked outcome in verify).
+Now run the spike (run 1), then wait ~30s and run again (run 2).
+Both hosts return 403 — the blocked scenario SC5 contemplates. Waiting 30s for run 2.
+Both runs consistently blocked (403) from both hosts. Let me investigate: check if Binance is reachable from local (to distinguish a Cloudflare-specific block vs. Binance-wide issue), and capture the 403 body from the Worker.
+Local reaches both Binance hosts (200), but the deployed Worker gets 403 from both — confirming a Cloudflare-IP-specific block. Let me see the 403 body.
+Important finding: the 403 body is **Cloudflare's own block page** (cf-ray present, "Request blocked"), and both hosts are behind Cloudflare. Let me test one more hypothesis before declaring blocked — a browser-like User-Agent (Binance requires a UA; the Workers default UA may be rejected).
+User-Agent doesn't help — confirmed the block is on Cloudflare's shared Worker IPs reaching Binance's Cloudflare-protected edge (research Pitfall 1). Restoring the real `index.ts` (removing probe) and redeploying.
+Now run 3 more spike attempts (spaced ~15s) to capture intermittency evidence for the report.
+5/5 runs all 403 from both hosts — deterministic block, not intermittent. Task 2 verify passes (WARNING-02-acceptable 502 blocked outcome). Committing Task 2.
+**01-03 Task 3 (checkpoint:decision)**: Both hosts blocked → the embedded rule selects option (c) — external-fetcher ingest path. Writing SPIKE-REPORT.md with the verdict, then stopping for owner sign-off.
+Running Task 3's verify greps.
+Task 3 verify ✓ (Verdict + Phase 2 Path sections present; selected path matches one of three options). Committing the report, then stopping at the decision checkpoint.
+All auto tasks complete; one human checkpoint remains. Writing `1-SUMMARY.md` as instructed.
+Phase 1 execution complete: **8/9 tasks done**, 1 owner checkpoint blocking.
+
+**Built & verified live** (single Worker `https://btcethdivergence.swadmin31.workers.dev`, no Pages project):
+- SC1 assets binding, SC2 `{ok,data|error}` envelope on all routes, SC3 Zod rejection (POST+PUT) before any D1 write, SC4 `.dev.vars`/`.wrangler/` git-ignored
+- D1 schema (`klines`, `divergence_records`) live local + remote
+- Typed Binance client (`parseKline` string→number coercion) with 4/4 vitest tests
+
+**[SECURITY]/[CLEANUP] fixes:** none needed — no `DEV_*` flags, no secrets (`.dev.vars` comment-only), no dead code found.
+
+**⚠️ HUMAN CHECKPOINT — 01-03 T3 (SC5):** The Binance spike is **blocked**. 5/5 deployed-Worker fetches returned **403 from both `api.binance.com` and `data-api.binance.vision`** (Cloudflare-edge block of Worker IPs; the same request returns 200 from your local machine — verified). Per the plan's decision rule, this selects **option (c): Phase 2 uses an external-fetcher ingest path** (GitHub Actions job fetches Binance and POSTs into a future `/api/admin/ingest`). `SPIKE-REPORT.md` documents the verdict and path, awaiting your confirmation. To unblock: confirm option (c) or state an override (a: direct `api.binance.com` / b: `data-api.binance.vision`).
+
+Deviations logged in `1-SUMMARY.md`: reused existing D1 id, Hono v4 `export default app`, temporary spike-probe endpoints removed after use.
+
+Commits `0458c41..HEAD` (9):
+```
+ef82b70 scaffold · 6e8a8a7 assets+deploy · c28f997 D1+migrations · b70cf91 API skeleton · fc93c76 Zod validation · 31e3ee7 binance client · 81c861f spike endpoint · 7574fac spike report · 94b9eab summary
+```

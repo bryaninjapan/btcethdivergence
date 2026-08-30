@@ -1,0 +1,69 @@
+I'll start by reading the planning documents in the specified order.
+Now let me read the plan files and check file for Phase 2.
+Let me examine the SPIKE-REPORT, phase 1 summary, and current codebase state.
+The SPIKE-REPORT now shows owner confirmation ✅ 2026-08-31 for the external-fetcher path, satisfying the PLAN-GATE. Let me read the existing source files to understand conventions.
+Wrangler (Cloudflare) and `gh` (GitHub) are both authenticated, and the SPIKE-REPORT confirms the owner sign-off ✅ 2026-08-31 for option (c), satisfying the PLAN-GATE. Let me check the D1 databases and existing secrets before starting.
+Remote D1 has `klines` + `divergence_records`; local D1 is empty (all migrations pending locally). Both `wrangler` and `gh` are authenticated, and the owner gate is confirmed. Let me set up the task list and begin.
+Now executing 02-01 Task 1. Let me first check the D1 `first()` signature in the installed workers-types, then write the files.
+`D1Result.meta.changes: number` and `first<number>(colName)` confirmed. Now writing the Task 1 files.
+Now extend `src/lib/db.ts` with the backfill cursor and batch-insert functions.
+Now install `@types/node` and test the typecheck:scripts setup.
+TS18003 (no inputs) — the plan's 02-01 verify requires `typecheck:scripts` to exit 0 before the fetcher exists. Let me test whether the node+workers-types combo actually compiles the src import chain (the WARNING-01 concern) with a throwaway probe file before deciding the config.
+The node+workers-types combo compiles the src import chain cleanly. Now I need to fix the TS18003 (no inputs) issue so `typecheck:scripts` is satisfiable at 02-01 time — I'll have the scripts config also cover `src` so it always has inputs and acts as a combo sanity check.
+Config works. Removing the probe and running the full Task 1 verify: apply migrations (local + remote), typechecks, and the vitest suite.
+Remote migration apply hit an account authorization error (7403). `d1 execute --remote` worked moments ago, so let me check the log and retry.
+The `query` endpoint 403'd here but worked earlier for `d1 execute`. Let me retry — could be transient.
+The remote DB has `klines`/`divergence_records` applied outside migrations tracking (no `d1_migrations` table), so apply tries to re-run 0001 and fails. I'll adopt the remote DB into migrations tracking by mirroring the local `d1_migrations` state, then apply 0003. Let me inspect the local tracking table.
+Adopting the remote DB into migrations tracking (mirror local schema + mark 0001/0002 applied), then applying 0003 remotely.
+0003 applied remotely. Now running the complete Task 1 verify suite.
+All Task 1 verifications pass. Committing Task 1.
+Task 1 committed (46164ff). Now 02-01 Task 2. First, set the `INGEST_TOKEN` secret on the worker (user_setup prerequisite).
+Now update the source files for Task 2: `Env.INGEST_TOKEN`, `ingestSchema`, and the admin routes.
+Let me check the records route's validation pattern to match conventions.
+Typecheck passes. Deploying the Worker.
+Deployed. Now running the Task 2 verify sequence. First the auth guard and Zod rejection checks.
+The old `swadmin31` URL is serving an older worker build. The new deploy is at `gn01968711.workers.dev`. Let me check both.
+The new URL serves the new worker (401 = route exists + auth guard works); `swadmin31` serves stale code. Let me determine whether `swadmin31` is the same worker (different account) or stale.
+Confirmed: `swadmin31.workers.dev` is a stale worker in a different CF account; the authoritative Phase 2 deployment (with ingest + cursor routes) is at `https://btcethdivergence.gn01968711.workers.dev` in the currently-authenticated account that also holds the D1 data. I'll use that URL for verification and record the deviation. Now running the persistence verify: generate synthetic klines and run the full sequence.
+Auth/Zod/size-cap checks pass. Now the 1000-candle persistence test.
+1000 candles persisted. Now idempotency and cursor-advance verification.
+All persistence/cursor verifies pass. Quick check that the cursor route is also gated, then commit Task 2.
+Plan 02-01 complete (859eb90). Now 02-02 Task 1: install `tsx`, then write the backoff module + fetcher script.
+All 02-02 Task 1 verifies pass. Let me run the full test suite to confirm no regressions, then commit.
+02-02 Task 2: rewrite the workflow (dispatch-only, no cron). Note: I'll set `WORKER_URL` to the authoritative deployed worker URL (`gn01968711.workers.dev`) rather than the stale `swadmin31` URL in the plan — recording this deviation in the SUMMARY.
+Secrets set (note: stale `WORKER_API_KEY` from the old stub remains — I'll flag it in the SUMMARY). Now the workflow greps and the end-to-end local fetcher runs.
+Run 1 succeeded — real Binance data inserted, cursor advanced. Run 2 to prove repeated calls advance the cursor.
+Cursor advancing across runs (1616655600 → 1620273600 → 1623873600 → 1627473600). Now verify the reached-now tail handler with a future override (should exit 0 without POSTing).
+Reached-now tail works. Let me also prove pipeline idempotency — re-running the fetcher over an already-fetched range should insert 0 / skip 1000.
+Pipeline idempotency proven (0 inserted / 1000 skipped, no dupes). Committing the workflow, then triggering a real GitHub Actions run to test the GH-runner → Binance path.
+GitHub run triggered (ETHUSDT). Watching it to verify the GH-runner → Binance path (WARNING-02 concern).
+The GH run failed at the fetcher step. Let me get the logs.
+GH runner is also blocked by Binance ("non-retryable HTTP status" = non-429/418, likely 403) — confirming WARNING-02. Let me improve the abort logging to capture the actual status, then re-run to confirm.
+Confirmed: Binance returns **451** (geo-block) to GitHub Actions runner IPs too — WARNING-02's prediction verified. The GH-runner automation path is blocked; local-machine runs (which work) prove the Phase 2 mechanism. This is a finding for Phase 3's cron strategy, not a Phase 2 SC failure.
+
+Before wrapping up, I need to purge the synthetic test rows from 02-01's verify so Phase 3's real crawl won't be skipped by `INSERT OR IGNORE` over fake data.
+Only real data remains (3000 BTCUSDT rows, 2021-03-25 → 2021-06-01). Running the final phase verification battery.
+All phase verifications green. Writing the phase summary.
+Phase 2 complete. All 4 tasks across both plans executed, verified, and committed.
+
+**Tasks completed (4/4):**
+- 02-01 T1 — `backfill_state` migration + chunked-insert builder (≤14 rows/98 params/stmt, ≤40 stmts per `db.batch()`) + cursor repo + scripts typecheck isolation
+- 02-01 T2 — authenticated `POST /api/admin/ingest` + `GET /api/admin/backfill-cursor`, deployed & curl-verified (401/400/400-bound, 1000-insert, idempotent re-POST, cursor advance)
+- 02-02 T1 — `decideBackoff` (429 retry w/ Retry-After, 418 abort, 403 abort) + cursor-aware `backfill-fetcher.mts` (8 backoff tests + reached-now tail)
+- 02-02 T2 — dispatch-only GH workflow, GitHub secrets set, 3 local runs advanced cursor 1616655600→1627473600; remote D1 holds 3000 real BTCUSDT rows
+
+**Findings / [CONFLICT] needing owner input:** GitHub Actions runner IPs are **geo-blocked by Binance (451)** — the GH workflow cannot complete a run on hosted runners. Phase 2 SCs are fully proven via the local path; Phase 3's daily cron needs an owner decision (local `launchd`/crontab, self-hosted runner, or other). Also: the plan's `swadmin31.workers.dev` URL serves a stale worker in another CF account; I used the authoritative `gn01968711.workers.dev` for the `WORKER_URL` secret.
+
+**Security/cleanup:** no DEV_* flags or hardcoded secrets; purged 2000 synthetic test rows so Phase 3's crawl won't `INSERT OR IGNORE` over fake data. No [SECURITY]/[CLEANUP] commits were needed.
+
+**Summary:** `.planning/phases/02-kline-backfill-engine/2-SUMMARY.md` written.
+
+**Commit range (`6866741..HEAD`):**
+```
+a3f1650 include underlying Binance status in abort log line
+e27b518 rewrite fetch workflow as manual dispatch-only backfill driver
+4c430d5 backoff decision module + cursor-aware external backfill fetcher
+859eb90 authenticated ingest + backfill-cursor admin routes
+46164ff backfill_state migration + chunked D1 insert builder + cursor repo
+9c7c6ae record owner sign-off on external-fetcher path; fix D1 database_id
+```

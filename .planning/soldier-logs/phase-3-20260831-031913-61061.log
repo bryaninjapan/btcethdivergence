@@ -1,0 +1,23 @@
+Now let me inspect the current source and live state. Let me check key files and run read-only checks.
+Now let me run live checks: D1 state, worker health, launchd/cron state, and the summary's claimed test/typecheck results.
+Significant finding: the launchd jobs ARE now loaded and config exists — created **after** the SUMMARY was written (03:10). Let me examine the logs and re-query D1 properly.
+The owner ran the backfill after the summary. Let me read the full log and re-query D1 with full output.
+The backfill actually ran (both symbols reached "now"). Let me query the live D1 state properly, plus the gap check and cursor state.
+Both symbols span 2021-01-01 → 2026-08-30 18:00 UTC with 49,613 rows each. Now the gap check:
+7 gaps per symbol. Let me identify each gap window and cross-check against Binance directly to determine if they're explained (Binance genuinely lacks candles) or unexplained.
+Gap windows identified. Now let me cross-check each against Binance directly to determine if they're Binance-side (explained) or data loss (unexplained).
+All 7 gaps per symbol match Binance's own candle availability exactly — all explained. Now let me verify the regression items from Phase 2's verification (typecheck:scripts, tests) and confirm no duplicate rows exist in D1.
+All evidence gathered. Writing the verification report.
+Phase 3 verified against the **current, live** state. Key finding: the summary (03:10) reported everything BLOCKED, but the owner executed the work at 03:15–03:17 — the backfill crawl ran to completion for both symbols and the launchd jobs were loaded. I verified against that real state.
+
+**SC1 — PASS.** Remote D1: BTCUSDT and ETHUSDT both 49,613 rows, 2021-01-01 → 2026-08-30 18:00 UTC. 7 gaps/symbol, all identical across symbols and all confirmed Binance-side live (Binance returns no candles in those exact windows).
+
+**SC2 — PASS.** `INSERT OR IGNORE` + `PRIMARY KEY (symbol, open_time)`; the crawl log itself demonstrates re-run over the pre-loaded range (`{ inserted: 0, skipped: 1000 }` twice); D1 `dup_groups = 0`.
+
+**SC3 — FAIL.** Both launchd jobs are loaded with `StartCalendarInterval`, but neither has **ever fired** (no launchd stdout/stderr/log files exist — only the manual crawl log). Worse, `com.btcethdivergence.backfill.plist` is missing the `cd` to the project directory (the ETHUSDT plist has it), so the daily 02:00 BTCUSDT job will fail on trigger — `./node_modules/.bin/tsx` won't resolve from launchd's default CWD `/`.
+
+No regressions: `typecheck`, `typecheck:scripts`, and 38/38 vitest tests pass (the Phase 2 `typecheck:scripts` blocker is fixed), worker live 200.
+
+Report written to `.planning/phases/03-historical-load-cron-sync/3-VERIFICATION.md`.
+
+2 criteria PASS, 1 FAILED — phase not ready. Fix: add the `cd` (or `WorkingDirectory`) to the BTCUSDT plist, reload, and observe one real scheduled run per symbol.

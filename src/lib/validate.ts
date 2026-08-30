@@ -6,12 +6,16 @@ const baseFields = {
   start_time: z.number().int(),
   end_time: z.number().int(),
   type: divergenceType,
-  notes: z.string().max(1000).default(''),
-  tags: z.string().max(200).default(''),
+  notes: z.string().max(1000),
+  tags: z.string().max(200),
 };
 
 export const createRecordSchema = z
-  .object(baseFields)
+  .object({
+    ...baseFields,
+    notes: z.string().max(1000).default(''),
+    tags: z.string().max(200).default(''),
+  })
   .refine((d) => d.start_time < d.end_time, { message: 'start_time must be before end_time' });
 
 export const updateRecordSchema = z

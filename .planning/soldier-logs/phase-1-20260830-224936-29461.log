@@ -1,0 +1,9 @@
+The ROADMAP says Phase 1 plans are "TBD" — let me verify whether any plan files actually exist.
+Plan files exist. Let me read them in order.
+Now let me examine the current codebase state, existing commits, and uncommitted work.
+Let me read all source files to understand the current state.
+Now let me check remaining config files, gitignore, deployed URL, and state docs.
+Deployed URL found: `https://btcethdivergence.swadmin31.workers.dev`. Let me check the prior soldier log for context and git tracked files.
+The current in-flight work is 01-02 T3 (Zod validation, code written but uncommitted). Let me set up tracking and proceed.
+Something is inconsistent — `.dev.vars`/`.wrangler/` now appear untracked, and npm can't read package.json. Let me investigate the actual filesystem/git state.
+package.json and .gitignore have vanished mid-session — something is concurrently modifying this working tree. Let me assess the full picture.

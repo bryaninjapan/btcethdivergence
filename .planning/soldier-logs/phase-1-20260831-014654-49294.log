@@ -1,0 +1,19 @@
+Now let me run the live infrastructure checks and git hygiene checks in parallel.
+All checks complete. All 5 criteria verified with live evidence. Writing the verification report.
+## Verification Summary — Phase 1
+
+All 5 success criteria verified against the **current live state** (deployed Worker `btcethdivergence.swadmin31.workers.dev`, live git, current source):
+
+1. **Static assets via binding, no Pages** — PASS: root serves the placeholder bundle (HTTP 200); `wrangler pages project list` shows no `btcethdivergence` project.
+2. **`{ok, data|error}` envelope on every route** — PASS: `/api/health`, `/api/records`, and `/api/nonexistent` (404) all conform.
+3. **Zod rejects invalid POST/PUT before DB** — PASS: bad type → 400, bad ordering → 400, records list stayed `[]`, invalid PUT → 400.
+4. **`.dev.vars` / `.wrangler/` untracked** — PASS: `git check-ignore` echoes both; absent from `git ls-files` and porcelain.
+5. **Binance spike or documented fallback** — PASS: live spike re-run today returns 502 `Binance blocked: api.binance.com 403, data-api.binance.vision 403`; SPIKE-REPORT.md documents the Verdict, Phase 2 Path (option c, external-fetcher), and owner sign-off (2026-08-31).
+
+Regression: no prior phase to regress against; the phase's CRITICAL review finding (CR-01 klines ms/seconds) is fixed in current source; typecheck exits 0, 38 tests pass. Deviations in SUMMARY are all logged and none violates a criterion.
+
+Note (non-blocking): live spike endpoint answered without the Phase 2 `INGEST_TOKEN`, i.e. the deployed Worker is a Phase 1-era build (known stale-worker issue).
+
+Report written to `.planning/phases/01-worker-foundation-binance-spike/1-VERIFICATION.md`.
+
+**All 5 criteria PASS — phase verified.**
