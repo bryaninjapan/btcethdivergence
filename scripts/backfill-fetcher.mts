@@ -28,7 +28,7 @@ async function fetchWithBackoff(
     if (decision.action !== 'retry') {
       process.exit(1);
     }
-    await sleep((decision.waitSeconds ?? 0) * 1000);
+    await sleep(decision.waitSeconds * 1000);
     try {
       return await fetchKlines('https://api.binance.com', symbol, startTimeMs, 1000);
     } catch (retryErr) {
@@ -54,7 +54,13 @@ async function main(): Promise<void> {
     console.error(`Failed to read cursor: HTTP ${cursorRes.status}`);
     process.exit(1);
   }
-  const cursorData = (await cursorRes.json()) as { data?: { cursor: number | null } };
+  let cursorData: { data?: { cursor: number | null } };
+  try {
+    cursorData = (await cursorRes.json()) as { data?: { cursor: number | null } };
+  } catch (parseErr) {
+    console.error(`Failed to parse cursor response: ${String(parseErr)}`);
+    process.exit(1);
+  }
   const cursor = cursorData.data?.cursor ?? null;
   const startTimeMs = startTimeOverride
     ? Number(startTimeOverride)
@@ -88,14 +94,20 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   }
-  const ingestData = (await ingestRes.json()) as {
-    data?: { inserted: number; skipped: number; cursor: number };
-  };
-  const { inserted, skipped, cursor: newCursor } = ingestData.data ?? {
-    inserted: 0,
-    skipped: 0,
-    cursor: 0,
-  };
+  let ingestData: { data?: { inserted: number; skipped: number; cursor: number } };
+  try {
+    ingestData = await ingestRes.json();
+  } catch (parseErr) {
+    console.error(`Ingest response parsing failed: ${String(parseErr)}`);
+    process.exit(1);
+  }
+
+  if (!ingestData.data || typeof ingestData.data.cursor !== 'number') {
+    console.error(`Ingest response missing or malformed: ${JSON.stringify(ingestData)}`);
+    process.exit(1);
+  }
+
+  const { inserted, skipped, cursor: newCursor } = ingestData.data;
   const done = result.klines.length < 1000;
   console.log(`{ inserted: ${inserted}, skipped: ${skipped}, cursor: ${newCursor} }`);
   console.log(`done: ${done}`);

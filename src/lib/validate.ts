@@ -26,12 +26,12 @@ export type CreateRecordInput = z.infer<typeof createRecordSchema>;
 export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
 
 const ingestKline = z.object({
-  open_time: z.number().int(),
-  open: z.number(),
-  high: z.number(),
-  low: z.number(),
-  close: z.number(),
-  volume: z.number(),
+  open_time: z.number().int().min(0),
+  open: z.number().finite().positive(),
+  high: z.number().finite().positive(),
+  low: z.number().finite().positive(),
+  close: z.number().finite().positive(),
+  volume: z.number().finite().nonnegative(),
 });
 
 export const ingestSchema = z.object({
