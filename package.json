@@ -1,0 +1,24 @@
+{
+  "name": "btcethdivergence",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BTC/ETH divergence tracker — single Cloudflare Worker (Static Assets binding) + D1",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.13.5",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/workers-types": "^5.20260830.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.127.1"
+  }
+}
