@@ -25,6 +25,22 @@ export const updateRecordSchema = z
 export type CreateRecordInput = z.infer<typeof createRecordSchema>;
 export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
 
+const ingestKline = z.object({
+  open_time: z.number().int(),
+  open: z.number(),
+  high: z.number(),
+  low: z.number(),
+  close: z.number(),
+  volume: z.number(),
+});
+
+export const ingestSchema = z.object({
+  symbol: z.enum(['BTCUSDT', 'ETHUSDT']),
+  klines: z.array(ingestKline).min(1).max(1000),
+});
+
+export type IngestInput = z.infer<typeof ingestSchema>;
+
 export function validationMessage(error: z.ZodError): string {
   return error.issues
     .map((issue) => `${issue.path.join('.')}: ${issue.message}`.trim())

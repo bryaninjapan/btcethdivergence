@@ -1,9 +1,19 @@
-import { Hono } from 'hono';
+import { Context, Hono } from 'hono';
 import { BinanceError, fetchKlines } from '../lib/binance';
+import { getBackfillCursor, insertKlinesBatch, setBackfillCursor } from '../lib/db';
 import { jsonError, jsonOk } from '../lib/response';
+import { ingestSchema, validationMessage } from '../lib/validate';
 import type { Env } from '../types';
 
 const admin = new Hono<{ Bindings: Env }>();
+
+function auth(c: Context<{ Bindings: Env }>, env: Env): Response | null {
+  const expected = `Bearer ${env.INGEST_TOKEN}`;
+  if (c.req.header('Authorization') !== expected) {
+    return jsonError('Unauthorized', 401);
+  }
+  return null;
+}
 
 async function attempt(host: string, symbol: string, startTime: number) {
   const result = await fetchKlines(host, symbol, startTime, 1);
@@ -30,6 +40,36 @@ admin.get('/api/admin/binance-spike', async (c) => {
       );
     }
   }
+});
+
+admin.post('/api/admin/ingest', async (c) => {
+  const denied = auth(c, c.env);
+  if (denied) return denied;
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return jsonError('Invalid JSON body', 400);
+  }
+  const parsed = ingestSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(`Validation failed: ${validationMessage(parsed.error)}`, 400);
+  }
+  const { symbol, klines } = parsed.data;
+  const res = await insertKlinesBatch(c.env.DB, symbol, klines);
+  const cursor = klines[klines.length - 1].open_time;
+  await setBackfillCursor(c.env.DB, symbol, cursor);
+  return jsonOk({ inserted: res.inserted, skipped: res.skipped, cursor });
+});
+
+admin.get('/api/admin/backfill-cursor', async (c) => {
+  const denied = auth(c, c.env);
+  if (denied) return denied;
+
+  const symbol = c.req.query('symbol') ?? 'BTCUSDT';
+  const cursor = await getBackfillCursor(c.env.DB, symbol);
+  return jsonOk({ symbol, cursor, default: 1609459200 });
 });
 
 export default admin;
