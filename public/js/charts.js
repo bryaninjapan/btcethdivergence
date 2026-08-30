@@ -13,6 +13,7 @@ import { nowRange, parseRangeParams } from './chart-range.js';
 
 let btcChart = null, ethChart = null, btcSeries = null, ethSeries = null;
 let sync = null, unsubBtc = null, unsubEth = null;
+let activeController = null;
 
 function toCandle(row) {
   return {
@@ -111,14 +112,16 @@ async function loadRange(startMs, endMs) {
   if (unsubEth) unsubEth();
   if (loadingEl) loadingEl.hidden = false;
   errorEl.hidden = true;
+  if (activeController) activeController.abort();
+  const controller = new AbortController();
+  activeController = controller;
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
     const [btcRows, ethRows] = await Promise.all([
       loadWindow('BTCUSDT', startMs, endMs, controller),
       loadWindow('ETHUSDT', startMs, endMs, controller),
     ]);
-    clearTimeout(timeoutId);
+
     if (loadingEl) loadingEl.hidden = true;
 
     btcSeries.setData(btcRows.map(toCandle));
@@ -137,6 +140,8 @@ async function loadRange(startMs, endMs) {
     errorEl.textContent = `載入 K 線失敗：${error.message}`;
     errorEl.hidden = false;
   } finally {
+    clearTimeout(timeoutId);
+    activeController = null;
     sync = sync || createRangeSync();
     unsubBtc = sync.link(btcChart.timeScale(), ethChart.timeScale());
     unsubEth = sync.link(ethChart.timeScale(), btcChart.timeScale());
@@ -175,4 +180,11 @@ async function init() {
   });
 }
 
-init();
+init().catch((error) => {
+  console.error('Charts initialization failed:', error);
+  const errorEl = document.getElementById('chart-error');
+  if (errorEl) {
+    errorEl.textContent = `圖表初始化失敗：${error.message}`;
+    errorEl.hidden = false;
+  }
+});
