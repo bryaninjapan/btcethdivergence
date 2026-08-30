@@ -48,6 +48,10 @@ function renderTable(records) {
       tr.appendChild(td);
     }
     const actionTd = document.createElement('td');
+    const viewBtn = document.createElement('button');
+    viewBtn.type = 'button';
+    viewBtn.textContent = '查看K線';
+    viewBtn.dataset.action = 'view-chart';
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.textContent = '編輯';
@@ -56,7 +60,7 @@ function renderTable(records) {
     deleteBtn.type = 'button';
     deleteBtn.textContent = '刪除';
     deleteBtn.dataset.action = 'delete';
-    actionTd.append(editBtn, deleteBtn);
+    actionTd.append(viewBtn, editBtn, deleteBtn);
     tr.appendChild(actionTd);
     tbody.appendChild(tr);
   }
@@ -228,6 +232,10 @@ function wireRowActions() {
     const id = Number(btn.closest('tr').dataset.id);
     const record = recordsCache.find((r) => r.id === id);
     if (!record) return;
+    if (btn.dataset.action === 'view-chart') {
+      const { startMs, endMs } = recordToRange(record);
+      window.location.assign(`/charts.html?start=${startMs}&end=${endMs}`);
+    }
     if (btn.dataset.action === 'edit') openForm(record);
     if (btn.dataset.action === 'delete') confirmDelete(record);
   });
