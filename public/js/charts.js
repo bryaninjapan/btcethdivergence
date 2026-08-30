@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { createRangeSync } from './chart-sync.js';
 
 const DEFAULT_WINDOW_SECONDS = 30 * 24 * 3600;
 
@@ -43,8 +44,21 @@ async function init() {
   const errorEl = document.getElementById('chart-error');
   try {
     const [btcRows, ethRows] = await Promise.all([loadWindow('BTCUSDT'), loadWindow('ETHUSDT')]);
-    renderChart('btc-chart', btcRows.map(toCandle));
-    renderChart('eth-chart', ethRows.map(toCandle));
+    const btcChart = renderChart('btc-chart', btcRows.map(toCandle));
+    const ethChart = renderChart('eth-chart', ethRows.map(toCandle));
+
+    const btcScale = btcChart.chart.timeScale();
+    const ethScale = ethChart.chart.timeScale();
+
+    window.btcChart = btcChart.chart;
+    window.ethChart = ethChart.chart;
+
+    const initial = btcScale.getVisibleLogicalRange();
+    if (initial) ethScale.setVisibleLogicalRange(initial);
+
+    const sync = createRangeSync();
+    sync.link(btcScale, ethScale);
+    sync.link(ethScale, btcScale);
   } catch (error) {
     errorEl.textContent = `載入 K 線失敗：${error.message}`;
     errorEl.hidden = false;
