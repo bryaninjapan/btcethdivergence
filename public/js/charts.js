@@ -77,9 +77,9 @@ function setPickerFromEpoch(pickerEl, ts) {
   fillSelect(pickerEl.querySelector('[data-part="hour"]'), hourOptions());
   pickerEl.querySelector('[data-part="year"]').value = String(p.year);
   pickerEl.querySelector('[data-part="month"]').value = String(p.month);
-  pickerEl.querySelector('[data-part="day"]').value = String(p.day);
   pickerEl.querySelector('[data-part="hour"]').value = String(p.hour);
   rebuildDays(pickerEl);
+  pickerEl.querySelector('[data-part="day"]').value = String(p.day);
 }
 
 function pickerEpoch(pickerEl) {
