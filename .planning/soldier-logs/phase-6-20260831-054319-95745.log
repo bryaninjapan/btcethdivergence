@@ -1,0 +1,47 @@
+Baseline green (68 tests, typecheck clean). Let me check the unstaged ROADMAP change and set up the task list.
+ROADMAP diff is just the phase-6 plan-list update from planning; I'll leave it untouched. Executing **06-01 Task 1**.
+Now deploy and run Task 1's verify markers:
+The 307 is Cloudflare's standard clean-URL redirect (`/charts.html` → `/charts`). The plan's `curl -sf` markers miss it because `-f` doesn't follow redirects (empty body). Code functionally matches — this is a verify-command fix. Let me confirm the pattern from a prior phase before adjusting.
+Confirmed: `/index.html` also 307s to `/` — standard Workers Assets clean-URL behavior; prior phases curled the root. Re-running Task 1 markers with `-L` (follow redirect):
+All markers pass. Committing Task 1 (charts.js is Task 2, so excluded):
+**06-01 Task 2** — security scan: new JS file, no secrets/DEV flags, uses `textContent`, all networking via `api()`. Writing charts.js per plan:
+Deployed markers pass. Browser checkpoint — loading the live page:
+Pencil MCP unavailable. Loading the webapp-testing skill for a Playwright-based browser checkpoint:
+Playwright browsers are already cached. Installing the Python package into a temp venv:
+Version mismatch — cached Chromium is 1217, package wants 1223. Pointing at the cached build directly:
+Charts render correctly; one 404 console error. Identifying which resource:
+The 404 is `/favicon.ico` — a pre-existing site-wide missing asset, not a JS error. Confirming it's not introduced by my change:
+Same 404 on the records page — pre-existing and unrelated. Let me visually confirm the screenshot:
+Checkpoint verified via DOM checks: both panes render real canvas-based candlestick charts with correct titles, no error banner, no JS errors (only the pre-existing site-wide favicon 404, also present on index.html). Committing Task 2:
+**06-02 Task 1** — security/dead-code scan: pure module, no DOM/secrets. Writing chart-sync.js and the vitest suite, applying the W-1 plan-check fix (throwing scale as link *target*):
+8/8 green. Full suite, typecheck, and must-never-appear greps:
+**06-02 Task 2** — wiring sync into charts.js:
+Deployed markers fail while local files have the content — checking served vs local:
+Served assets are stale (cache). Checking response headers:
+Fresh content is deployed — the stale response was edge cache. Re-running markers:
+All sync markers pass. For the interactive sync checkpoint I need programmatic access to the chart ranges — the plan-check (W-2 fix_hint) sanctions exposing the chart refs on `window` as the enabler for real-browser sync assertions. Adding that small, logged deviation:
+Writing the interactive sync checkpoint script (baseline → pan both directions → zoom → rapid-fire → boundary scrub):
+Baseline aligned (both `535..722`). Fixing the canvas selector (LWC renders 7 canvases per chart — using first):
+All sync assertions PASS (baseline, bidirectional pan, zoom, rapid-fire, edge scrub — no desync). The "FAIL" is only the same pre-existing favicon 404 network log (not a JS error). Refining the pass criterion to treat genuine JS errors vs. the benign asset 404:
+Full sync checkpoint PASSES. Running the complete verification track for 06-02:
+All 4 tasks complete. Writing the phase summary:
+Fixing the hashes in the summary:
+Phase 6 complete — all 4 tasks done, deployed, and verified in a real browser.
+
+**Built:** `public/charts.html` (stacked BTC/ETH panes, pinned LWC v5.2.1 CDN), `public/index.html` reachability link, `public/css/style.css` pane CSS, `public/js/charts.js` (bounded 30-day kline fetch + v5 candlesticks + sync wiring), `public/js/chart-sync.js` (pure logical-range sync with re-entrancy guard), `public/js/chart-sync.test.ts` (8 vitest cases).
+
+**Verification:** vitest 8/8 targeted, 76/76 full, typecheck 0. Deployed curl markers all pass. Playwright checkpoint: both panes render real hourly candles; baseline aligned, pan BTC→ETH and ETH→BTC lockstep, zoom locked, 40-event rapid zoom + 30-drag rapid pan zero desync, left-edge scrub beyond data bounds no crash — SC1–SC4 all green.
+
+**Plan-check fixes applied:** W-1 (exception-safety test wired with throwing scale as link target, guard resets via `finally`, 8/8 not 7/7); W-2 (exposed `window.btcChart`/`window.ethChart` per the sanctioned fix_hint to enable the automated lockstep assertions).
+
+**Deviations (logged in 6-SUMMARY.md):** verify curls use `-sfL` (Workers Assets 307s `charts.html`→`/charts`, `index.html`→`/`); pre-existing site-wide `/favicon.ico` 404 is a benign network log, not a JS error.
+
+**No checkpoints blocked, no [SECURITY]/[CLEANUP] fixes needed.** (Section A scans found no DEV_* flags, secrets, dead code, or lint issues.)
+
+**Commits** (`git log --oneline 573b92b..HEAD`):
+- `7d7c277` charts page — stacked panes, pinned CDN, reachability link
+- `4923f86` charts.js — bounded fetch + v5 candlestick rendering
+- `7b22bce` chart-sync.js pure sync factory + vitest suite
+- `f2ad4b9` wire sync into charts.js with initial alignment
+
+Summary written to `.planning/phases/06-dual-chart-rendering-time-sync/6-SUMMARY.md`.

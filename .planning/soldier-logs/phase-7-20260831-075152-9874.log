@@ -1,0 +1,10 @@
+All source verified. I have a complete picture — the plan files were updated (07:51) after the prior check (07:50), so I'll re-verify the previously-flagged items against the current text and report fresh findings.
+Plan check complete. Report written to `.planning/phases/07-chart-navigation-record-deep-link/7-PLAN-CHECK.md`.
+
+**Summary** (0 blockers, 2 warnings, 7 info):
+
+Both Phase 7 plans (07-01, 07-02) are requirement-complete — CHART-04/05/06 all map to concrete tasks, dependencies are acyclic and correctly ordered, and every success criterion (SC1 log toggle, SC2 custom range, SC3 record deep link with ±24h padding) is wired to specific tasks with evidence. I fact-checked all load-bearing claims against the source: `/api/klines` ms contract (klines.ts:15-22), unbounded `queryKlines`, `chart-sync.link()` returning unsub fns, datetime.js exports, the delegated records.js click handler + `recordsCache`, the pinned LWC 5.2.1 CDN, CSS vars, and tsconfig (src-only typecheck). The prior check's two warnings were re-verified as already fixed in the current plan text (subscribe only in `finally`; explicit null guard in `parseRangeParams`).
+
+Remaining warnings: **W1** — SC2's full-history worst case (~48K candles/symbol, claimed to "render fine") is never exercised by the checkpoints and contradicts PITFALLS.md's own anti-pattern; add a full-range checkpoint or a server-side cap. **W2** — the `parseRangeParams` rationale prose still describes the pre-guard buggy behavior, contradicting the (correct) mandated code; align the text so an executor doesn't regress it.
+
+Plans verified. Ready to execute.

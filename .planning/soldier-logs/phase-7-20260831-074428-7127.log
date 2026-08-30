@@ -1,0 +1,18 @@
+All verification complete. Writing the report.
+Plan check complete. Report written to `.planning/phases/07-chart-navigation-record-deep-link/7-PLAN-CHECK.md`.
+
+**Phase 7 Plan Check summary**
+
+Verified 07-01 (CHART-04, CHART-05) and 07-02 (CHART-06) against ROADMAP, REQUIREMENTS, PROJECT.md, ARCHITECTURE.md, and the live source. **Result: 0 blockers, 2 warnings, 4 info.**
+
+- **Coverage**: CHART-04/05/06 all covered; SC1→07-01 T2+T3, SC2→07-01 T1+T2+T3, SC3→07-01 T1 + 07-02 T1+T2. No gaps.
+- **Dependencies**: 07-01→06-02 (Phase 6 signed off), 07-02→07-01; task ordering acyclic with preconditions. Scope within limits (3+2 tasks).
+- **Fact-check**: all load-bearing claims verified — `PriceScaleMode.Logarithmic` named export in v5 standalone, `priceScale('right').applyOptions`, `/api/klines` ms-range contract (klines.ts:15-22), unbounded `queryKlines`, `chart-sync.link()` unsubscribe return, `datetime.js` helpers, `tsconfig` "src"-only scope, CSS vars, ARCHITECTURE deep-link flow.
+
+**Warnings**:
+- **W1** — 07-01 T3 `setPickerFromEpoch` sets the day value before the day select is populated; `rebuildDays` then clamps it to 1. Pickers always show the 1st, breaking both picker-reflection checkpoints and risking a silently wrong reload after a deep link. Fix: fill day options before assigning, or set day after `rebuildDays`.
+- **W2** — `loadRange` unsubscribes sync links before fetch; on failure it never re-subscribes, leaving the charts permanently desynced until the next successful load. Fix: re-subscribe in a `finally` path.
+
+**Info**: ARCHITECTURE.md uses `/chart` vs actual `/charts.html` (plan is correct, doc stale); log-persistence scoped out legitimately; placeholder URL in verify blocks; stale STATE.md.
+
+Plans verified. Ready to execute.

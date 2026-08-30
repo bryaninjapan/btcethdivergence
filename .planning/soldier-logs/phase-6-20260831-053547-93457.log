@@ -1,0 +1,18 @@
+All fact-checking complete. Writing the verification report.
+## Summary
+
+Verified Phase 6 against ROADMAP, REQUIREMENTS.md, PROJECT.md, and the actual source tree. **0 blockers, 2 warnings, 6 info.**
+
+- **Coverage**: All 5 requirements (CHART-01/02/03/07/08) and all 4 success criteria are delivered by named tasks across 06-01 (rendering) and 06-02 (sync). No zero-coverage gaps.
+- **Dependencies**: 06-01 → 06-02, acyclic; 06-01's dependency on 05-02 is real (committed, touches `public/index.html` + `public/js/*`). Scope is 2 tasks/plan.
+- **Fact-checked against source**: `/api/klines` ms→s conversion (`src/routes/klines.ts:15-24`), `open_time` as unix seconds (`src/lib/binance.ts:17`), `api()` chokepoint, `textContent`-only discipline in `records.js`, tsconfig `include: ["src"]`, STACK.md:47/:287 citations, PITFALLS.md:184/:248, pinned CDN URL (HTTP 200, npm 5.2.1 exists). All accurate.
+
+**Warnings** (in the plans' own test/verification specs, not the shipped logic):
+- W-1: The exception-safety vitest case (06-02 T1) is wired backwards — `ThrowingTimeScale` is the *source* of `sync.link(a,b)`, so `to.setVisibleLogicalRange` never throws and `expect(...).toThrow()` fails. Fix: `sync.link(b, a)`. The guard's `try/finally` itself is correct.
+- W-2: Optional Playwright spec asserts `window.btcChart`/`window.ethChart`, which `charts.js` never sets. Fix: expose refs or change the assertion.
+
+**Info**: "7/7" test count vs 8 enumerated cases, prose/code drift in case 8, `chart.html` vs `charts.html` naming, accepted logical-range alignment behavior, unchecked `public/js/*.test.ts`, undefined `ThrowingTimeScale` sample.
+
+Both warnings are trivial in-execution fixes that the verify steps will surface immediately. No re-planning needed.
+
+Plans verified. Ready to execute.

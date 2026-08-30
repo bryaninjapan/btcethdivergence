@@ -1,0 +1,17 @@
+I have full context now. Let me create the phase directory and write the plan files.
+Let me fix a bug in the round-trip test case spec (the URL keys must be `start`/`end`, not `startMs`/`endMs`):
+Both plan files are written. Summary:
+
+**Phase 7 → 2 plan files, 5 tasks total**
+
+- **07-01-PLAN.md** (wave 1, depends on 06-02) — Chart navigation controls, 3 tasks:
+  1. Pure `public/js/chart-range.js` (recordToRange ±24h padding, parseRangeParams, nowRange) + 9-case vitest suite
+  2. `charts.html` + `style.css` — log-scale checkbox, UTC start/end dropdown pickers, 載入範圍 button, range summary
+  3. `charts.js` — reusable `loadRange()` (unsub→setData→align→re-subscribe), `setLogScale()` applying `PriceScaleMode` to both charts at once, param-driven init
+- **07-02-PLAN.md** (wave 2, depends on 07-01) — Record deep link, 2 tasks:
+  1. `records.js` — 查看K線 button per row → `recordToRange(record)` navigation
+  2. End-to-end SC3 browser verification + fix loop (padding/centering, fallbacks, edge-of-history)
+
+**Requirement & SC coverage:** CHART-04→07-01 T2/T3 (SC1: log toggle both charts at once); CHART-05→07-01 T1/T2/T3 (SC2: custom range loads both charts); CHART-06→07-01 T1 + 07-02 T1/T2 (SC3: 24h padding, centered). Every success criterion maps to named tasks, each task has files/action/verify/done, and the dependency graph (07-01→07-02, acyclic) is ordered.
+
+**[PLAN-GATE] blockers: none** — no CONTEXT.md, no OPEN research inputs, no backend changes required; all locks respected (single Worker, UTC dropdowns, pinned LWC v5 CDN, logical-range sync, api() chokepoint, no innerHTML).

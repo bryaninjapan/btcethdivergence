@@ -1,0 +1,37 @@
+Now let me explore the existing codebase to understand conventions.
+Interesting — some phase-7 commits already exist. Let me check the current state.
+Much of 07-01 appears already committed. Let me check the phase-7 soldier logs to understand where the previous run stopped.
+The previous run got through 07-01 tasks and was mid-browser-checkpoint when it stopped. Let me set up a task list and verify current state.
+Now let me verify the committed 07-01 state passes its code-level checks.
+All greps clean. But deployed charts.html markers failed silently — let me investigate the deployed site.
+Redirect preserves query params — deep links work. Now the deployed charts.js markers:
+Deployed markers all green. Now let me run the browser checkpoints. First check Playwright availability.
+The previous run left a comprehensive checkpoint script covering 07-01 browser checks + W1. Let me run it.
+All 24 browser checks pass (including the W1 full-history range). 07-01 fully verified. Now executing 07-02 Task 1 — the `查看K線` deep-link button in records.js.
+Section A scan on records.js: no DEV_* flags, no secrets, no auth bypass. Clean. Applying the three edits:
+Now verify the changes and run the must-never-appear greps:
+A duplicate import appeared. Let me check the diff:
+Duplicate import (added at both line 2 and line 12). Removing the stray one at line 2:
+The import got removed entirely — records.js now references `recordToRange` without importing it. Let me re-add it cleanly:
+Single clean import. Verifying the full diff and running the verify greps:
+git diff only shows the import but rg finds the button code. Let me check git state — something may have committed in between:
+A **concurrent executor** (dispatch 080246, still `in_progress`) committed during my session — commits `7d56e3b` and `88854ad`. Let me assess what it changed before continuing.
+The concurrent executor committed the button code but **without the `recordToRange` import** — HEAD's records.js references it unimported (a real bug). My pending change supplies the missing import. Let me verify the concurrent executor's charts.js change and re-run all checks before committing.
+The concurrent fix is legitimate and grep-clean. Running the full suite + typecheck against current state:
+Suite green. Committing my fix (the missing import that the deep-link button needs):
+Now let me verify the complete deep-link wiring in records.js and deploy:
+records.js is complete and correct. Deploying:
+All 07-02 Task 1 markers live. Now 07-02 Task 2 — the E2E deep-link verification battery. Writing a Playwright script for the SC3 browser proof:
+One check failed — my assertion's expected summary string was miscounted (record end is `2024-01-16T04:00Z`, not `03:00Z`). The code is correct: summary shows `2024-01-14T12:00Z ~ 2024-01-17T04:00Z` = exactly [start−24h, end+24h], record span centered. Fixing the checkpoint assertion (verify-command fix, not a code fix):
+All 20/20 deep-link checks pass. Let me check whether the concurrent executor has made further commits, and re-verify deployed records.js import:
+Deployed records.js has the import (line 11) and usage (line 237). All 07-02 battery checks pass. Let me run one final consolidated verification and capture the commit range:
+All checks green (the `fetch(` matches are only in `api.js`/`api.test.ts` — the intended single fetch chokepoint; the plan-scoped grep on charts.js/records.js is clean). Writing the SUMMARY:
+Phase 7 complete. All three success criteria verified end-to-end.
+
+**Built** (commit range `44fc1bf..HEAD`, 8 commits): pure `public/js/chart-range.js` (±24h record padding, deep-link param parsing, default window) + 10-case vitest suite incl. the record→URL→parse round-trip SC3 contract; controls bar in `charts.html` (`#log-scale` checkbox, UTC start/end pickers, `載入範圍`, `#range-summary`) + CSS; `charts.js` `loadRange()`/`setLogScale()` (flips both charts)/param-driven `init()`; records.js `查看K線` button navigating to `/charts.html?start/end` via `recordToRange`.
+
+**Verification**: `npx vitest run` 86/86 green; `npm run typecheck` exit 0; all deployed markers + must-never-appear greps clean. Browser proofs via Playwright: 24/24 (07-01: SC1 log toggle both charts, SC2 custom range, PLAN-CHECK W1 **full-history 49,613 candles/symbol**, sync-under-log) and 20/20 (07-02: row button order, SC3 padded+centered window on both charts, summary/pickers reflection, no-params + malformed fallbacks, edge-of-history no crash). No blocking human checkpoints remain.
+
+**Fixes applied**: `[fix]` SRI `integrity` hash (LWC CDN blocked — charts had rendered nothing since Phase 6); `[fix]` missing `recordToRange` import (records.js would throw on every click); `[fix]` picker day-rebuild listeners.
+
+**Note**: a concurrent phase-7 executor (dispatch `7-...-080246`, still `in_progress`) committed `7d56e3b`/`88854ad` mid-session; its records.js commit omitted the required import, which this session fixed in `3de2974`. Final code converges correctly. Summary at `.planning/phases/07-chart-navigation-record-deep-link/7-SUMMARY.md`.

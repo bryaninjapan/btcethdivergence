@@ -1,0 +1,18 @@
+Now let me verify the backend contract, CSS vars, index.html, and the phase 6/7 planning references.
+Let me quickly confirm STATE.md status and the prior phase check findings for completeness.
+I have everything I need. All load-bearing claims fact-checked. Now writing the plan-check report.
+Plan check written to `.planning/phases/07-chart-navigation-record-deep-link/7-PLAN-CHECK.md`.
+
+**Summary**
+
+Verified plans 07-01 (CHART-04, CHART-05) and 07-02 (CHART-06) against ROADMAP.md, REQUIREMENTS.md, PROJECT.md, ARCHITECTURE.md, and the live source tree. All load-bearing claims check out: `/api/klines` ms contract (`src/routes/klines.ts:15-22`), unbounded `queryKlines`, `chart-sync.js` unsubscribe return, Phase 6 `charts.js` shape, `datetime.js`/`records.js` helpers, CSS vars, pinned 5.2.1 CDN, Phase 6 UAT sign-off.
+
+All 3 requirements and all 3 success criteria are covered by concrete tasks; dependencies are acyclic; verification is strong (round-trip unit test + deployed-marker curls + per-SC browser checkpoints). No blockers.
+
+Two warnings (both code defects in the plans' mandated code, both one-line fixes):
+- **W1**: `loadRange` subscribes sync links in both the `try` and `finally` blocks → subscriptions leak/accumulate on every successful reload. Fix: drop the `try`-block `sync.link` calls, keep `finally` only.
+- **W2**: `parseRangeParams('?end=…')` (missing `start`) returns `{startMs: 0, …}` instead of `null` because `Number(null)===0` — its own "missing param → null" contract is only half-implemented and test 4 doesn't cover missing-start. Fix: explicit null-param guard + test.
+
+Also flagged 5 info items — notably that the previous 7-PLAN-CHECK's W1/W2 (day-picker reset, sync dropped on failure) are **false positives** after re-verification against the actual plan code, so executors should not act on them.
+
+Plans verified. Ready to execute.

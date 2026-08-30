@@ -1,0 +1,10 @@
+Let me verify the Lightweight Charts v5 API surface for the standalone build and logical-range sync before writing the plan.
+Let me check the config and any context docs for phase-specific decisions.
+CDN URL confirmed. Now creating the phase directory and writing the plan files.
+Now updating the ROADMAP phase section to reference the new plan files, matching the Phase 4 convention.
+**Summary**
+
+- **Plan files:** 2 — `06-01-PLAN.md` (wave 1: `charts.html` page + stacked BTC/ETH Lightweight Charts v5 candlestick panes), `06-02-PLAN.md` (wave 2: pure `chart-sync.js` logical-range sync module + re-entrancy guard, unit-tested, wired into `charts.js`).
+- **Total tasks:** 4 (2 per plan, within the 2–3 task budget). Dependencies acyclic: `06-01` → `06-02`.
+- **[PLAN-GATE] blockers:** none. No open research decisions — the v5 CDN URL (`lightweight-charts@5.2.1` standalone) and v5 logical-range API surface (`addSeries(CandlestickSeries)`, `subscribeVisibleLogicalRangeChange`/`setVisibleLogicalRange`) were verified against official docs and the live CDN during planning. One prerequisite noted in `user_setup` (not a gate): the browser checkpoints need Phase 2/3 kline data in D1.
+- **Traceability confirmed:** CHART-01/02 → 06-01 T1+T2; CHART-07 → 06-01 T1+T2 (pinned CDN + v5-only API greps); CHART-03 → 06-02 T2; CHART-08 → 06-02 T1+T2 (logical-range-only greps). Every success criterion is covered: SC1 → 06-01, SC2 → 06-02 T2, SC3 → 06-02 T1 (unit) + T2 (browser), SC4 → 06-01. ROADMAP Phase 6 updated to list 06-01/06-02.

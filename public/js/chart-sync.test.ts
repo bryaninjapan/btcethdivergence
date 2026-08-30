@@ -9,9 +9,11 @@ class FakeTimeScale {
   }
   subscribeVisibleLogicalRangeChange(fn) {
     this.handlers.push(fn);
-    return () => {
-      this.handlers = this.handlers.filter((h) => h !== fn);
-    };
+    // Real LWC returns void, not an unsubscribe function
+    return undefined;
+  }
+  unsubscribeVisibleLogicalRangeChange(fn) {
+    this.handlers = this.handlers.filter((h) => h !== fn);
   }
   setVisibleLogicalRange(range) {
     this.applyCount += 1;
@@ -107,8 +109,9 @@ describe('chart-sync.js logical-range sync (CHART-08)', () => {
     const sync = createRangeSync();
     const a = new FakeTimeScale();
     const b = new FakeTimeScale();
-    const un = sync.link(a, b);
-    un();
+    const unsub = sync.link(a, b);
+    expect(typeof unsub).toBe('function');
+    unsub();
     a.fire({ from: 1, to: 2 });
     expect(b.applyCount).toBe(0);
   });
@@ -125,5 +128,25 @@ describe('chart-sync.js logical-range sync (CHART-08)', () => {
     expect(b.applyCount).toBe(1);
     expect(b.range).toEqual({ from: 5, to: 45 });
     expect(sync.isSyncing()).toBe(false);
+  });
+
+  it('handler cleanup: unsubscribe prevents future notifications', () => {
+    const sync = createRangeSync();
+    const a = new FakeTimeScale();
+    const b = new FakeTimeScale();
+
+    // Link and fire once
+    const unsub = sync.link(a, b);
+    a.fire({ from: 1, to: 10 });
+    expect(b.applyCount).toBe(1);
+    expect(a.handlers.length).toBe(1);
+
+    // Unsubscribe
+    unsub();
+    expect(a.handlers.length).toBe(0);
+
+    // Fire again - should not apply
+    a.fire({ from: 2, to: 20 });
+    expect(b.applyCount).toBe(1); // Still 1, not 2
   });
 });

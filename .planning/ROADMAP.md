@@ -107,11 +107,12 @@ Plans:
   2. Scrolling or zooming either chart applies the same visible range to the other chart automatically.
   3. Panning/zooming rapidly on either chart does not desync, double-fire, or crash (the re-entrancy guard holds), including across ranges with data gaps.
   4. Charts render using the Lightweight Charts v5 standalone build loaded from a CDN, with no build step required.
-**Plans**: TBD
+**Plans**: 06-01 (charts page + dual candlestick rendering), 06-02 (logical-range time sync with re-entrancy guard)
 **UI hint**: yes
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01: Charts page — stacked BTC/ETH Lightweight Charts v5 candlestick panes
+- [ ] 06-02: Logical-range time sync with re-entrancy guard
 
 ### Phase 7: Chart Navigation & Record Deep Link
 **Goal**: The owner can freely navigate chart history and jump straight from a logged record to its exact time window.

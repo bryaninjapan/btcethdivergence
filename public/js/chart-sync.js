@@ -5,7 +5,7 @@ function isUsableRange(range) {
 export function createRangeSync() {
   let syncing = false;
   function link(from, to) {
-    return from.subscribeVisibleLogicalRangeChange((range) => {
+    const handler = (range) => {
       if (syncing || !isUsableRange(range)) return;
       syncing = true;
       try {
@@ -13,7 +13,9 @@ export function createRangeSync() {
       } finally {
         syncing = false;
       }
-    });
+    };
+    from.subscribeVisibleLogicalRangeChange(handler);
+    return () => from.unsubscribeVisibleLogicalRangeChange(handler);
   }
   return { link, isSyncing: () => syncing };
 }
