@@ -82,9 +82,46 @@ All 87 vitest tests passing:
 
 4. **Top-Level Error Handling**: Page-level async initialization should always have `.catch()` for debugging and user feedback.
 
+## Warnings Resolved
+
+### W1: Date Picker Reset to Day 1
+**Problem**: `setPickerFromEpoch` set day value before `rebuildDays` was called, so day options were still empty. Deep links would show day 1 instead of actual date.
+
+**Fix** (commit 801af00):
+Reorder operations to populate day options via `rebuildDays()` before setting day value.
+
+**Before**:
+```javascript
+setPickerFromEpoch(...) {
+  fillSelect(year); fillSelect(month); fillSelect(hour);
+  set year.value, month.value, day.value, hour.value;  // ← day select empty yet
+  rebuildDays(pickerEl);  // ← options populated too late
+}
+```
+
+**After**:
+```javascript
+setPickerFromEpoch(...) {
+  fillSelect(year); fillSelect(month); fillSelect(hour);
+  set year.value, month.value, hour.value;
+  rebuildDays(pickerEl);  // ← options populated first
+  set day.value;  // ← now day select has options
+}
+```
+
+### W2: Sync Links Permanently Broken on Load Failure
+**Verified as non-blocking**: Finally block (lines 142-149 in charts.js) always re-subscribes sync links regardless of success/error. Load failures properly restore sync state.
+
+**Design rationale**: Unsubscribe old links first (lines 111-112) to prevent handler accumulation. Then finally block re-subscribes unconditionally.
+
+### Unaddressed Warnings
+1. **SC2 full-history test coverage** (~48K candles) — No explicit browser test. Tests exist but not documented as covering this scale.
+2. **parseRangeParams description inconsistency** — Text vs code alignment (non-functional).
+
 ## Commits
 - 0ed343e: HIGH fix — chart-sync unsubscribe
 - 2bea97d: MEDIUM + LOW fixes — race condition, timeout cleanup, init error handling
+- 801af00: W1 fix — date picker day value order
 
 ## Verification
 ```bash
