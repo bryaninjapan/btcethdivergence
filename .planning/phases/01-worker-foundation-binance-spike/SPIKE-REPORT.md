@@ -75,4 +75,6 @@ Per the plan decision rule — *api.binance.com failed, data-api.binance.vision 
 
 ---
 
-*This decision is a one-way door for the data-ingestion architecture (Phases 2 and 3). Awaiting owner confirmation or override.*
+**Owner confirmation: ✅ 2026-08-31 — Proceed with option (c) external-fetcher path.**
+
+*This decision is a one-way door for the data-ingestion architecture (Phases 2 and 3).*
