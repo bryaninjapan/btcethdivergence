@@ -1,14 +1,23 @@
 import { Hono } from 'hono';
 import { createRecord, deleteRecord, listRecords, updateRecord } from '../lib/db';
 import { jsonError, jsonOk } from '../lib/response';
-import { createRecordSchema, updateRecordSchema, validationMessage } from '../lib/validate';
+import {
+  createRecordSchema,
+  listRecordsQuerySchema,
+  updateRecordSchema,
+  validationMessage,
+} from '../lib/validate';
 import type { Env } from '../types';
 
 const records = new Hono<{ Bindings: Env }>();
 
 records.get('/api/records', async (c) => {
   try {
-    const rows = await listRecords(c.env.DB);
+    const parsed = listRecordsQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return jsonError(`Validation failed: ${validationMessage(parsed.error)}`, 400);
+    }
+    const rows = await listRecords(c.env.DB, parsed.data);
     return jsonOk(rows);
   } catch (error) {
     console.error(`Failed to list records: ${String(error)}`);

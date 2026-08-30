@@ -269,3 +269,74 @@ describe('records CRUD route contract', () => {
     expect(body.data).toEqual(db.rows);
   });
 });
+
+describe('records filter contract (REC-05, REC-06)', () => {
+  it('GET /api/records?type=structural → filters by type, no tags LIKE', async () => {
+    const db = new FakeD1Database();
+    db.rows = [{ ...EXISTING_RECORD }];
+
+    const res = await records.request('/api/records?type=structural', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    expect(db.prepares[0]).toContain('WHERE type = ?');
+    expect(db.prepares[0]).toContain('ORDER BY start_time DESC');
+    expect(db.prepares[0]).not.toContain('tags LIKE');
+    expect(db.calls[0]).toContain('structural');
+  });
+
+  it('GET /api/records?tag=btc → tags LIKE partial match with %btc% bound', async () => {
+    const db = new FakeD1Database();
+    db.rows = [{ ...EXISTING_RECORD }];
+
+    const res = await records.request('/api/records?tag=btc', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    expect(db.prepares[0]).toContain('tags LIKE ?');
+    expect(db.calls[0]).toContain('%btc%');
+  });
+
+  it('GET /api/records?type=structural&tag=btc → both conditions ANDed with both params bound', async () => {
+    const db = new FakeD1Database();
+    db.rows = [{ ...EXISTING_RECORD }];
+
+    const res = await records.request(
+      '/api/records?type=structural&tag=btc',
+      {},
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.prepares[0]).toContain('type = ?');
+    expect(db.prepares[0]).toContain('tags LIKE ?');
+    expect(db.prepares[0]).toContain('AND');
+    expect(db.calls[0]).toContain('structural');
+    expect(db.calls[0]).toContain('%btc%');
+  });
+
+  it('GET /api/records?type=bogus → 400 mentioning the enum, no DB call', async () => {
+    const db = new FakeD1Database();
+
+    const res = await records.request('/api/records?type=bogus', {}, makeEnv(db));
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error: string };
+    expect(body.ok).toBe(false);
+    expect(body.error).toMatch(/time_lag|structural|opposite/);
+    expect(db.prepares).toHaveLength(0);
+  });
+
+  it('GET /api/records?tag=<201 chars> → 400 (max 200), no DB call', async () => {
+    const db = new FakeD1Database();
+
+    const res = await records.request(
+      `/api/records?tag=${'a'.repeat(201)}`,
+      {},
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error: string };
+    expect(body.ok).toBe(false);
+    expect(db.prepares).toHaveLength(0);
+  });
+});

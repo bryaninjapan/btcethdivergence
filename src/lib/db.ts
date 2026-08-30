@@ -1,10 +1,25 @@
 import { buildKlineInsertChunks } from './kline-insert';
 import type { DivergenceRecord, Env, Kline } from '../types';
 
-export async function listRecords(db: D1Database): Promise<DivergenceRecord[]> {
+export async function listRecords(
+  db: D1Database,
+  filters: { type?: string; tag?: string } = {},
+): Promise<DivergenceRecord[]> {
   // Note (L4 LOW): currently unbounded; fine at single-owner scale. Add LIMIT/OFFSET for pagination when records grow.
+  const conditions: string[] = [];
+  const params: string[] = [];
+  if (filters.type) {
+    conditions.push('type = ?');
+    params.push(filters.type);
+  }
+  if (filters.tag) {
+    conditions.push('tags LIKE ?');
+    params.push(`%${filters.tag}%`);
+  }
+  const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
   return db
-    .prepare('SELECT * FROM divergence_records ORDER BY start_time DESC')
+    .prepare(`SELECT * FROM divergence_records${where} ORDER BY start_time DESC`)
+    .bind(...params)
     .all<DivergenceRecord>()
     .then((r) => r.results);
 }

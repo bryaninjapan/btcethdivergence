@@ -29,6 +29,12 @@ export const updateRecordSchema = z
 export type CreateRecordInput = z.infer<typeof createRecordSchema>;
 export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
 
+export const listRecordsQuerySchema = z.object({
+  type: z.enum(['time_lag', 'structural', 'opposite']).optional(),
+  tag: z.string().trim().max(200).optional(),
+});
+export type ListRecordsQuery = z.infer<typeof listRecordsQuerySchema>;
+
 const ingestKline = z.object({
   open_time: z.number().int().min(0),
   open: z.number().finite().positive(),
