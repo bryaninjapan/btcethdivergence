@@ -51,7 +51,7 @@
 
 ## Constraints
 
-- **Tech stack**: Cloudflare Pages + Workers + D1 — 擁有者已有 CF 經驗，無需學新平台
+- **Tech stack**: Cloudflare Workers (單一部署，含 Static Assets binding) + D1 — 不使用 Pages，單一 Worker 專案服務靜態資源和 API（架構已鎖定於 Phase 1 ROADMAP INFRA-01）
 - **Data source**: Binance public API (no API key required for klines)
 - **Frontend**: 純靜態 HTML/CSS/JS — 由 Google AI Studio 生成，無構建步驟
 - **Chart library**: Lightweight Charts — 開源，無需申請 API key
