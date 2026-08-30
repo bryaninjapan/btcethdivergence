@@ -12,6 +12,20 @@
       <button id="new-record" type="button">+ 新增</button>
     </header>
 
+    <div id="filters">
+      <label>類型
+        <select id="type-filter">
+          <option value="">全部</option>
+          <option value="time_lag">時間差</option>
+          <option value="structural">結構背離</option>
+          <option value="opposite">完全反向</option>
+        </select>
+      </label>
+      <label>標籤
+        <input id="tag-filter" type="search" placeholder="搜尋標籤（部分符合）" autocomplete="off" />
+      </label>
+    </div>
+
     <main>
       <table id="records-table">
         <thead>

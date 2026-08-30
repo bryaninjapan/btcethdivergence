@@ -55,8 +55,22 @@ function renderTable(records) {
   }
 }
 
+function debounce(fn, ms) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
+}
+
 async function loadRecords() {
-  const data = await api('/api/records');
+  const params = new URLSearchParams();
+  const type = document.querySelector('#type-filter').value;
+  const tag = document.querySelector('#tag-filter').value.trim();
+  if (type) params.set('type', type);
+  if (tag) params.set('tag', tag);
+  const qs = params.toString();
+  const data = await api(qs ? `/api/records?${qs}` : '/api/records');
   recordsCache = data;
   renderTable(data);
 }
@@ -171,6 +185,8 @@ function wireRowActions() {
 
 document.addEventListener('DOMContentLoaded', () => {
   wireRowActions();
+  document.querySelector('#type-filter').addEventListener('change', loadRecords);
+  document.querySelector('#tag-filter').addEventListener('input', debounce(loadRecords, 250));
   document.querySelector('#new-record').addEventListener('click', () => openForm(null));
   document.querySelector('#save-record').addEventListener('click', submitForm);
   document.querySelector('#cancel-record').addEventListener('click', () => {
