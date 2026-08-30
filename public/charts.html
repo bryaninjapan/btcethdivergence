@@ -15,6 +15,32 @@
     <main>
       <p id="chart-loading" style="color: #666;">載入中...</p>
       <p id="chart-error" hidden></p>
+      <section class="chart-controls">
+        <label class="chart-controls__check">
+          <input type="checkbox" id="log-scale" />
+          對數縮放
+        </label>
+        <label>
+          開始時間 (UTC)
+          <span class="time-picker" data-picker="start">
+            <select data-part="year"></select> 年
+            <select data-part="month"></select> 月
+            <select data-part="day"></select> 日
+            <select data-part="hour"></select> 時
+          </span>
+        </label>
+        <label>
+          結束時間 (UTC)
+          <span class="time-picker" data-picker="end">
+            <select data-part="year"></select> 年
+            <select data-part="month"></select> 月
+            <select data-part="day"></select> 日
+            <select data-part="hour"></select> 時
+          </span>
+        </label>
+        <button id="load-range" type="button">載入範圍</button>
+        <p id="range-summary" class="range-summary"></p>
+      </section>
       <section class="chart-pane">
         <h3>BTCUSDT 1h</h3>
         <div id="btc-chart"></div>
