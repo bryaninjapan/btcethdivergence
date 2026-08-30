@@ -1,10 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BTC/ETH Divergence Tracker</title>
+    <link rel="stylesheet" href="/css/style.css" />
   </head>
   <body>
-    <h1 id="app-root">BTC/ETH Divergence Tracker</h1>
+    <header>
+      <h1>BTC/ETH Divergence Tracker</h1>
+      <button id="new-record" type="button">+ 新增</button>
+    </header>
+
+    <main>
+      <table id="records-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>開始時間</th>
+            <th>結束時間</th>
+            <th>類型</th>
+            <th>備註</th>
+            <th>標籤</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+
+    <dialog id="record-dialog">
+      <form id="record-form">
+        <h2 id="dialog-title">新增記錄</h2>
+        <label>
+          開始時間
+          <input id="start_time" type="text" placeholder="YYYY-MM-DDTHH:MM:SSZ" autocomplete="off" />
+        </label>
+        <label>
+          結束時間
+          <input id="end_time" type="text" placeholder="YYYY-MM-DDTHH:MM:SSZ" autocomplete="off" />
+        </label>
+        <fieldset>
+          <legend>類型</legend>
+          <label><input type="radio" name="type" value="time_lag" checked /> 時間差</label>
+          <label><input type="radio" name="type" value="structural" /> 結構背離</label>
+          <label><input type="radio" name="type" value="opposite" /> 完全反向</label>
+        </fieldset>
+        <label>
+          備註
+          <textarea id="notes" rows="3"></textarea>
+        </label>
+        <label>
+          標籤
+          <input id="tags" type="text" autocomplete="off" />
+        </label>
+        <p id="form-error" hidden></p>
+        <div class="dialog-actions">
+          <button id="cancel-record" type="button">取消</button>
+          <button id="save-record" type="button">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-dialog">
+      <h2>刪除記錄</h2>
+      <p id="delete-summary"></p>
+      <p id="delete-error" hidden></p>
+      <div class="dialog-actions">
+        <button id="cancel-delete" type="button">取消</button>
+        <button id="confirm-delete" type="button">確認刪除</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/records.js"></script>
   </body>
 </html>

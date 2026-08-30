@@ -1,0 +1,158 @@
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --muted: #59636e;
+  --accent: #1f6feb;
+  --danger: #d1242f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+main {
+  padding: 24px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+th,
+td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  vertical-align: top;
+}
+
+th {
+  background: #eef1f4;
+  font-weight: 600;
+}
+
+tbody tr:hover {
+  background: #f6f8fa;
+}
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+button:hover {
+  background: #eef1f4;
+}
+
+#new-record {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+#new-record:hover {
+  opacity: 0.9;
+}
+
+dialog {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  width: min(480px, 90vw);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+dialog h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+dialog label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+dialog input[type="text"],
+dialog textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text);
+}
+
+dialog fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+dialog fieldset legend {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+dialog fieldset label {
+  margin-bottom: 4px;
+}
+
+#form-error {
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+#confirm-delete {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+#confirm-delete:hover {
+  opacity: 0.9;
+}
