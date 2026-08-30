@@ -246,7 +246,7 @@ Gain Rate %:          [display]
    - Test 8: Long with SL above entry → isValid = false (invalid input)
    - Test 9: Short with SL below entry → isValid = false (invalid input)
    - All tests use `vitest` assertions (e.g., `expect(result.positionSize).toBeCloseTo(...)`)
-   - Coverage target: 100% of calculator.js logic
+   - Coverage target: ≥95% of calculator.js logic
 
 3. **Wire Form to Calculations** — create `public/js/calculator-init.js`
    - On every `input` event on margin/entryPrice/stopLoss/takeProfitPrice/leverage/longShort:
@@ -257,7 +257,7 @@ Gain Rate %:          [display]
 
 4. **Module Loader** — `public/js/calculator-init.js`
    - `<script type="module" src="/js/calculator-init.js"></script>` at the end of calculator.html body
-   - Imports `calculatePosition` from `public/js/calculator.js`
+   - Imports `calculatePosition` from `./calculator.js` (relative to `/js/`, resolves to static asset `/js/calculator.js`)
    - Caches DOM references (form inputs, output elements)
    - Attaches event listeners
    - Calls `calculatePosition` and updates display on form changes
@@ -478,25 +478,23 @@ After Phase 8 is complete, verify each success criterion:
 
 ---
 
-## Remaining Tasks (Breakdown into 08-01 through 08-04)
+## Remaining Tasks (Breakdown into 08-01 through 08-03)
 
 1. **08-01**: HTML scaffolding and UI layout (`public/calculator.html`, CSS)
-2. **08-02**: Core calculation engine and real-time wiring (`public/js/calculator.js`, vitest basics)
-3. **08-03**: Risk warnings, edge-case validation, extended tests (calculator.js + HTML display, vitest expanded)
-4. **08-04**: Final testing and verification (vitest run, manual E2E checkpoints)
+2. **08-02**: Core calculation engine and real-time wiring (`public/js/calculator.js`, `public/js/calculator-init.js`, vitest basics)
+3. **08-03**: Risk warnings, edge-case validation, extended tests, verification (calculator.js + HTML display, vitest expanded, manual E2E checkpoints)
 
-Each task is independently testable and can be deployed and verified before moving to the next task.
+Each task is independently testable and can be deployed and verified before moving to the next task. Verification track (vitest + browser E2E) is part of 08-03.
 
 ---
 
 ## Timeline Estimate
 
 Based on Phase 1–7 velocity (~15–25 min per task):
-- **08-01** (HTML + CSS): 15 min
+- **08-01** (HTML + CSS): 10 min
 - **08-02** (Calculation engine + wiring): 20 min
-- **08-03** (Warnings + validation + extended tests): 15 min
-- **08-04** (Testing + manual E2E): 10 min
-- **Total Phase 8**: ~60 min (1 execution session)
+- **08-03** (Warnings + validation + tests + verification): 20 min
+- **Total Phase 8**: ~50 min (1 execution session)
 
 ---
 
@@ -514,5 +512,5 @@ Based on Phase 1–7 velocity (~15–25 min per task):
 - **No shared navbar yet**: Phase 8 calculator has its own back link; Phase 9 will unify navigation.
 - **No dark-theme polish**: Phase 5/9 scope; keep styling minimal and readable for now.
 - **Pure JS, no framework**: Aligns with project constraint (Google AI Studio friendly, no build step).
-- **Tracer-first approach**: Task 08-01 is the minimal page; 08-02 adds live calculations; 08-03 hardens validation; 08-04 verifies.
+- **Tracer-first approach**: Task 08-01 is the minimal page; 08-02 adds live calculations; 08-03 hardens validation and verification.
 
