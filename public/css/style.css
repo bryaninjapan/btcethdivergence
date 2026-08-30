@@ -218,3 +218,127 @@ dialog fieldset label {
   font-size: 13px;
   color: var(--muted);
 }
+
+.calculator-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.calculator-panel {
+  flex: 1 1 320px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.calculator-panel h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.direction-toggle {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+}
+
+.direction-toggle legend {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.direction-toggle label {
+  margin-right: 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.form-group {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.form-group__input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-group .unit {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.form-group input,
+.form-group select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+.result-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f6f8fa;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.result-label {
+  color: var(--muted);
+}
+
+.result-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+
+#calc-error {
+  color: var(--danger);
+  font-size: 14px;
+  margin: 12px 0 0;
+}
+
+.warning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-left: 4px solid var(--danger);
+  border-radius: 6px;
+  background: #fff1f0;
+  color: var(--danger);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .calculator-layout {
+    flex-direction: column;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+}

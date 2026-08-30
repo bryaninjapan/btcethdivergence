@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BTC/ETH Divergence Tracker — 槓桿計算機</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>BTC/ETH Divergence Tracker</h1>
+      <a href="/">← 記錄表</a>
+    </header>
+
+    <main class="calculator-layout">
+      <section class="calculator-panel">
+        <h2>槓桿計算機</h2>
+        <form id="calculator-form" novalidate>
+          <fieldset class="direction-toggle">
+            <legend>方向</legend>
+            <label><input type="radio" name="longShort" value="long" checked /> 做多（Long）</label>
+            <label><input type="radio" name="longShort" value="short" /> 做空（Short）</label>
+          </fieldset>
+
+          <label class="form-group">
+            保證金（Margin）
+            <span class="form-group__input">
+              <input id="margin" type="number" step="any" min="0" placeholder="USDT" autocomplete="off" />
+              <span class="unit">USDT</span>
+            </span>
+          </label>
+
+          <label class="form-group">
+            入場價（Entry Price）
+            <input id="entry-price" type="number" step="0.01" min="0" placeholder="例如 42000.50" autocomplete="off" />
+          </label>
+
+          <label class="form-group">
+            止損價（Stop-Loss）
+            <input id="stop-loss" type="number" step="0.01" min="0" placeholder="例如 41000.00" autocomplete="off" />
+          </label>
+
+          <label class="form-group">
+            止盈價（Take-Profit）
+            <input id="take-profit" type="number" step="0.01" min="0" placeholder="例如 43000.00" autocomplete="off" />
+          </label>
+
+          <label class="form-group">
+            槓桿（Leverage）
+            <select id="leverage">
+              <option value="1">1x</option>
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+              <option value="5">5x</option>
+              <option value="10" selected>10x</option>
+              <option value="20">20x</option>
+              <option value="25">25x</option>
+              <option value="50">50x</option>
+              <option value="75">75x</option>
+              <option value="100">100x</option>
+              <option value="125">125x</option>
+            </select>
+          </label>
+        </form>
+      </section>
+
+      <section class="calculator-panel results">
+        <h2>計算結果</h2>
+        <div class="results-grid">
+          <div class="result-field">
+            <span class="result-label">持倉數量（Position Size）</span>
+            <span class="result-value" id="position-size">—</span>
+          </div>
+          <div class="result-field">
+            <span class="result-label">止損金額（Stop-Loss）</span>
+            <span class="result-value" id="sl-amount">—</span>
+          </div>
+          <div class="result-field">
+            <span class="result-label">止盈金額（Take-Profit）</span>
+            <span class="result-value" id="tp-amount">—</span>
+          </div>
+          <div class="result-field">
+            <span class="result-label">盈虧比 R:R</span>
+            <span class="result-value" id="rr-ratio">—</span>
+          </div>
+          <div class="result-field">
+            <span class="result-label">虧損率（Loss Rate %）</span>
+            <span class="result-value" id="loss-rate">—</span>
+          </div>
+          <div class="result-field">
+            <span class="result-label">獲利率（Gain Rate %）</span>
+            <span class="result-value" id="gain-rate">—</span>
+          </div>
+        </div>
+        <p id="calc-error" hidden></p>
+        <div id="rr-warning" class="warning" hidden>盈虧比低於 1:1 — 潛在虧損大於潛在獲利，建議放寬止盈或收緊止損。</div>
+        <div id="liquidation-warning" class="warning" hidden>止損金額超過保證金 — 可能在被止損前就被強制平倉，建議放寬止損或降低槓桿。</div>
+      </section>
+    </main>
+  </body>
+</html>
