@@ -369,8 +369,9 @@ Gain Rate %:          [display]
    - Margin: 50, Entry: 42000, SL: 40000, TP: 43000, Leverage: 2x
    - **Expected**: Position size = (50 × 2)/42000 ≈ 0.0024, Loss = 0.0024 × 2000 = 4.8 < 50, still safe. (Update to leverage 10x for risk:) Position size = (50 × 10)/42000 ≈ 0.012, Loss = 0.012 × 2000 = 24 < 50, still safe. (Try 50x leverage:) Position size = (50 × 50)/42000 ≈ 0.06, Loss = 0.06 × 2000 = 120 > 50, **liquidation warning on**.
 4. **R:R < 1.0 warning**:
-   - Margin: 1000, Entry: 42000, SL: 41500 (loss = ~11.9), TP: 42100 (profit = ~11.9), Leverage: 1x
-   - Adjust TP: 42050 (profit = ~5.95 < loss = ~11.9)
+   - Margin: 1000, Entry: 42000, SL: 41500 (loss = ~11.90), TP: 42500 (profit = 0.0238 × 500 = ~11.90, R:R = 1.0), Leverage: 1x
+   - **Expected**: warning off at TP 42500 (R:R = 1.0)
+   - Adjust TP to 42400 (profit = 0.0238 × 400 = ~9.52, loss still ~11.90, R:R ≈ 0.80)
    - **Expected**: R:R < 1.0 warning on
 5. **Short position**:
    - Toggle: "Short"

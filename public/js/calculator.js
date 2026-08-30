@@ -11,6 +11,7 @@ export function calculatePosition(params = {}) {
 
   const base = {
     isValid: false,
+    errorMessage: '',
     longShort,
     margin,
     entryPrice,
@@ -26,8 +27,9 @@ export function calculatePosition(params = {}) {
     warnings: { riskRewardTooLow: false, liquidationRisk: false },
   };
 
-  if (!isValidInput({ longShort, margin, entryPrice, stopLoss, takeProfitPrice, leverage })) {
-    return base;
+  const errorMessage = validateInput({ longShort, margin, entryPrice, stopLoss, takeProfitPrice, leverage });
+  if (errorMessage) {
+    return { ...base, errorMessage };
   }
 
   const positionSize = (margin * leverage) / entryPrice;
@@ -66,18 +68,20 @@ function normalizeDirection(value) {
   return 'long';
 }
 
-function isValidInput({ longShort, margin, entryPrice, stopLoss, takeProfitPrice, leverage }) {
-  if (!Number.isFinite(margin) || margin <= 0) return false;
-  if (!Number.isFinite(entryPrice) || entryPrice <= 0) return false;
-  if (!Number.isFinite(leverage) || leverage < MIN_LEVERAGE || leverage > MAX_LEVERAGE) return false;
-  if (!Number.isFinite(stopLoss) || stopLoss <= 0) return false;
-  if (!Number.isFinite(takeProfitPrice) || takeProfitPrice <= 0) return false;
-  if (longShort === 'short') {
-    if (stopLoss <= entryPrice) return false;
-    if (takeProfitPrice >= entryPrice) return false;
-  } else {
-    if (stopLoss >= entryPrice) return false;
-    if (takeProfitPrice <= entryPrice) return false;
+function validateInput({ longShort, margin, entryPrice, stopLoss, takeProfitPrice, leverage }) {
+  if (!Number.isFinite(margin) || margin <= 0) return '保證金必須大於 0';
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) return '入場價必須大於 0';
+  if (!Number.isFinite(leverage) || leverage < MIN_LEVERAGE || leverage > MAX_LEVERAGE) {
+    return `槓桿必須介於 ${MIN_LEVERAGE}x 到 ${MAX_LEVERAGE}x`;
   }
-  return true;
+  if (!Number.isFinite(stopLoss) || stopLoss <= 0) return '止損價必須大於 0';
+  if (!Number.isFinite(takeProfitPrice) || takeProfitPrice <= 0) return '止盈價必須大於 0';
+  if (longShort === 'short') {
+    if (stopLoss <= entryPrice) return '做空時止損價必須高於入場價';
+    if (takeProfitPrice >= entryPrice) return '做空時止盈價必須低於入場價';
+  } else {
+    if (stopLoss >= entryPrice) return '做多時止損價必須低於入場價';
+    if (takeProfitPrice <= entryPrice) return '做多時止盈價必須高於入場價';
+  }
+  return '';
 }
