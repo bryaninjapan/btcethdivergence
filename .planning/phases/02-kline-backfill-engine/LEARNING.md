@@ -65,6 +65,22 @@
 
 ## Phase 2 Execution Findings
 
+### Code Review Fixes & Verification
+
+**All 8 findings fixed and verified:**
+- 1 CRITICAL (CR-01): Cursor fetch JSON parsing error handling — fixed with try-catch
+- 5 WARNINGS: Error handling, input validation, URL encoding, auth gating, timing-safe token
+- 2 INFO: Unused type alias, type assertion precision
+
+**TDD Tests Added (38 tests total, all passing):**
+- Priority 1: Phase 1 CR-01 (timestamp conversion ms→s) — 6 tests, 100% coverage
+- Priority 2: Phase 2 CR-01 (cursor fetch error) — 6 tests, 100% coverage
+- Priority 3: Phase 2 WR-02 (timing-safe token) — 9 tests, mechanistic mock verification
+
+**Verification Result:**
+- ✅ Phase 2 verified: 4/4 success criteria PASS
+- ⚠️ Minor finding (fixed): `npm run typecheck:scripts` was broken by IN-01 review fix (removed `?? 0` on line 32). Fixed by restoring the null coalescing: `(decision.waitSeconds ?? 0) * 1000`
+
 ### GitHub Actions Runner Geo-Block (451)
 **Finding**: GitHub Actions hosted runners are **completely blocked by Binance with HTTP 451** (Unavailable For Legal Reasons — geo-block of Azure/US datacenter IPs). Two real workflow_dispatch runs confirmed:
 - Run 1: `Binance returned 451; waiting 0s; exit code 1`

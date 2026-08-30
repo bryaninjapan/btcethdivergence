@@ -29,7 +29,7 @@ async function fetchWithBackoff(
     if (decision.action !== 'retry') {
       process.exit(1);
     }
-    await sleep(decision.waitSeconds * 1000);
+    await sleep((decision.waitSeconds ?? 0) * 1000);
     try {
       return await fetchKlines('https://api.binance.com', symbol, startTimeMs, 1000);
     } catch (retryErr) {
