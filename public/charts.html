@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BTC/ETH Divergence Tracker — K線圖</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>BTC/ETH Divergence Tracker</h1>
+      <a href="/">← 記錄表</a>
+    </header>
+    <main>
+      <p id="chart-error" hidden></p>
+      <section class="chart-pane">
+        <h3>BTCUSDT 1h</h3>
+        <div id="btc-chart"></div>
+      </section>
+      <section class="chart-pane">
+        <h3>ETHUSDT 1h</h3>
+        <div id="eth-chart"></div>
+      </section>
+    </main>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/charts.js"></script>
+  </body>
+</html>

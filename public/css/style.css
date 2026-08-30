@@ -156,3 +156,27 @@ dialog fieldset label {
 #confirm-delete:hover {
   opacity: 0.9;
 }
+
+.chart-pane {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.chart-pane h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.chart-pane > div {
+  position: relative;
+  height: 420px;
+}
+
+#chart-error {
+  color: var(--danger);
+  font-size: 14px;
+}
