@@ -1,0 +1,26 @@
+name: Fetch Binance Klines
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天午夜 UTC
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Fetch BTCUSDT 1h klines from Binance
+        run: |
+          # 獲取最近 1000 根 1h K線（約 42 天）
+          RESPONSE=$(curl -s "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000")
+          
+          # 發送到 Worker 的 ingest 端點
+          curl -X POST "${{ secrets.WORKER_URL }}/api/admin/ingest" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WORKER_API_KEY }}" \
+            -d "{\"symbol\": \"BTCUSDT\", \"klines\": $RESPONSE}"
+      
+      - name: Notify on failure
+        if: failure()
+        run: echo "⚠️ Binance fetch failed"
