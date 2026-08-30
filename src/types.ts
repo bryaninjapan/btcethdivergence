@@ -11,6 +11,16 @@ export interface Kline {
   volume: number;
 }
 
+export type BinanceKlineTuple = readonly [
+  openTime: number,
+  open: string,
+  high: string,
+  low: string,
+  close: string,
+  volume: string,
+  ...rest: unknown[],
+];
+
 export interface DivergenceRecord {
   id: number;
   start_time: number;
