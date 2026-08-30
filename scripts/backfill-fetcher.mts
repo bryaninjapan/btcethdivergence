@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'url';
 import { decideBackoff, sleep } from '../src/lib/backoff';
 import { BinanceError, fetchKlines } from '../src/lib/binance';
 
@@ -40,12 +41,11 @@ async function fetchWithBackoff(
   }
 }
 
-async function main(): Promise<void> {
-  const workerUrl = requireEnv('WORKER_URL');
-  const ingestToken = requireEnv('INGEST_TOKEN');
-  const symbol = process.env.SYMBOL ?? 'BTCUSDT';
-  const startTimeOverride = process.env.START_TIME_OVERRIDE;
-
+export async function fetchCursor(
+  workerUrl: string,
+  ingestToken: string,
+  symbol: string,
+): Promise<number | null> {
   const cursorRes = await fetch(
     `${workerUrl}/api/admin/backfill-cursor?symbol=${encodeURIComponent(symbol)}`,
     { headers: { Authorization: `Bearer ${ingestToken}` } },
@@ -61,7 +61,16 @@ async function main(): Promise<void> {
     console.error(`Failed to parse cursor response: ${String(parseErr)}`);
     process.exit(1);
   }
-  const cursor = cursorData.data?.cursor ?? null;
+  return cursorData.data?.cursor ?? null;
+}
+
+async function main(): Promise<void> {
+  const workerUrl = requireEnv('WORKER_URL');
+  const ingestToken = requireEnv('INGEST_TOKEN');
+  const symbol = process.env.SYMBOL ?? 'BTCUSDT';
+  const startTimeOverride = process.env.START_TIME_OVERRIDE;
+
+  const cursor = await fetchCursor(workerUrl, ingestToken, symbol);
   const startTimeMs = startTimeOverride
     ? Number(startTimeOverride)
     : cursor === null
@@ -114,4 +123,11 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-void main();
+// Only auto-run when executed directly (e.g. `node backfill-fetcher.mts`),
+// not when imported by tests.
+const isDirectRun =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  void main();
+}
