@@ -1,8 +1,9 @@
-export const YEAR_RANGE = { min: 2021, max: 2026 };
+export const YEAR_RANGE = { min: 2021, max: () => new Date().getUTCFullYear() + 1 };
 
 export function yearOptions() {
   const years = [];
-  for (let y = YEAR_RANGE.min; y <= YEAR_RANGE.max; y += 1) {
+  const maxYear = typeof YEAR_RANGE.max === 'function' ? YEAR_RANGE.max() : YEAR_RANGE.max;
+  for (let y = YEAR_RANGE.min; y <= maxYear; y += 1) {
     years.push(y);
   }
   return years;

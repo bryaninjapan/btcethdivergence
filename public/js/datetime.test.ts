@@ -11,9 +11,13 @@ import {
 } from './datetime.js';
 
 describe('datetime.js pure helpers (REC-07, REC-08)', () => {
-  it('yearOptions() is 2021..2026', () => {
-    expect(yearOptions()).toEqual([2021, 2022, 2023, 2024, 2025, 2026]);
-    expect(YEAR_RANGE).toEqual({ min: 2021, max: 2026 });
+  it('yearOptions() includes 2021 to current+1 (dynamic)', () => {
+    const years = yearOptions();
+    const currentYear = new Date().getUTCFullYear();
+    expect(years[0]).toBe(2021);
+    expect(years[years.length - 1]).toBe(currentYear + 1);
+    expect(years).toContain(2021);
+    expect(years).toContain(currentYear);
   });
 
   it('monthOptions() has length 12 and includes 1 and 12', () => {

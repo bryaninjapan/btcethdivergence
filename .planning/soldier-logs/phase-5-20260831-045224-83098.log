@@ -1,0 +1,16 @@
+The phases glob returned nothing — let me check the actual directory structure.
+Now let me examine the current source code state to ground the plan in real file structure.
+Now I have full context. Let me verify one more detail — how Hono query params are read and confirm no CONTEXT.md / phase-5 research exists, then write the plans.
+Now writing the two plan files.
+Let me verify the tsconfig covers the frontend test files (so the `npm run typecheck` claims in the plans hold) and sanity-check the final plan files.
+The tsconfig only includes `src`, so my "typechecked by root tsconfig" claim in 05-02 is wrong. Fixing it.
+Done. Two plan files written for Phase 5.
+
+**Summary**
+
+- **Plan files**: 2 — `.planning/phases/05-records-filtering-time-entry-ux/05-01-PLAN.md` (wave 1, filtering) and `05-02-PLAN.md` (wave 2, time-entry UX).
+- **Total tasks**: 4 (2 per file, within the 2–3 budget).
+  - **05-01** T1: server-side `type`/`tag` filters on `GET /api/records` (`listRecords` + `listRecordsQuerySchema` Zod boundary validation + route tests, deploy, curl-verified); T2: filter bar (`#type-filter` select + debounced `#tag-filter` search) wired through `api()`, deployed + browser checkpoint.
+  - **05-02** T1: pure `public/js/datetime.js` (REC-07 option ranges, leap-aware days, `Date.UTC()` conversion) + vitest suite; T2: UTC-labeled year/month/day/hour dropdowns replacing the free-text inputs, edit pre-fill, day-clamping, deploy + browser checkpoint.
+- **[PLAN-GATE] blockers**: none. Server-side filtering follows the locked PLAN.md contract; REC-07's year range (2021–2026) and hour-only granularity are locked by the requirement (minute-snap on edit documented as expected behavior); pagination stays out per the Phase 4 L4 decision.
+- **Coverage confirmed**: every Phase 5 requirement (REC-05/06/07/08) and every success criterion (SC1–SC4) has a named covering task; dependencies acyclic (05-01 → 05-02, both on 04-02).

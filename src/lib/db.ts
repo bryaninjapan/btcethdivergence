@@ -1,6 +1,10 @@
 import { buildKlineInsertChunks } from './kline-insert';
 import type { DivergenceRecord, Env, Kline } from '../types';
 
+function escapeLikeWildcards(s: string): string {
+  return s.replace(/[\\%_]/g, '\\$&');
+}
+
 export async function listRecords(
   db: D1Database,
   filters: { type?: string; tag?: string } = {},
@@ -13,8 +17,9 @@ export async function listRecords(
     params.push(filters.type);
   }
   if (filters.tag) {
-    conditions.push('tags LIKE ?');
-    params.push(`%${filters.tag}%`);
+    conditions.push('tags LIKE ? ESCAPE ?');
+    params.push(`%${escapeLikeWildcards(filters.tag)}%`);
+    params.push('\\');
   }
   const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
   return db

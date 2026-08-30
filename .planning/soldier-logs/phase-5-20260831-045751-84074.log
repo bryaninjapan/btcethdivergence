@@ -1,0 +1,16 @@
+No CONTEXT.md or RESEARCH.md in the phase dir. Now let me verify the load-bearing claims against the actual source.
+Now let me verify remaining claims: the phase 4 "locked API contract", wrangler config, vitest setup, and the api.test.ts precedent.
+All claims verified. I have everything needed. Let me write the check report.
+Phase 5 plan check complete. Report written to `.planning/phases/05-records-filtering-time-entry-ux/5-PLAN-CHECK.md`.
+
+**Summary:**
+- Verified 05-01 and 05-02 against ROADMAP Phase 5 ground truth (REC-05/06/07/08, SC1–SC4) and the actual source tree.
+- **Coverage:** all 4 requirements and all 4 success criteria have concrete, wired tasks; each plan has 2 tasks; dependencies acyclic (04-02 → 05-01 → 05-02); locked decisions (single Worker + Static Assets, no build, L4 pagination exclusion) honored.
+- **Fact-checks:** most load-bearing claims confirmed against real files (listRecords signature, L4 comment, FakeD1 prepares/calls pattern, `#start_time`/`#end_time` placeholders, `parseEpoch`, MAX_UNIX_EPOCH=2100, tsconfig `include:["src"]`, D1 name, deployed URL, ARCHITECTURE Pattern 2).
+- **0 blockers, 3 warnings:**
+  - W1: 05-01 cites a "locked API contract in PLAN.md" — that exact text exists in no PLAN.md; citation is fabricated (design itself is sound).
+  - W2: claims "existing 11 cases"; the suite actually has 12 tests.
+  - W3: records from Phase 4 can hold years up to 2100; editing one outside the 2021–2026 picker range silently rewrites its year to 2021 on save — needs a guard.
+- **4 info items** (stale REQUIREMENTS/ROADMAP mappings, minute-snap note, unproven `.js` import in vitest with documented fallback).
+
+Plans verified. Ready to execute.

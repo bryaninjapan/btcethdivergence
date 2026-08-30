@@ -18,6 +18,7 @@ const TYPE_LABELS = {
 let recordsCache = [];
 let editingId = null;
 let deleteId = null;
+let latestRequestToken = 0;
 
 function formatTime(ts) {
   return new Date(ts * 1000).toISOString();
@@ -70,6 +71,7 @@ function debounce(fn, ms) {
 }
 
 async function loadRecords() {
+  const requestToken = ++latestRequestToken;
   const params = new URLSearchParams();
   const type = document.querySelector('#type-filter').value;
   const tag = document.querySelector('#tag-filter').value.trim();
@@ -77,8 +79,17 @@ async function loadRecords() {
   if (tag) params.set('tag', tag);
   const qs = params.toString();
   const data = await api(qs ? `/api/records?${qs}` : '/api/records');
+  if (requestToken !== latestRequestToken) return;
   recordsCache = data;
   renderTable(data);
+}
+
+function showFilterError(error) {
+  const filterError = document.querySelector('#filter-error');
+  if (filterError) {
+    filterError.textContent = error.message || 'Failed to load records';
+    filterError.hidden = false;
+  }
 }
 
 function fillSelect(select, values) {
@@ -224,8 +235,12 @@ function wireRowActions() {
 
 document.addEventListener('DOMContentLoaded', () => {
   wireRowActions();
-  document.querySelector('#type-filter').addEventListener('change', loadRecords);
-  document.querySelector('#tag-filter').addEventListener('input', debounce(loadRecords, 250));
+  document.querySelector('#type-filter').addEventListener('change', () => {
+    loadRecords().catch(showFilterError);
+  });
+  document.querySelector('#tag-filter').addEventListener('input', debounce(() => {
+    loadRecords().catch(showFilterError);
+  }, 250));
   const startPicker = document.querySelector('[data-picker="start"]');
   const endPicker = document.querySelector('[data-picker="end"]');
   populatePicker(startPicker);

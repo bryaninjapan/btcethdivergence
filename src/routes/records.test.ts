@@ -14,6 +14,40 @@ class FakeD1Database {
   public firstRow: DivergenceRecord | null = null;
   public rows: DivergenceRecord[] = [];
 
+  private simpleLikeMatch(pattern: string, text: string, escapeChar: string): boolean {
+    let patIdx = 0;
+    let textIdx = 0;
+    while (patIdx < pattern.length && textIdx < text.length) {
+      if (pattern[patIdx] === escapeChar && patIdx + 1 < pattern.length) {
+        if (pattern[patIdx + 1] !== text[textIdx]) return false;
+        patIdx += 2;
+        textIdx += 1;
+      } else if (pattern[patIdx] === '%') {
+        if (patIdx === pattern.length - 1) return true;
+        const nextPat = pattern.slice(patIdx + 1);
+        let nextCharIdx = -1;
+        if (nextPat[0] === escapeChar && nextPat.length > 1) {
+          nextCharIdx = text.indexOf(nextPat[1], textIdx);
+        } else if (nextPat[0] !== '%' && nextPat[0] !== '_') {
+          nextCharIdx = text.indexOf(nextPat[0], textIdx);
+        }
+        if (nextCharIdx === -1) return this.simpleLikeMatch(nextPat, text.slice(textIdx), escapeChar);
+        if (this.simpleLikeMatch(nextPat, text.slice(nextCharIdx), escapeChar)) return true;
+        textIdx += 1;
+      } else if (pattern[patIdx] === '_') {
+        patIdx += 1;
+        textIdx += 1;
+      } else {
+        if (pattern[patIdx] !== text[textIdx]) return false;
+        patIdx += 1;
+        textIdx += 1;
+      }
+    }
+    if (patIdx === pattern.length) return textIdx === text.length;
+    if (pattern[patIdx] === '%') return true;
+    return false;
+  }
+
   prepare(sql: string) {
     this.prepares.push(sql);
     const self = this;
@@ -24,7 +58,25 @@ class FakeD1Database {
       },
       run: async () => ({ meta: { changes: self.changes } }),
       first: async <T>() => self.firstRow as T | null,
-      all: async <T>() => ({ results: self.rows as T[] }),
+      all: async <T>() => {
+        const sql = self.prepares[self.prepares.length - 1];
+        let filtered = self.rows;
+        if (sql.includes('WHERE')) {
+          const lastCall = self.calls[self.calls.length - 1] || [];
+          if (sql.includes('type = ?')) {
+            const typeParam = lastCall[0];
+            filtered = filtered.filter((r) => r.type === typeParam);
+          }
+          if (sql.includes('tags LIKE ? ESCAPE ?')) {
+            const pattern = lastCall[sql.includes('type = ?') ? 1 : 0];
+            const escapeChar = lastCall[sql.includes('type = ?') ? 2 : 1];
+            filtered = filtered.filter((r) =>
+              self.simpleLikeMatch(String(pattern), r.tags, String(escapeChar)),
+            );
+          }
+        }
+        return { results: filtered as T[] };
+      },
     };
   }
 }
@@ -267,6 +319,39 @@ describe('records CRUD route contract', () => {
     const body = (await res.json()) as { ok: boolean; data: DivergenceRecord[] };
     expect(body.ok).toBe(true);
     expect(body.data).toEqual(db.rows);
+  });
+
+  it('GET /api/records?tag=50%25 (percent sign in tag) → returns exact match only, not wildcards', async () => {
+    const db = new FakeD1Database();
+    db.rows = [
+      { ...EXISTING_RECORD, id: 1, tags: '50%_profit' },
+      { ...EXISTING_RECORD, id: 2, tags: '50profit' },
+    ];
+
+    const res = await records.request('/api/records?tag=50%25', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: DivergenceRecord[] };
+    expect(body.ok).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].tags).toBe('50%_profit');
+  });
+
+  it('GET /api/records?tag=v1_beta (underscore in tag) → returns exact match only', async () => {
+    const db = new FakeD1Database();
+    db.rows = [
+      { ...EXISTING_RECORD, id: 1, tags: 'v1_beta' },
+      { ...EXISTING_RECORD, id: 2, tags: 'v1beta' },
+      { ...EXISTING_RECORD, id: 3, tags: 'v1Xbeta' },
+    ];
+
+    const res = await records.request('/api/records?tag=v1_beta', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: DivergenceRecord[] };
+    expect(body.ok).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].tags).toBe('v1_beta');
   });
 });
 
