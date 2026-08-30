@@ -8,6 +8,7 @@ import {
   monthOptions,
   yearOptions,
 } from './datetime.js';
+import { recordToRange } from './chart-range.js';
 
 const TYPE_LABELS = {
   time_lag: '時間差',
