@@ -1,13 +1,19 @@
 import { api } from './api.js';
+import {
+  buildUtcEpoch,
+  dayOptions,
+  daysInMonth,
+  epochToParts,
+  hourOptions,
+  monthOptions,
+  yearOptions,
+} from './datetime.js';
 
 const TYPE_LABELS = {
   time_lag: '時間差',
   structural: '結構背離',
   opposite: '完全反向',
 };
-
-const MIN_UNIX_EPOCH = 1609459200; // 2021-01-01T00:00:00Z
-const MAX_UNIX_EPOCH = 4102444800; // 2100-01-01T00:00:00Z
 
 let recordsCache = [];
 let editingId = null;
@@ -75,18 +81,53 @@ async function loadRecords() {
   renderTable(data);
 }
 
-function parseEpoch(value) {
-  const trimmed = String(value).trim();
-  if (/^\d+$/.test(trimmed)) {
-    const sec = Number(trimmed);
-    return sec >= MIN_UNIX_EPOCH && sec <= MAX_UNIX_EPOCH ? sec : null;
+function fillSelect(select, values) {
+  select.replaceChildren();
+  for (const v of values) {
+    const opt = document.createElement('option');
+    opt.value = String(v);
+    opt.textContent = String(v);
+    select.appendChild(opt);
   }
-  // Reject ISO strings without explicit timezone (Z or ±HH:MM) to prevent local-time ambiguity
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
-    return null; // No timezone specified
-  }
-  const ms = Date.parse(trimmed) / 1000;
-  return Number.isNaN(ms) ? null : ms;
+}
+
+function rebuildDays(pickerEl) {
+  const yearSel = pickerEl.querySelector('[data-part="year"]');
+  const monthSel = pickerEl.querySelector('[data-part="month"]');
+  const daySel = pickerEl.querySelector('[data-part="day"]');
+  const max = daysInMonth(Number(yearSel.value), Number(monthSel.value));
+  const prev = Number(daySel.value) || 1;
+  fillSelect(daySel, dayOptions(Number(yearSel.value), Number(monthSel.value)));
+  daySel.value = String(Math.min(prev, max));
+}
+
+function populatePicker(pickerEl) {
+  fillSelect(pickerEl.querySelector('[data-part="year"]'), yearOptions());
+  fillSelect(pickerEl.querySelector('[data-part="month"]'), monthOptions());
+  fillSelect(pickerEl.querySelector('[data-part="hour"]'), hourOptions());
+  const parts = epochToParts(Math.floor(Date.now() / 1000));
+  pickerEl.querySelector('[data-part="year"]').value = String(parts.year);
+  pickerEl.querySelector('[data-part="month"]').value = String(parts.month);
+  pickerEl.querySelector('[data-part="hour"]').value = String(parts.hour);
+  pickerEl.querySelector('[data-part="day"]').value = String(parts.day);
+  rebuildDays(pickerEl);
+}
+
+function setPickerFromEpoch(pickerEl, ts) {
+  const parts = epochToParts(ts);
+  pickerEl.querySelector('[data-part="year"]').value = String(parts.year);
+  pickerEl.querySelector('[data-part="month"]').value = String(parts.month);
+  pickerEl.querySelector('[data-part="day"]').value = String(parts.day);
+  pickerEl.querySelector('[data-part="hour"]').value = String(parts.hour);
+  rebuildDays(pickerEl);
+}
+
+function pickerEpoch(pickerEl) {
+  const year = Number(pickerEl.querySelector('[data-part="year"]').value);
+  const month = Number(pickerEl.querySelector('[data-part="month"]').value);
+  const day = Number(pickerEl.querySelector('[data-part="day"]').value);
+  const hour = Number(pickerEl.querySelector('[data-part="hour"]').value);
+  return buildUtcEpoch(year, month, day, hour);
 }
 
 function openForm(record = null) {
@@ -94,15 +135,18 @@ function openForm(record = null) {
   form.reset();
   editingId = record ? record.id : null;
   document.querySelector('#dialog-title').textContent = record ? '編輯記錄' : '新增記錄';
+  const startPicker = document.querySelector('[data-picker="start"]');
+  const endPicker = document.querySelector('[data-picker="end"]');
   if (record) {
-    document.querySelector('#start_time').value =
-      new Date(record.start_time * 1000).toISOString().slice(0, 19) + 'Z';
-    document.querySelector('#end_time').value =
-      new Date(record.end_time * 1000).toISOString().slice(0, 19) + 'Z';
+    setPickerFromEpoch(startPicker, record.start_time);
+    setPickerFromEpoch(endPicker, record.end_time);
     const typeRadio = form.querySelector(`input[name="type"][value="${record.type}"]`);
     if (typeRadio) typeRadio.checked = true;
     document.querySelector('#notes').value = record.notes;
     document.querySelector('#tags').value = record.tags;
+  } else {
+    populatePicker(startPicker);
+    populatePicker(endPicker);
   }
   document.querySelector('#form-error').hidden = true;
   document.querySelector('#record-dialog').showModal();
@@ -110,13 +154,8 @@ function openForm(record = null) {
 
 async function submitForm() {
   const formError = document.querySelector('#form-error');
-  const start = parseEpoch(document.querySelector('#start_time').value);
-  const end = parseEpoch(document.querySelector('#end_time').value);
-  if (start === null || end === null) {
-    formError.textContent = '開始/結束時間需為 ISO-8601 UTC 或 unix 秒數';
-    formError.hidden = false;
-    return;
-  }
+  const start = pickerEpoch(document.querySelector('[data-picker="start"]'));
+  const end = pickerEpoch(document.querySelector('[data-picker="end"]'));
   if (start >= end) {
     formError.textContent = '開始時間必須早於結束時間';
     formError.hidden = false;
@@ -187,6 +226,18 @@ document.addEventListener('DOMContentLoaded', () => {
   wireRowActions();
   document.querySelector('#type-filter').addEventListener('change', loadRecords);
   document.querySelector('#tag-filter').addEventListener('input', debounce(loadRecords, 250));
+  const startPicker = document.querySelector('[data-picker="start"]');
+  const endPicker = document.querySelector('[data-picker="end"]');
+  populatePicker(startPicker);
+  populatePicker(endPicker);
+  for (const pickerEl of [startPicker, endPicker]) {
+    pickerEl
+      .querySelector('[data-part="year"]')
+      .addEventListener('change', () => rebuildDays(pickerEl));
+    pickerEl
+      .querySelector('[data-part="month"]')
+      .addEventListener('change', () => rebuildDays(pickerEl));
+  }
   document.querySelector('#new-record').addEventListener('click', () => openForm(null));
   document.querySelector('#save-record').addEventListener('click', submitForm);
   document.querySelector('#cancel-record').addEventListener('click', () => {

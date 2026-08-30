@@ -11,6 +11,7 @@
       <h1>BTC/ETH Divergence Tracker</h1>
       <button id="new-record" type="button">+ 新增</button>
     </header>
+    <p class="utc-note">所有時間皆為 UTC</p>
 
     <div id="filters">
       <label>類型
@@ -31,8 +32,8 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>開始時間</th>
-            <th>結束時間</th>
+            <th>開始時間 (UTC)</th>
+            <th>結束時間 (UTC)</th>
             <th>類型</th>
             <th>備註</th>
             <th>標籤</th>
@@ -47,12 +48,22 @@
       <form id="record-form">
         <h2 id="dialog-title">新增記錄</h2>
         <label>
-          開始時間
-          <input id="start_time" type="text" placeholder="YYYY-MM-DDTHH:MM:SSZ" autocomplete="off" />
+          開始時間 (UTC)
+          <span class="time-picker" data-picker="start">
+            <select data-part="year"></select> 年
+            <select data-part="month"></select> 月
+            <select data-part="day"></select> 日
+            <select data-part="hour"></select> 時
+          </span>
         </label>
         <label>
-          結束時間
-          <input id="end_time" type="text" placeholder="YYYY-MM-DDTHH:MM:SSZ" autocomplete="off" />
+          結束時間 (UTC)
+          <span class="time-picker" data-picker="end">
+            <select data-part="year"></select> 年
+            <select data-part="month"></select> 月
+            <select data-part="day"></select> 日
+            <select data-part="hour"></select> 時
+          </span>
         </label>
         <fieldset>
           <legend>類型</legend>
