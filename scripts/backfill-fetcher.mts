@@ -24,7 +24,7 @@ async function fetchWithBackoff(
       process.exit(1);
     }
     const decision = decideBackoff(err);
-    console.log(`${decision.message}; waiting ${decision.waitSeconds ?? 0}s`);
+    console.log(`${decision.message} (${err.message}); waiting ${decision.waitSeconds ?? 0}s`);
     if (decision.action !== 'retry') {
       process.exit(1);
     }
