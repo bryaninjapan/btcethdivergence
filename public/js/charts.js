@@ -155,6 +155,14 @@ async function init() {
   await loadRange(initial.startMs, initial.endMs);
 
   document.getElementById('log-scale').addEventListener('change', (e) => setLogScale(e.target.checked));
+  for (const pickerEl of [document.querySelector('[data-picker="start"]'), document.querySelector('[data-picker="end"]')]) {
+    pickerEl
+      .querySelector('[data-part="year"]')
+      .addEventListener('change', () => rebuildDays(pickerEl));
+    pickerEl
+      .querySelector('[data-part="month"]')
+      .addEventListener('change', () => rebuildDays(pickerEl));
+  }
   document.getElementById('load-range').addEventListener('click', () => {
     const startSec = pickerEpoch(document.querySelector('[data-picker="start"]'));
     const endSec = pickerEpoch(document.querySelector('[data-picker="end"]'));
