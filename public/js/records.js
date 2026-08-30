@@ -67,6 +67,10 @@ function parseEpoch(value) {
     const sec = Number(trimmed);
     return sec >= MIN_UNIX_EPOCH && sec <= MAX_UNIX_EPOCH ? sec : null;
   }
+  // Reject ISO strings without explicit timezone (Z or ±HH:MM) to prevent local-time ambiguity
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return null; // No timezone specified
+  }
   const ms = Date.parse(trimmed) / 1000;
   return Number.isNaN(ms) ? null : ms;
 }
@@ -104,14 +108,14 @@ async function submitForm() {
     formError.hidden = false;
     return;
   }
-  const payload = {
-    start_time: start,
-    end_time: end,
-    type: document.querySelector('input[name="type"]:checked').value,
-    notes: document.querySelector('#notes').value,
-    tags: document.querySelector('#tags').value,
-  };
   try {
+    const payload = {
+      start_time: start,
+      end_time: end,
+      type: document.querySelector('input[name="type"]:checked').value,
+      notes: document.querySelector('#notes').value,
+      tags: document.querySelector('#tags').value,
+    };
     if (editingId) {
       await api(`/api/records/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
     } else {

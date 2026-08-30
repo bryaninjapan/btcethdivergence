@@ -2,6 +2,7 @@ import { buildKlineInsertChunks } from './kline-insert';
 import type { DivergenceRecord, Env, Kline } from '../types';
 
 export async function listRecords(db: D1Database): Promise<DivergenceRecord[]> {
+  // Note (L4 LOW): currently unbounded; fine at single-owner scale. Add LIMIT/OFFSET for pagination when records grow.
   return db
     .prepare('SELECT * FROM divergence_records ORDER BY start_time DESC')
     .all<DivergenceRecord>()

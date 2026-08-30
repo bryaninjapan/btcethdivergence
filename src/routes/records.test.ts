@@ -70,6 +70,10 @@ describe('records CRUD route contract', () => {
     expect(body.ok).toBe(true);
     expect(body.data).toEqual(db.firstRow);
     expect(db.prepares.some((sql) => sql.includes('INSERT INTO divergence_records'))).toBe(true);
+    // Verify bound params include the exact values (LOW issue L5 regression)
+    expect(db.calls.some((params) => params.includes(1600000000))).toBe(true);
+    expect(db.calls.some((params) => params.includes(1600003600))).toBe(true);
+    expect(db.calls.some((params) => params.includes('time_lag'))).toBe(true);
   });
 
   it('POST with start_time >= end_time → 400 with SC5 message, no DB write', async () => {
@@ -213,6 +217,38 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
 
     const res = await records.request('/api/records/abc', { method: 'DELETE' }, makeEnv(db));
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error: string };
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('Invalid record id');
+    expect(db.prepares).toHaveLength(0);
+  });
+
+  it('PUT /api/records/0x10 (hex notation) → 400, rejects non-decimal formats (LOW issue)', async () => {
+    const db = new FakeD1Database();
+
+    const res = await records.request(
+      '/api/records/0x10',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'structural' }),
+      },
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error: string };
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('Invalid record id');
+    expect(db.prepares).toHaveLength(0);
+  });
+
+  it('DELETE /api/records/1e3 (scientific notation) → 400, rejects non-decimal (LOW issue)', async () => {
+    const db = new FakeD1Database();
+
+    const res = await records.request('/api/records/1e3', { method: 'DELETE' }, makeEnv(db));
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { ok: boolean; error: string };

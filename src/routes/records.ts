@@ -37,8 +37,12 @@ records.post('/api/records', async (c) => {
 });
 
 records.put('/api/records/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const idStr = c.req.param('id');
+  if (!/^\d+$/.test(idStr)) {
+    return jsonError('Invalid record id', 400);
+  }
+  const id = Number(idStr);
+  if (id <= 0) {
     return jsonError('Invalid record id', 400);
   }
   let body: unknown;
@@ -64,8 +68,12 @@ records.put('/api/records/:id', async (c) => {
 });
 
 records.delete('/api/records/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const idStr = c.req.param('id');
+  if (!/^\d+$/.test(idStr)) {
+    return jsonError('Invalid record id', 400);
+  }
+  const id = Number(idStr);
+  if (id <= 0) {
     return jsonError('Invalid record id', 400);
   }
   try {
