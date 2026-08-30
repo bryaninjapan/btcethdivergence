@@ -176,5 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#confirm-delete').addEventListener('click', confirmDeleteAction);
   document.querySelector('#cancel-delete').addEventListener('click', closeDeleteDialog);
   document.querySelector('#delete-dialog').addEventListener('cancel', closeDeleteDialog);
-  loadRecords();
+  loadRecords().catch((e) => {
+    console.error('Failed to load records on init:', e);
+    // Table remains empty with visible error, better than silent failure
+  });
 });
