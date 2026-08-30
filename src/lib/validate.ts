@@ -1,0 +1,32 @@
+import { z } from 'zod';
+
+const divergenceType = z.enum(['time_lag', 'structural', 'opposite']);
+
+const baseFields = {
+  start_time: z.number().int(),
+  end_time: z.number().int(),
+  type: divergenceType,
+  notes: z.string().max(1000).default(''),
+  tags: z.string().max(200).default(''),
+};
+
+export const createRecordSchema = z
+  .object(baseFields)
+  .refine((d) => d.start_time < d.end_time, { message: 'start_time must be before end_time' });
+
+export const updateRecordSchema = z
+  .object(baseFields)
+  .partial()
+  .refine(
+    (d) => d.start_time === undefined || d.end_time === undefined || d.start_time < d.end_time,
+    { message: 'start_time must be before end_time' },
+  );
+
+export type CreateRecordInput = z.infer<typeof createRecordSchema>;
+export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
+
+export function validationMessage(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => `${issue.path.join('.')}: ${issue.message}`.trim())
+    .join('; ');
+}
