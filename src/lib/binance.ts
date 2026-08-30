@@ -34,8 +34,12 @@ export async function fetchKlines(
   startTime: number,
   limit = 1000,
 ): Promise<KlineResult> {
-  const url = `${host}/api/v3/klines?symbol=${symbol}&interval=1h&limit=${limit}&startTime=${startTime}`;
-  const response = await fetch(url);
+  const url = new URL(`${host}/api/v3/klines`);
+  url.searchParams.set('symbol', symbol);
+  url.searchParams.set('interval', '1h');
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('startTime', String(startTime));
+  const response = await fetch(url.toString());
 
   const retryAfter = response.headers.get('Retry-After');
   const weight = response.headers.get('X-MBX-USED-WEIGHT-1M');

@@ -17,8 +17,16 @@ klines.get('/api/klines', async (c) => {
   if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
     return jsonError('start and end must be numeric timestamps', 400);
   }
-  const rows = await queryKlines(c.env.DB, symbol, startMs, endMs);
-  return jsonOk(rows);
+  // Convert milliseconds to seconds for database query
+  const startSec = Math.floor(startMs / 1000);
+  const endSec = Math.floor(endMs / 1000);
+  try {
+    const rows = await queryKlines(c.env.DB, symbol, startSec, endSec);
+    return jsonOk(rows);
+  } catch (error) {
+    console.error(`Database query failed: ${String(error)}`);
+    return jsonError('Internal server error', 500);
+  }
 });
 
 export default klines;

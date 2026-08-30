@@ -84,13 +84,11 @@ export async function updateRecord(
   return merged;
 }
 
-export type D1Env = Env;
-
 export async function getBackfillCursor(db: D1Database, symbol: string): Promise<number | null> {
   return db
     .prepare('SELECT cursor_open_time FROM backfill_state WHERE symbol = ?')
     .bind(symbol)
-    .first<number>('cursor_open_time');
+    .first<number | null>('cursor_open_time');
 }
 
 export async function setBackfillCursor(

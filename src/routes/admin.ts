@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { Context, Hono } from 'hono';
 import { BinanceError, fetchKlines } from '../lib/binance';
 import { getBackfillCursor, insertKlinesBatch, setBackfillCursor } from '../lib/db';
@@ -9,7 +10,17 @@ const admin = new Hono<{ Bindings: Env }>();
 
 function auth(c: Context<{ Bindings: Env }>, env: Env): Response | null {
   const expected = `Bearer ${env.INGEST_TOKEN}`;
-  if (c.req.header('Authorization') !== expected) {
+  const actual = c.req.header('Authorization') || '';
+
+  try {
+    // Compare only if lengths match (prevents length-based timing leak)
+    if (expected.length !== actual.length) {
+      return jsonError('Unauthorized', 401);
+    }
+    if (!timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) {
+      return jsonError('Unauthorized', 401);
+    }
+  } catch {
     return jsonError('Unauthorized', 401);
   }
   return null;
@@ -21,7 +32,13 @@ async function attempt(host: string, symbol: string, startTime: number) {
 }
 
 admin.get('/api/admin/binance-spike', async (c) => {
+  const denied = auth(c, c.env);
+  if (denied) return denied;
+
   const symbol = c.req.query('symbol') ?? 'BTCUSDT';
+  if (!['BTCUSDT', 'ETHUSDT'].includes(symbol)) {
+    return jsonError('Invalid symbol', 400);
+  }
   const startTime = Date.now() - 2 * 60 * 60 * 1000;
 
   try {
@@ -56,11 +73,17 @@ admin.post('/api/admin/ingest', async (c) => {
   if (!parsed.success) {
     return jsonError(`Validation failed: ${validationMessage(parsed.error)}`, 400);
   }
-  const { symbol, klines } = parsed.data;
-  const res = await insertKlinesBatch(c.env.DB, symbol, klines);
-  const cursor = klines[klines.length - 1].open_time;
-  await setBackfillCursor(c.env.DB, symbol, cursor);
-  return jsonOk({ inserted: res.inserted, skipped: res.skipped, cursor });
+
+  try {
+    const { symbol, klines } = parsed.data;
+    const res = await insertKlinesBatch(c.env.DB, symbol, klines);
+    const cursor = klines[klines.length - 1].open_time;
+    await setBackfillCursor(c.env.DB, symbol, cursor);
+    return jsonOk({ inserted: res.inserted, skipped: res.skipped, cursor });
+  } catch (error) {
+    console.error(`Ingest failed: ${String(error)}`);
+    return jsonError('Internal server error', 500);
+  }
 });
 
 admin.get('/api/admin/backfill-cursor', async (c) => {
