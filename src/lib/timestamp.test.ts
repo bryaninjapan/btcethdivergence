@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Timestamp, TimestampError, TimeConverter } from './timestamp';
+import { Timestamp, TimestampError } from './timestamp';
 
 describe('Timestamp', () => {
   // ========== Factory Methods ==========
@@ -240,77 +240,6 @@ describe('Timestamp', () => {
     });
   });
 
-  // ========== TimeConverter ==========
-
-  describe('TimeConverter.fromParts()', () => {
-    it('converts year/month/day/hour to Timestamp', () => {
-      // 2023-08-31 15:00:00 UTC = 1693494000
-      const ts = TimeConverter.fromParts(2023, 8, 31, 15);
-      expect(ts.toSeconds()).toBe(1693494000);
-    });
-
-    it('handles January (month=1)', () => {
-      // 2023-01-01 00:00:00 UTC = 1672531200
-      const ts = TimeConverter.fromParts(2023, 1, 1, 0);
-      expect(ts.toSeconds()).toBe(1672531200);
-    });
-
-    it('handles leap year dates', () => {
-      // 2024 is leap year
-      // 2024-02-29 12:00:00 UTC
-      const ts = TimeConverter.fromParts(2024, 2, 29, 12);
-      const parts = ts.toParts();
-      expect(parts.year).toBe(2024);
-      expect(parts.month).toBe(2);
-      expect(parts.day).toBe(29);
-    });
-
-    it('clamps invalid days (e.g., Feb 30 → Feb 28/29)', () => {
-      // Feb 30 doesn't exist; should clamp to Feb 28
-      const ts = TimeConverter.fromParts(2023, 2, 30, 0);
-      const parts = ts.toParts();
-      expect(parts.month).toBe(3); // Rolled over to March
-      expect(parts.day).toBe(2); // March 2
-    });
-
-    it('rejects invalid month', () => {
-      expect(() => TimeConverter.fromParts(2023, 13, 1, 0)).toThrow();
-      expect(() => TimeConverter.fromParts(2023, 0, 1, 0)).toThrow();
-    });
-
-    it('rejects invalid hour', () => {
-      expect(() => TimeConverter.fromParts(2023, 8, 31, 24)).toThrow();
-      expect(() => TimeConverter.fromParts(2023, 8, 31, -1)).toThrow();
-    });
-  });
-
-  describe('TimeConverter.toParts()', () => {
-    it('converts Timestamp to parts', () => {
-      const ts = Timestamp.fromSeconds(1693494000);
-      const parts = TimeConverter.toParts(ts);
-
-      expect(parts).toEqual({
-        year: 2023,
-        month: 8,
-        day: 31,
-        hour: 15,
-      });
-    });
-
-    it('is inverse of fromParts()', () => {
-      const originalParts = { year: 2023, month: 8, day: 31, hour: 15 };
-      const ts = TimeConverter.fromParts(
-        originalParts.year,
-        originalParts.month,
-        originalParts.day,
-        originalParts.hour
-      );
-      const roundTrip = TimeConverter.toParts(ts);
-
-      expect(roundTrip).toEqual(originalParts);
-    });
-  });
-
   // ========== Utilities ==========
 
   describe('toString()', () => {
@@ -350,7 +279,7 @@ describe('Timestamp', () => {
 
     it('handles form input scenario: parts→Timestamp→millis→Date', () => {
       // User enters year=2023, month=8, day=31, hour=15
-      const ts = TimeConverter.fromParts(2023, 8, 31, 15);
+      const ts = Timestamp.fromMillis(Date.UTC(2023, 7, 31, 15, 0, 0));
       const millis = ts.toMillis();
       const date = new Date(millis);
 

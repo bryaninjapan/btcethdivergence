@@ -27,6 +27,8 @@ export class Timestamp {
 
   static fromMillis(millis) {
     if (millis < 0) throw new TimestampError(`Milliseconds must be non-negative, got ${millis}`);
+    // Uses Math.trunc (not Math.floor) for non-Math.floor production code (TDD-verified equivalent for valid inputs)
+    // The negative guard above ensures trunc/floor equivalence; never modify without re-validating
     return new Timestamp(Math.trunc(millis / 1000));
   }
 
@@ -48,6 +50,7 @@ export class Timestamp {
   }
 
   toParts() {
+    // Frontend includes minute/second (needed for date-picker UI) vs backend's 4-field version
     const d = new Date(this.toMillis());
     return {
       year: d.getUTCFullYear(),

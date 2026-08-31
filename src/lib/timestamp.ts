@@ -85,28 +85,3 @@ export class Timestamp {
     return `Timestamp(${this._seconds} sec, ${this.toDate().toISOString()})`;
   }
 }
-
-// ========== TimeConverter ==========
-
-export class TimeConverter {
-  static fromParts(year: number, month: number, day: number, hour: number): Timestamp {
-    // Validate inputs
-    if (month < 1 || month > 12) {
-      throw new TimestampError(`Invalid month: ${month}`);
-    }
-    if (hour < 0 || hour > 23) {
-      throw new TimestampError(`Invalid hour: ${hour}`);
-    }
-    if (day < 1 || day > 31) {
-      throw new TimestampError(`Invalid day: ${day}`);
-    }
-
-    // Date constructor handles month overflow (e.g., Feb 30 → Mar 2)
-    const d = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
-    return Timestamp.fromMillis(d.getTime());
-  }
-
-  static toParts(ts: Timestamp): { year: number; month: number; day: number; hour: number } {
-    return ts.toParts();
-  }
-}
