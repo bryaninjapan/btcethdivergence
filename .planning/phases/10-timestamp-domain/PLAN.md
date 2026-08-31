@@ -243,6 +243,11 @@ rg -n "Math\.floor" public/js --type js
 - Total production Math.floor sites: **1 sanctioned exception** (backend Timestamp.fromMillis internal)
 - Excludes: test files (`.test.ts/.test.js`), non-Math.floor arithmetic
 
+**Post-Execution Reminders (W1/W2/W3 fixes)**:
+- **W1**: After 10-03, update ROADMAP SC2 to `"All Math.floor(ms/1000) conversion patterns use Timestamp API"` (Option B decision)
+- **W2**: ✅ DONE — Both frontend grep commands now use `-g '!*.test.js'` (standardized)
+- **W3**: After 10-03, update ROADMAP SC3 to `"Zero Math.floor(ms/1000) outside src/lib/timestamp.ts"` (sanctioned exception documented)
+
 **Why Option 1**:
 - ✓ Single pattern catches all `Math.floor(ms/1000)` forms (Date.now, Date.UTC, simple division)
 - ✓ Explicit about exclusions (test + chart-range)
