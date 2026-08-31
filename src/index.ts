@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { jsonError, jsonOk } from './lib/response';
+import { errorMiddleware, type ApiResponse } from './lib/error-middleware';
+import { ErrorCode } from './lib/errors';
 import admin from './routes/admin';
 import klines from './routes/klines';
 import records from './routes/records';
@@ -10,12 +11,30 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({ credentials: true }));
 
-app.get('/api/health', (c) => jsonOk({ status: 'ok' }));
+// Register error middleware to catch all errors from route handlers
+app.onError((err, c) => errorMiddleware(err, c));
+
+app.get('/api/health', (c) => {
+  const response: ApiResponse<{ status: string }> = {
+    ok: true,
+    data: { status: 'ok' },
+  };
+  return c.json(response);
+});
 
 app.route('/', admin);
 app.route('/', klines);
 app.route('/', records);
 
-app.notFound(() => jsonError('Not found', 404));
+app.notFound((c) => {
+  const response: ApiResponse<never> = {
+    ok: false,
+    error: {
+      code: ErrorCode.INTERNAL_ERROR,
+      message: 'Not found',
+    },
+  };
+  return c.json(response, 404);
+});
 
 export default app;
