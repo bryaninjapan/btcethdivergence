@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { Hono } from 'hono';
+import { errorMiddleware } from '../lib/error-middleware';
 import records from './records';
 import type { DivergenceRecord, Env } from '../types';
 
@@ -85,6 +87,23 @@ function makeEnv(db: FakeD1Database): Env {
   return { DB: db as unknown as Env['DB'], INGEST_TOKEN: 'unused' };
 }
 
+function createAppWithErrorMiddleware(): Hono<{ Bindings: Env }> {
+  const app = new Hono<{ Bindings: Env }>();
+  app.onError((err, c) => errorMiddleware(err, c));
+  app.route('/', records);
+  return app;
+}
+
+// Helper to call records routes with error middleware
+async function callRecordsRoute(
+  path: string,
+  options: RequestInit,
+  env: Env
+): Promise<Response> {
+  const app = createAppWithErrorMiddleware();
+  return app.request(path, options, env);
+}
+
 const EXISTING_RECORD: DivergenceRecord = {
   id: 1,
   start_time: 1600000000,
@@ -101,7 +120,7 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
     db.firstRow = { ...EXISTING_RECORD, id: 5 };
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records',
       {
         method: 'POST',
@@ -131,7 +150,7 @@ describe('records CRUD route contract', () => {
   it('POST with start_time >= end_time → 400 with SC5 message, no DB write', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records',
       {
         method: 'POST',
@@ -146,16 +165,16 @@ describe('records CRUD route contract', () => {
     );
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toContain('start_time must be before end_time');
+    expect(body.error?.message).toContain('start_time must be before end_time');
     expect(db.prepares).toHaveLength(0);
   });
 
   it('POST with an invalid type → 400 mentioning the enum values, no DB write', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records',
       {
         method: 'POST',
@@ -170,9 +189,9 @@ describe('records CRUD route contract', () => {
     );
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toMatch(/time_lag|structural|opposite/);
+    expect(body.error?.message).toMatch(/time_lag|structural|opposite/);
     expect(db.prepares).toHaveLength(0);
   });
 
@@ -180,7 +199,7 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
     db.firstRow = { ...EXISTING_RECORD };
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records/1',
       {
         method: 'PUT',
@@ -200,7 +219,7 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
     db.firstRow = { ...EXISTING_RECORD, notes: 'existing notes', tags: 'existing tags' };
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records/1',
       {
         method: 'PUT',
@@ -222,7 +241,7 @@ describe('records CRUD route contract', () => {
   it('PUT with reversed times → 400 with SC5 message, no DB write', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records/1',
       {
         method: 'PUT',
@@ -233,9 +252,9 @@ describe('records CRUD route contract', () => {
     );
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toContain('start_time must be before end_time');
+    expect(body.error?.message).toContain('start_time must be before end_time');
     expect(db.prepares).toHaveLength(0);
   });
 
@@ -243,7 +262,7 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
     db.changes = 1;
 
-    const res = await records.request('/api/records/1', { method: 'DELETE' }, makeEnv(db));
+    const res = await callRecordsRoute('/api/records/1', { method: 'DELETE' }, makeEnv(db));
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: { id: number } };
@@ -257,30 +276,30 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
     db.changes = 0;
 
-    const res = await records.request('/api/records/1', { method: 'DELETE' }, makeEnv(db));
+    const res = await callRecordsRoute('/api/records/1', { method: 'DELETE' }, makeEnv(db));
 
     expect(res.status).toBe(404);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toBe('Record not found');
+    expect(body.error?.message).toContain('not found');
   });
 
   it('DELETE /api/records/abc (non-integer id) → 400, no DB call', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request('/api/records/abc', { method: 'DELETE' }, makeEnv(db));
+    const res = await callRecordsRoute('/api/records/abc', { method: 'DELETE' }, makeEnv(db));
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toBe('Invalid record id');
+    expect(body.error?.message).toContain('Record ID must be');
     expect(db.prepares).toHaveLength(0);
   });
 
   it('PUT /api/records/0x10 (hex notation) → 400, rejects non-decimal formats (LOW issue)', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records/0x10',
       {
         method: 'PUT',
@@ -291,21 +310,21 @@ describe('records CRUD route contract', () => {
     );
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toBe('Invalid record id');
+    expect(body.error?.message).toContain('Record ID must be');
     expect(db.prepares).toHaveLength(0);
   });
 
   it('DELETE /api/records/1e3 (scientific notation) → 400, rejects non-decimal (LOW issue)', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request('/api/records/1e3', { method: 'DELETE' }, makeEnv(db));
+    const res = await callRecordsRoute('/api/records/1e3', { method: 'DELETE' }, makeEnv(db));
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toBe('Invalid record id');
+    expect(body.error?.message).toContain('Record ID must be');
     expect(db.prepares).toHaveLength(0);
   });
 
@@ -313,7 +332,7 @@ describe('records CRUD route contract', () => {
     const db = new FakeD1Database();
     db.rows = [{ ...EXISTING_RECORD }, { ...EXISTING_RECORD, id: 2 }];
 
-    const res = await records.request('/api/records', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records', {}, makeEnv(db));
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: DivergenceRecord[] };
@@ -328,7 +347,7 @@ describe('records CRUD route contract', () => {
       { ...EXISTING_RECORD, id: 2, tags: '50profit' },
     ];
 
-    const res = await records.request('/api/records?tag=50%25', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records?tag=50%25', {}, makeEnv(db));
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: DivergenceRecord[] };
@@ -345,7 +364,7 @@ describe('records CRUD route contract', () => {
       { ...EXISTING_RECORD, id: 3, tags: 'v1Xbeta' },
     ];
 
-    const res = await records.request('/api/records?tag=v1_beta', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records?tag=v1_beta', {}, makeEnv(db));
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: DivergenceRecord[] };
@@ -360,7 +379,7 @@ describe('records filter contract (REC-05, REC-06)', () => {
     const db = new FakeD1Database();
     db.rows = [{ ...EXISTING_RECORD }];
 
-    const res = await records.request('/api/records?type=structural', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records?type=structural', {}, makeEnv(db));
 
     expect(res.status).toBe(200);
     expect(db.prepares[0]).toContain('WHERE type = ?');
@@ -373,7 +392,7 @@ describe('records filter contract (REC-05, REC-06)', () => {
     const db = new FakeD1Database();
     db.rows = [{ ...EXISTING_RECORD }];
 
-    const res = await records.request('/api/records?tag=btc', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records?tag=btc', {}, makeEnv(db));
 
     expect(res.status).toBe(200);
     expect(db.prepares[0]).toContain('tags LIKE ?');
@@ -384,7 +403,7 @@ describe('records filter contract (REC-05, REC-06)', () => {
     const db = new FakeD1Database();
     db.rows = [{ ...EXISTING_RECORD }];
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       '/api/records?type=structural&tag=btc',
       {},
       makeEnv(db),
@@ -401,26 +420,26 @@ describe('records filter contract (REC-05, REC-06)', () => {
   it('GET /api/records?type=bogus → 400 mentioning the enum, no DB call', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request('/api/records?type=bogus', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records?type=bogus', {}, makeEnv(db));
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toMatch(/time_lag|structural|opposite/);
+    expect(body.error?.message).toMatch(/time_lag|structural|opposite/);
     expect(db.prepares).toHaveLength(0);
   });
 
   it('GET /api/records?tag=<201 chars> → 400 (max 200), no DB call', async () => {
     const db = new FakeD1Database();
 
-    const res = await records.request(
+    const res = await callRecordsRoute(
       `/api/records?tag=${'a'.repeat(201)}`,
       {},
       makeEnv(db),
     );
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
     expect(db.prepares).toHaveLength(0);
   });

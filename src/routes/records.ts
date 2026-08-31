@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { createRecord, deleteRecord, listRecords, updateRecord } from '../lib/db';
-import { DatabaseError, ValidationError } from '../lib/errors';
+import { DatabaseError, NotFoundError, ValidationError } from '../lib/errors';
 import {
   createRecordSchema,
   listRecordsQuerySchema,
@@ -80,7 +80,7 @@ records.put('/api/records/:id', async (c) => {
   try {
     const row = await updateRecord(c.env.DB, id, parsed.data);
     if (!row) {
-      throw new ValidationError('id', 'Record not found');
+      throw new NotFoundError('Record');
     }
     const response: ApiResponse<DivergenceRecord> = {
       ok: true,
@@ -88,7 +88,7 @@ records.put('/api/records/:id', async (c) => {
     };
     return c.json(response);
   } catch (error) {
-    if (error instanceof ValidationError) throw error;
+    if (error instanceof ValidationError || error instanceof NotFoundError) throw error;
     throw new DatabaseError(`Failed to update record: ${String(error)}`);
   }
 });
@@ -106,7 +106,7 @@ records.delete('/api/records/:id', async (c) => {
   try {
     const deleted = await deleteRecord(c.env.DB, id);
     if (!deleted) {
-      throw new ValidationError('id', 'Record not found');
+      throw new NotFoundError('Record');
     }
     const response: ApiResponse<{ id: number }> = {
       ok: true,
@@ -114,7 +114,7 @@ records.delete('/api/records/:id', async (c) => {
     };
     return c.json(response);
   } catch (error) {
-    if (error instanceof ValidationError) throw error;
+    if (error instanceof ValidationError || error instanceof NotFoundError) throw error;
     throw new DatabaseError(`Failed to delete record: ${String(error)}`);
   }
 });

@@ -108,6 +108,23 @@ export class AuthenticationError extends AppError {
 }
 
 /**
+ * Not found error: Resource does not exist.
+ * HTTP Status: 404 Not Found
+ * Note: Uses VALIDATION_ERROR code but returns 404 status code.
+ */
+export class NotFoundError extends AppError {
+  constructor(resource: string, details?: Record<string, unknown>) {
+    super(ErrorCode.VALIDATION_ERROR, `${resource} not found`, details);
+    this.name = 'NotFoundError';
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+
+  override statusCode(): number {
+    return 404; // Override to return 404 instead of 400
+  }
+}
+
+/**
  * Maps ErrorCode to HTTP status codes.
  * Used by middleware to set response status.
  */
