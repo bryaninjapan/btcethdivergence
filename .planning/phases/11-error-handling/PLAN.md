@@ -5,7 +5,7 @@ date_created: 2026-09-01
 goal: Replace ad-hoc error handling with structured error types, unified response envelope, and centralized error middleware
 depends_on: Phase 1-10 (v1.0 complete)
 requirements: CODE-02 (Error Handling)
-estimated_effort: 3-4 days
+estimated_effort: 4-5 days (1.5 + 1.5 + 1 + 0.5-1 for frontend)
 ---
 
 # Phase 11: Error Handling & Structured Responses
@@ -70,24 +70,49 @@ Eliminate scattered `try-catch` blocks, string-based errors, and ad-hoc error re
 ## Implementation Plan
 
 ### Phase 11-01: Error Type Definitions & Middleware
-**Duration**: 1 day
+**Duration**: 1-1.5 days
 **Deliverable**: `src/lib/errors.ts`, error middleware, types
 
 Tasks:
 - [ ] Create `src/lib/errors.ts`:
-  - Define `AppError` base class
+  - Define `AppError` base class with `code`, `message`, `details` properties
   - Define `ValidationError`, `DatabaseError`, `ExternalServiceError`, `AuthenticationError`
-  - Implement `toResponse()` method for each type
-  - Define `ErrorCode` enum
+  - Implement `toResponse()` method for each type (client-safe, no details leakage)
+  - Define `ErrorCode` enum: VALIDATION_ERROR, DATABASE_ERROR, SERVICE_ERROR, AUTH_ERROR, INTERNAL_ERROR
+  - **HTTP Status Code Mapping**:
+    ```typescript
+    const statusCodes = {
+      VALIDATION_ERROR: 400,
+      DATABASE_ERROR: 500,
+      SERVICE_ERROR: 502,
+      AUTH_ERROR: 401,
+      INTERNAL_ERROR: 500
+    }
+    ```
 - [ ] Create `src/lib/error-middleware.ts`:
-  - Centralized error handler
-  - Logs full error + context
-  - Returns structured `ApiResponse<never>` on error
-  - Handles both `AppError` and unexpected errors
+  - Centralized error handler for Hono
+  - **Logging Strategy**: Use Wrangler's built-in logger with structured JSON format
+    - Log fields: `{ code, message, details, stack, timestamp, severity }`
+    - Include full stack trace for debugging
+    - Log level: ERROR for client errors, ERROR for server errors
+  - **Zod Error Detection**: Catch `ZodError` and convert to `ValidationError`
+    ```typescript
+    if (err instanceof ZodError) {
+      return new ValidationError(err.errors[0].path.join('.'), validationMessage(err))
+    }
+    ```
+  - Returns structured `ApiResponse<never>` on error (with correct HTTP status code)
+  - Handles `AppError` subtypes + unexpected errors (unknown → INTERNAL_ERROR)
 - [ ] Update `src/types.ts`:
   - Export `ApiResponse<T>` interface
   - Export `ErrorDetails` interface
   - Export `ErrorCode` enum
+
+- [ ] Update `src/index.ts`:
+  - Register error middleware: `app.onError((err, c) => errorMiddleware(err, c))`
+  - **JSON Parse Error Handling**: Preserve route-level try-catch for `c.req.json()`
+    - Routes should catch and throw `ValidationError("body", "Invalid JSON")`
+    - Middleware will catch and format response
 
 ### Phase 11-02: Refactor Route Handlers
 **Duration**: 1.5 days
@@ -107,13 +132,33 @@ Tasks:
   - Return `ApiResponse<Record | Record[]>`
 
 - [ ] Update `src/routes/admin.ts`:
-  - Restructure nested try-catch
+  - Restructure nested try-catch (lines 44-59, 77-86)
   - Separate concerns: validation → service → DB
   - Each layer throws typed error
   - Middleware catches and formats
+  - Preserve Binance fallback logic (err instanceof BinanceError ? err : new BinanceError(...))
 
-### Phase 11-03: Integration & Testing
-**Duration**: 1 day
+### Phase 11-03: Frontend Error Handling Updates
+**Duration**: 0.5-1 day
+**Deliverable**: Frontend receives and differentiates structured errors
+
+Tasks:
+- [ ] Update `public/js/records.js`:
+  - Change error handling from string to object
+  - Check `data.error.code` (VALIDATION_ERROR | SERVICE_ERROR | DATABASE_ERROR)
+  - Show context-appropriate messages (toast for validation, error page for service)
+
+- [ ] Update other frontend files if applicable:
+  - `public/js/charts.js` — If errors are displayed in charts
+  - `public/js/api.js` — If fetch error handling exists
+
+- [ ] Manual frontend UAT:
+  - Invalid input → shows validation toast
+  - Service failure → shows error page
+  - Different error codes differentiated visually
+
+### Phase 11-04: Integration & Testing
+**Duration**: 1-1.5 days
 **Deliverable**: Tests, verification, LEARNING.md
 
 Tasks:
@@ -153,15 +198,20 @@ Tasks:
 - `src/lib/errors.test.ts` — Error tests
 - `src/middleware/error.test.ts` — Middleware tests
 
-### Modified Files
+### Modified Files (Backend)
 - `src/types.ts` — Add `ApiResponse`, `ErrorDetails`, `ErrorCode`
-- `src/index.ts` — Register error middleware
-- `src/routes/klines.ts` — Structured errors
-- `src/routes/records.ts` — Structured errors
-- `src/routes/admin.ts` — Restructured try-catch
-- `src/routes/klines.test.ts` — Error case tests
-- `src/routes/records.test.ts` — Error case tests
-- `src/routes/admin.test.ts` — Error case tests
+- `src/index.ts` — Register error middleware + JSON parse error handling
+- `src/routes/klines.ts` — Throw structured errors instead of swallowing
+- `src/routes/records.ts` — Throw structured errors for validation/DB/auth failures
+- `src/routes/admin.ts` — Restructure nested try-catch, preserve Binance fallback
+- `src/routes/klines.test.ts` — Error case tests (validation, DB, service failures)
+- `src/routes/records.test.ts` — Error case tests (3 routes × 3 error types)
+- `src/routes/admin.test.ts` — Error case tests (nested try-catch refactoring)
+
+### Modified Files (Frontend)
+- `public/js/records.js` — Update fetch error handling to parse `error.code`
+- `public/js/charts.js` — (if errors displayed) Update error handling
+- `public/js/api.js` — (if exists) Consistent error handling pattern
 
 ## Testing Strategy
 
@@ -176,7 +226,13 @@ Tasks:
 - Route returns structured error on service failure (1 route × 3 failures = 3 tests)
 - Error middleware logs full context (3 tests)
 
-**Total**: ~40 tests (target: 80%+ coverage of error paths)
+**Special Cases**:
+- Zod error detection → ValidationError conversion (2 tests)
+- Binance timeout errors → ExternalServiceError with retry info (2 tests)
+- Error context preservation in server logs (2 tests)
+
+**Total**: ~45 tests (target: 80%+ coverage of error paths)
+**Coverage target**: 80%+ of error handling code paths
 
 ## Risk Mitigation
 
@@ -206,5 +262,6 @@ Tasks:
 One commit per task:
 1. `feat(phase-11-01): add structured error types and middleware`
 2. `refactor(phase-11-02): restructure route error handling`
-3. `test(phase-11-03): add comprehensive error handling tests`
-4. `docs(phase-11): add LEARNING.md and error handling guide`
+3. `refactor(phase-11-03): update frontend error handling`
+4. `test(phase-11-04): add comprehensive error handling tests`
+5. `docs(phase-11): add LEARNING.md and error handling guide`
