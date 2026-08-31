@@ -1,5 +1,26 @@
 import { z } from 'zod';
 import { DIVERGENCE_TYPES } from '../domains/divergence';
+import { ValidationError } from './errors';
+
+/**
+ * Validates that a value is a positive integer represented as a plain
+ * decimal string (no whitespace, sign, decimal point, or exponent).
+ * Intended for route params such as `:id` where the raw value is always
+ * a string (or possibly unknown, e.g. tests passing non-string input).
+ *
+ * Throws a `ValidationError` for any invalid input, always with the same
+ * message shape: "<fieldName> must be a positive integer".
+ */
+export function validatePositiveInteger(value: unknown, fieldName = 'id'): number {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+    throw new ValidationError(fieldName, `${fieldName} must be a positive integer`);
+  }
+  const num = Number(value);
+  if (!Number.isSafeInteger(num) || num <= 0) {
+    throw new ValidationError(fieldName, `${fieldName} must be a positive integer`);
+  }
+  return num;
+}
 
 const divergenceType = z.enum(DIVERGENCE_TYPES);
 
