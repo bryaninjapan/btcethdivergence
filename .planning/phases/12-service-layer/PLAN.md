@@ -16,30 +16,32 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ### **12-00: Create Test Database Helper (before all tasks)**
 
-**Goal:** Set up test D1 infrastructure so 12-01/02/03 can use it.
+**Goal:** Set up test D1 infrastructure using SQLite in-memory so 12-01/02/03 can use it.
 
 **Subtasks:**
 
-1. **Configure vitest for D1 testing**
-   - Update `vitest.config.ts` to use `@cloudflare/vitest-pool-workers`
-   - Enable D1 miniflare bindings
-   - Set up test database instance
+1. **Install SQLite test dependency**
+   - Add to devDependencies: `sql.js@^1.8.0` (or `better-sqlite3@^9.0.0` if native bindings preferred)
+   - `npm install` to verify
 
 2. **Create src/lib/test-db.ts helper**
-   - `async function createTestDatabase(): Promise<D1Database>`
-     - Create isolated D1 miniflare instance
-     - Run 0001, 0002, 0003 migrations
-     - Return fresh D1 instance
-   - `async function cleanupTestDatabase(db: D1Database): Promise<void>`
-     - Drop all tables, close connection
+   - Import `sql.js` (or `better-sqlite3`)
+   - `async function createTestDatabase(): Promise<SQLiteDatabase>`
+     - Create in-memory SQLite instance
+     - Run 0001, 0002, 0003 migrations (SQL strings)
+     - Return fresh DB instance with schema
+   - `async function cleanupTestDatabase(db: SQLiteDatabase): Promise<void>`
+     - Close connection (if needed)
 
 3. **Verify helper works**
-   - Write simple test: `createTestDatabase() → insert record → query → cleanup`
+   - Write smoke test: `createTestDatabase() → insert record → query → cleanup`
+   - Confirm migrations run without error
 
 **Success Criteria:**
-- [ ] vitest.config.ts updated with workers pool + D1
-- [ ] test-db.ts helper created and tested
+- [ ] sql.js added to package.json devDependencies
+- [ ] test-db.ts helper created and imports sql.js
 - [ ] Simple smoke test passes
+- [ ] No changes to vitest.config.ts
 
 ---
 
@@ -74,8 +76,10 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
    - Setup: Use createTestDatabase()
    - Test createRecord: valid input → creates record
    - Test createRecord: edge case (very long notes) → succeeds
+   - Test createRecord: tags preserved → returns correct tags
    - Test updateRecord: updates existing → returns Record
    - Test updateRecord: non-existent id → returns null
+   - Test updateRecord: partial update (only type) → other fields preserved
    - Test listRecords: no filters → returns all
    - Test listRecords: filter by type → returns matching only
    - Test listRecords: filter by tag → returns matching only
@@ -308,21 +312,21 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ### **New Files**
 - `src/services/records.service.ts` (~60 lines) — createRecord, updateRecord, listRecords, deleteRecord wrappers
-- `src/services/records.service.test.ts` (~180 lines) — 8 test cases
+- `src/services/records.service.test.ts` (~200 lines) — 11 test cases
 - `src/services/klines.service.ts` (~30 lines) — queryKlines wrapper
 - `src/services/klines.service.test.ts` (~120 lines) — 5 test cases
 - `src/services/admin.service.ts` (~40 lines) — getBackfillCursor, setBackfillCursor wrappers
 - `src/services/admin.service.test.ts` (~100 lines) — 3 test cases
-- `src/lib/test-db.ts` (~60 lines) — createTestDatabase(), cleanupTestDatabase() helpers
+- `src/lib/test-db.ts` (~70 lines) — createTestDatabase(), cleanupTestDatabase() helpers (SQLite in-memory)
 
 ### **Modified Files**
-- `vitest.config.ts` — add workers pool + D1 miniflare bindings (for test DB)
-- `package.json` — update test:coverage script to include src/**
+- `package.json` — add `sql.js@^1.8.0` to devDependencies, update test:coverage script to include `src/**`
 - `src/routes/records.ts` (~15 lines reduction) — replace logic with service calls
 - `src/routes/klines.ts` (~10 lines reduction) — replace query logic with service calls
 - `src/routes/admin.ts` (~15 lines reduction) — replace cursor logic with service calls
 
 ### **Unchanged**
+- `vitest.config.ts` (NO CHANGES — remains jsdom/pool:undefined for existing tests)
 - `src/lib/db.ts` (DB functions stay as-is, act as repository layer)
 - `src/types.ts`
 - `src/lib/errors.ts`
@@ -346,7 +350,7 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 ## Success Criteria (Phase-Level)
 
 1. ✅ All business logic extracted to services/ (records, klines, admin)
-2. ✅ 16+ unit tests created, all passing (12-00 smoke + 12-01/02/03 tests)
+2. ✅ 20+ unit tests created, all passing (12-00: 1 + 12-01: 11 + 12-02: 5 + 12-03: 3 = 20)
 3. ✅ Integration tests pass (routes still work, no regressions)
 4. ✅ E2E tests pass (calculator flows work)
 5. ✅ `npm run typecheck` passes (no TypeScript errors)
@@ -359,14 +363,14 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ## Estimated Effort
 
-- 12-00: 0.5 day (2-3 hours) — vitest config + test-db helper
-- 12-01: 1 day (4-6 hours) — records service + 8 tests
+- 12-00: 0.25 day (1-1.5 hours) — install sql.js + test-db helper (no vitest config needed)
+- 12-01: 1 day (4-6 hours) — records service + 11 tests
 - 12-02: 1 day (4-6 hours) — klines service + 5 tests (can run parallel with 12-01)
 - 12-03: 0.5 day (2-3 hours) — admin service + 3 tests
 - 12-04: 0.5 day (2-3 hours) — verification, coverage, E2E check
 - 12-05: 0.5 day (2-3 hours) — code review, JSDoc, LEARNING.md
 
-**Total: 3.5-4 days** (with 12-01/12-02 parallel: effectively 3-3.5 days)
+**Total: 3.5 days** (with 12-01/12-02 parallel: effectively 3 days)
 
 ---
 
