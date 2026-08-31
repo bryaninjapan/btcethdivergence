@@ -1,0 +1,20 @@
+Now let me verify load-bearing claims against the actual source. Let me explore the source tree and key files.
+I've completed my verification. The on-disk `12-PLAN-CHECK.md` reviews an older plan revision (it references `fetchAndInsertKlines`, phantom helpers already fixed in the current PLAN.md). I'll write a fresh check of the current plan, which I've now fact-checked against the source.
+Wrote `.planning/phases/12-service-layer/12-PLAN-CHECK.md` (fresh check of the current 08:01 PLAN.md revision — the prior on-disk check reviewed an older revision).
+
+**Summary: 0 blockers, 7 warnings, 7 info.**
+
+Verified against live source: all `db.ts` exports cited by the plan exist at the stated line numbers (`listRecords`:9, `queryKlines`:33, `createRecord`:48, `updateRecord`:73, `deleteRecord`:109, `getBackfillCursor`:114, `setBackfillCursor`:121, `insertKlinesBatch`:135), the admin spike route is admin.ts:51-97 and ingest 114-118, all five verification scripts exist in package.json, `vitest.config.ts` is jsdom/`pool:undefined`, only `e2e/calculator-init.spec.ts` exists, and `public/` never touches `/api/admin/`.
+
+Key warnings:
+- **W1** — Refactor examples drop the try/catch; `errorMiddleware` (error-middleware.ts:47) would flip DATABASE_ERROR→INTERNAL_ERROR and fail klines.test.ts:178. Error-translation ownership is undecided.
+- **W2** — Spike example shows `GET /api/admin/binance-spike/:symbol` + `param()`; the real route is `/api/admin/binance-spike?symbol=` with `Date.now() - 2h` startTime (admin.ts:51-59).
+- **W3** — Mock `batch({sql,params}[])` mismatches db.ts:143, which passes prepared-statement objects.
+- **W4** — Mock spec omits WHERE/LIKE-ESCAPE filtering needed by the stated listRecords tests and seeded-row `first()` for updateRecord.
+- **W5** — records/klines services are pass-through wrappers; only admin gains real logic.
+- **W6** — Coverage change silently relaxes the 95% calculator gates to one 80% lines gate.
+- **W7** — ~15-20 line targets for records PUT (37) / klines GET (35) lack a stated mechanism.
+
+All 8 success criteria have covering tasks; CODE-04 is covered; dependencies are acyclic; no scope-reduction hedging.
+
+Plans verified. Ready to execute.

@@ -186,4 +186,17 @@ describe('adminService.processIngest', () => {
       message: expect.stringContaining('Ingest failed'),
     });
   });
+
+  it('propagates DatabaseError from cursor upsert without double-wrapping', async () => {
+    const db = createMockD1Database();
+    // Succeed on the kline batch insert, but fail on cursor upsert
+    db.failNext('run'); // second call is setBackfillCursor's run()
+
+    await expect(
+      adminService.processIngest(db as unknown as D1Database, 'BTCUSDT', [K1]),
+    ).rejects.toMatchObject({
+      code: ErrorCode.DATABASE_ERROR,
+      message: expect.stringContaining('Failed to set backfill cursor'),
+    });
+  });
 });

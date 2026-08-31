@@ -1,0 +1,20 @@
+No RESEARCH.md exists for phase 12. Now let me read the load-bearing source files the plan references.
+All source claims verified. Now writing the plan check report.
+## Plan Check Summary — Phase 12 Service Layer Pattern
+
+**Verdict: 0 blockers, 7 warnings, 5 info** — report written to `.planning/phases/12-service-layer/12-PLAN-CHECK.md`.
+
+I verified the plan against the actual ROADMAP SC text, CONTEXT.md decisions, and the live source tree (all `db.ts` signatures, `admin.ts` line ranges 36-97/114-118, `vitest.config.ts`, `package.json` scripts, E2E config, existing route tests).
+
+**Key finding:** the prior on-disk PLAN-CHECK's blocker (B1) is stale — it claimed ROADMAP SC3 demands a *real* test D1, but SC3 reads "isolated with **Mock D1**". The plan's `createMockD1Database()` approach is compliant, so the blocker no longer applies.
+
+**Real defects (all WARNING, all fixable pre-execution):**
+- W1: 12-01/12-02 reference phantom `createTestDatabase()`/`cleanupTestDatabase()` — 12-00 only defines `createMockD1Database()`/`createMockD1WithData()`.
+- W2: The 12-00 mock omits `.batch()`, which `insertKlinesBatch` (db.ts:143) needs — 12-03 admin tests can't run against the specced mock.
+- W3: `fetchAndInsertKlines` mischaracterizes the binance-spike route (read-only probe returning `{endpoint,status,count,weight}`; plan would add a D1 write) — violates CONTEXT's "Change API contracts = Out of Scope".
+- W4: `processIngest` drops `skipped` from the ingest response contract.
+- W5-W8: line-count targets unverified, coverage lacks a remediation loop, admin spike/ingest have zero integration tests, E2E only covers the calculator.
+
+All 8 ROADMAP success criteria have covering tasks; no scope-reduction hedging found; dependencies acyclic; service signatures match real `db.ts` exports.
+
+**Plans verified. Ready to execute.**

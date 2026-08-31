@@ -1,0 +1,17 @@
+Now let me read ROADMAP.md phase section, PROJECT.md, and explore the source tree.
+Now the remaining source/config files and existing tests.
+Now checking binance lib, scripts, playwright config, migrations, types, and e2e dir.
+I have all the evidence I need. Let me write the plan check report.
+Plan check complete. Report written to `.planning/phases/12-service-layer/12-PLAN-CHECK.md`.
+
+**Summary — 4 blockers, 7 warnings, 3 info:**
+
+**Blockers (goal unachievable as written):**
+- **B1** Klines service signature `(db, symbol, limit?)` + route example drop `start`/`end` and reference non-existent `queryKlinesSchema` — breaks the chart time-range query and won't compile.
+- **B2** Records service `listRecords(db)` drops type/tag filters; `updateRecord`/`deleteRecord` drop the `null`/`boolean` semantics the routes need for 404s — breaks Phase 5 filtering and existing integration tests.
+- **B3** `npm run test:coverage` only instruments `public/js/calculator*.js` at 95% — cannot verify the 80% coverage criterion for new services.
+- **B4** "Real test D1" is unimplementable: `vitest.config.ts` uses `pool: undefined` (plain Node), no miniflare/workers pool or D1 bindings, and the plan specifies no config change.
+
+**Key warnings:** in-service validation contradicts locked Decision 3/SC2; min test count 16 < 20 required; test-db helper is ordered after the tasks that need it; missing `typecheck`; `npm run test:e2e` doesn't exist (E2E only covers calculator); `queryKlinesBatch`/`fetchAndStoreKlines`/`backfillKlines` are invented, not extracted; admin spike fallback logic not covered.
+
+4 blocker(s) found — plan needs revision before execution.

@@ -1,0 +1,20 @@
+Now let me examine the actual source tree to fact-check the plan's load-bearing claims.
+Now let me check the test infrastructure and db.ts to verify how tests currently work and whether the plan's "mock D1" approach matches the "real test D1 database" success criterion.
+Now let me verify the remaining load-bearing claims: types, validate schemas, error middleware, scripts, E2E config, and frontend usage of admin endpoints.
+I have all the evidence I need. Let me verify a couple final claims before writing the report.
+All claims verified. Writing the plan check report.
+Plan check complete. Report written to `.planning/phases/12-service-layer/12-PLAN-CHECK.md`.
+
+**Summary**
+
+Verified the current PLAN.md (mock-D1 revision, superseding the prior sql.js-era check) against ROADMAP Phase 12, CONTEXT.md, and the real source tree.
+
+**1 blocker (B1):** SC3 requires 20+ service unit tests "using **real test D1 database**", but the plan delivers only `createMockD1Database()` — an in-memory mock — and silently drops "real test D1" from its own success-criteria list. Worse, 12-01/12-02 reference `createTestDatabase()` / `cleanupTestDatabase()` which no task defines (12-00 builds only mock helpers), so those tasks can't execute as written. Fix: stand up a real D1 harness (miniflare/`@cloudflare/vitest-pool-workers` already installed but unused) or amend the ROADMAP criterion, and make the referenced helper names exist.
+
+**5 warnings:** W1 coverage ≥80% asserted with no remediation loop (and unused `src/lib/response.ts` drags it down; 95% calculator gates dropped); W2 SC4 "~10-20 lines/endpoint" dropped and unverified (records PUT ~37, klines GET ~35 today); W3 admin spike/ingest have zero integration tests (`admin.test.ts` only tests auth), so SC5 regressions go undetected; W4 spike/ingest refactor silently changes API contracts (`{endpoint,status,count,weight}` → insert+cursor; `skipped` dropped) — CONTEXT lists contract changes as Out of Scope; W5 E2E is calculator-only and needs local wrangler dev + D1.
+
+**5 info:** test-count arithmetic (16+ vs 23), module-vs-method phrasing, unused `env` param, no-Zod in klines route, over-serialized 12-03.
+
+Line-number and signature claims in the plan were fact-checked and found accurate.
+
+1 blocker(s) found — plan needs revision before execution.

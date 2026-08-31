@@ -1,0 +1,14 @@
+I have the full picture now. The existing `12-PLAN-CHECK.md` is stale (it reviewed the pre-`dda03fe` plan). I'll write a fresh check of the current `PLAN.md` against source.
+Re-checked revision `dda03fe` of Phase 12's PLAN.md against the actual source tree. The prior check's two blockers were resolved (20 tests now enumerated; `vitest.config.ts` untouched), but fresh analysis found two blockers remain.
+
+**Blockers**
+- **B1 — test-DB helper can't drive the services.** 12-00 defines `createTestDatabase(): Promise<SQLiteDatabase>` (sql.js), but every service and `db.ts` function takes `D1Database` and calls `prepare().bind().all/first/run/batch` with Promise/`meta.changes` semantics (db.ts:33-135). Neither sql.js nor better-sqlite3 implements that interface; no adapter is specced, so the service tests will fail `npm run typecheck` and runtime.
+- **B2 — admin business logic stays in the route.** 12-03 explicitly keeps the binance-spike/fallback orchestration (admin.ts:36-97) and ingest orchestration (admin.ts:114-118) at the HTTP layer, wrapping only cursor get/set. ROADMAP SC1 names the admin domain and SC4 requires thin routes — hedging on in-scope criteria.
+
+**Warnings:** SC4 line-count unverifiable for klines (~35 lines) and admin; coverage gate has no remediation if aggregate <80% and drops the existing calculator 95% thresholds; the sole E2E spec (calculator) doesn't touch refactored routes; 12-02/12-03 code examples call `db.queryKlines()`/`db.getBackfillCursor()` as instance methods though they're `../lib/db` module exports.
+
+**Info:** test-count inconsistency (11 vs "8+"), JSDoc contradicts Decision 3, LEARNING.md doesn't exist, klines validates manually not via Zod, sql.js ≠ literal D1 (document tradeoff), service/db naming collisions.
+
+Report written to `.planning/phases/12-service-layer/12-PLAN-CHECK.md`.
+
+2 blocker(s) found — plan needs revision before execution.

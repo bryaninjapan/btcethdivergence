@@ -130,6 +130,7 @@ async function processIngest(
     await setBackfillCursor(db, symbol, newCursor);
     return { inserted: res.inserted, skipped: res.skipped, newCursor };
   } catch (error) {
+    if (error instanceof DatabaseError) throw error;
     throw new DatabaseError('Ingest failed', { originalError: String(error) });
   }
 }

@@ -1,0 +1,18 @@
+I'll start by reading the required planning documents in order.
+Now let me verify against the actual source tree. Let me explore the project structure.
+Now let me read the actual source files that the plan's claims are load-bearing on.
+I now have everything needed. Let me verify a couple of remaining claims before writing the report.
+All claims verified. Writing the plan-check report.
+Report written to `.planning/phases/12-service-layer/12-PLAN-CHECK.md`.
+
+**Summary:** Re-checked the revised Phase 12 plan (after `af1833b`) against the real source. Prior B1-B4 are resolved — service signatures now match `db.ts` contracts exactly (verified against `db.ts`, `routes/*.ts`, `validate.ts`), validation stays at the route layer, and 12-04's commands are real.
+
+**2 blockers found — plan needs revision before execution.**
+
+1. **B1 — SC3 "20+ tests" not delivered.** Enumerated cases max at 18 (12-00:1 + 12-01:9 listed + 12-02:5 + 12-03:3), and PLAN.md line 349 silently rewrites the criterion down to "16+". No task reaches 20.
+
+2. **B2 — 12-00's global pool switch breaks the existing suite.** `vitest.config.ts` is jsdom/`pool: undefined`; 15+ frontend tests in `public/js/` and `src/public/` need DOM. `@cloudflare/vitest-pool-workers` runs in workerd (no jsdom). Switching the one config kills `npm test` and coverage → SC5/12-04 fail. Must use a separate workers config or vitest `projects`, not replace the main config.
+
+**4 warnings:** admin ingest orchestration + `binance-spike` fallback stay in routes (SC1 partial); SC4's "10-20 lines/endpoint" fuzzy (klines ~35 lines after refactor); real-D1 mechanism under-specified (inherits B2 redesign); E2E only covers the calculator, not the changed routes.
+
+Plans verified — ready to execute only after B1 and B2 are fixed.
