@@ -22,7 +22,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Leverage Calculator** - Independent client-side long/short position-sizing calculator ✅
 - [x] **Phase 9: Access & Launch Hardening** - Shared navigation plus Cloudflare Access gating the whole app ✅
 - [x] **Phase 10: Timestamp Domain Abstraction** - Eliminate scattered time conversion logic, centralize via strongly-typed Timestamp class ✅
-- [ ] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware
+- [x] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware ✅
+- [ ] **Phase 12: Service Layer Pattern** - Extract business logic from route handlers, implement service layer for improved testability and reusability
 
 ## Phase Details
 
