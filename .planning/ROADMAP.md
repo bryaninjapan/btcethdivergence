@@ -12,15 +12,15 @@ This project builds a single-owner, password-gated internal tool for logging obs
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Worker Foundation & Binance Spike** - Deployed Worker skeleton, D1 schema, and a live Binance-reachability spike test
-- [ ] **Phase 2: Kline Backfill Engine** - Cursor-paginated, rate-limit-aware Binance ingestion into D1 within Workers Free-plan limits
-- [ ] **Phase 3: Historical Load & Cron Sync** - Full 2021-present history loaded gap-free, then kept current by a daily cron
-- [ ] **Phase 4: Records Core CRUD** - Owner can create, edit, delete, and view divergence records
-- [ ] **Phase 5: Records Filtering & Time-Entry UX** - Owner can filter records and enter times via UTC-labeled dropdowns
-- [ ] **Phase 6: Dual Chart Rendering & Time Sync** - Stacked BTC/ETH candlestick charts with synced scroll/zoom
-- [ ] **Phase 7: Chart Navigation & Record Deep Link** - Log-scale toggle, custom date range, and record-to-chart deep link
-- [ ] **Phase 8: Leverage Calculator** - Independent client-side long/short position-sizing calculator
-- [ ] **Phase 9: Access & Launch Hardening** - Shared navigation plus Cloudflare Access gating the whole app
+- [x] **Phase 1: Worker Foundation & Binance Spike** - Deployed Worker skeleton, D1 schema, and a live Binance-reachability spike test ✅
+- [x] **Phase 2: Kline Backfill Engine** - Cursor-paginated, rate-limit-aware Binance ingestion into D1 within Workers Free-plan limits ✅
+- [x] **Phase 3: Historical Load & Cron Sync** - Full 2021-present history loaded gap-free, then kept current by a daily cron ✅
+- [x] **Phase 4: Records Core CRUD** - Owner can create, edit, delete, and view divergence records ✅
+- [x] **Phase 5: Records Filtering & Time-Entry UX** - Owner can filter records and enter times via UTC-labeled dropdowns ✅
+- [x] **Phase 6: Dual Chart Rendering & Time Sync** - Stacked BTC/ETH candlestick charts with synced scroll/zoom ✅
+- [x] **Phase 7: Chart Navigation & Record Deep Link** - Log-scale toggle, custom date range, and record-to-chart deep link ✅
+- [x] **Phase 8: Leverage Calculator** - Independent client-side long/short position-sizing calculator ✅
+- [x] **Phase 9: Access & Launch Hardening** - Shared navigation plus Cloudflare Access gating the whole app ✅
 
 ## Phase Details
 
@@ -150,8 +150,11 @@ Plans:
 **Requirements**: INFRA-04, INFRA-06
 **Success Criteria** (what must be TRUE):
   1. User can switch between Records, Charts, and Calculator pages via a shared navigation bar.
-  2. An unauthenticated request to the site or to any `/api/*` route is blocked and redirected to a Cloudflare Access login (email OTP) challenge.
-  3. Only the owner's allow-listed email can complete the Access login and reach the app.
+  2. An unauthenticated request to the site or to any `/api/*` route is blocked by Cloudflare Access:
+     - UI routes (`/`, `/charts.html`, `/calculator.html`) redirect to email OTP login challenge
+     - Data API routes (`/api/records`, `/api/klines`) require owner email (email OTP, Policy 1)
+     - Admin API routes (`/api/admin/*`) require Service Token (Policy 2)
+  3. Only the owner's allow-listed email can complete the Access login and reach the UI and data APIs.
 **Plans**: TBD
 **UI hint**: yes
 
