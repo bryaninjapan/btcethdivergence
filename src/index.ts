@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { jsonError, jsonOk } from './lib/response';
 import admin from './routes/admin';
 import klines from './routes/klines';
@@ -6,6 +7,8 @@ import records from './routes/records';
 import type { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.use('*', cors({ credentials: true }));
 
 app.get('/api/health', (c) => jsonOk({ status: 'ok' }));
 
