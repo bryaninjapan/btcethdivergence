@@ -194,6 +194,42 @@ Currently, timestamp conversions are scattered:
 
 ---
 
+## Scope Boundaries & Verification Strategy
+
+### W5: chart-range.js Scope (Resolved)
+
+**Decision**: Option B — Exclude chart-range.js from Phase 10 scope
+
+**Rationale**: 
+- chart-range.js uses `* 1000` (sec → ms adapter for Lightweight Charts), not the `Math.floor(ms/1000)` pattern
+- No ms/sec confusion risk (single-purpose adapter with clear intent)
+- All actual confusion-prone conversions ARE fixed (db ↔ binance, klines ↔ db, etc.)
+- Keeps Phase 10 focused on core goal: eliminate `Math.floor(ms/1000)` consolidation
+
+**Result**: Phase 10 targets 10 production sites + 1 sanctioned exception (timestamp.ts:27)
+
+### W1: Grep Verification Pattern (Resolved)
+
+**Decision**: Option 1 — Broad pattern with explicit exclusions
+
+**Pattern**:
+```bash
+rg "Math\.floor\(.*/ 1000\)" src public/js --type ts --type js | grep -v "\.test\." | grep -v "chart-range"
+```
+
+**Verification**:
+- Should find **11 matches** total:
+  - 10 production Math.floor(ms/1000) sites (will be converted to Timestamp)
+  - 1 sanctioned exception: `src/lib/timestamp.ts:27` (internal Timestamp implementation)
+- Excludes: test files (`.test.ts/.test.js`), chart-range.js (`* 1000` pattern)
+
+**Why Option 1**:
+- ✓ Single pattern catches all `Math.floor(ms/1000)` forms (Date.now, Date.UTC, simple division)
+- ✓ Explicit about exclusions (test + chart-range)
+- ✓ Most maintainable (vs. complex regex or multiple patterns)
+
+---
+
 ## Effort Estimate
 
 - **10-01 (Backend)**: 60-90 min (4 files total, 6 replacements, typecheck, grep verification)
