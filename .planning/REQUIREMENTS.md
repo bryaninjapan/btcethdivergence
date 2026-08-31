@@ -64,7 +64,7 @@
 
 - [x] **CODE-01**: Divergence type definitions are unified across backend (validate.ts) and frontend (records.js) — single source of truth, no duplication ✅ (Quick Task #5)
 - [ ] **CODE-02**: Error handling is structured with consistent error codes, messages, and context across all endpoints → Phase 11
-- [ ] **CODE-03**: Validation logic is centralized (DRY principle) — common patterns extracted, reused across endpoints → Quick Task #3
+- [x] **CODE-03**: Validation logic is centralized (DRY principle) — common patterns extracted, reused across endpoints → Quick Task #3 ✅ (2026-09-01)
 - [ ] **CODE-04**: Route handlers follow service layer pattern — business logic separated from HTTP concerns → Quick Task #1
 - [ ] **CODE-05**: Frontend state management is isolated — no implicit global dependencies between modules → Quick Task #4
 - [ ] **CODE-06**: SQL generation in admin routes is safe from injection — dynamic queries are parameterized or avoided → Quick Task #6 (v2)
@@ -141,7 +141,7 @@
 | INFRA-06 | Phase 5 | Pending |
 | CODE-01 | Quick Task #5 | ✅ Complete |
 | CODE-02 | Phase 11 | Planned |
-| CODE-03 | Quick Task #3 | Planned |
+| CODE-03 | Quick Task #3 | ✅ Complete |
 | CODE-04 | Quick Task #1 | Planned |
 | CODE-05 | Quick Task #4 | Planned |
 | CODE-06 | Quick Task #6 | Planned (v2) |
@@ -150,9 +150,9 @@
 - v1 requirements: 35 feature requirements + 6 code quality requirements = 41 total
 - Mapped to phases/tasks: 41
 - Unmapped: 0 ✓
-- Completed: CODE-01 ✅ (1/6 code quality)
+- Completed: CODE-01 ✅, CODE-03 ✅ (2/6 code quality)
 - In Progress: CODE-02 (Phase 11 planning done, execution ready)
 
 ---
 *Requirements defined: 2026-08-30*
-*Last updated: 2026-09-01 — Phase 11 planning complete, CODE-02 elevated from Quick Task #7 to full Phase 11*
+*Last updated: 2026-09-01 — CODE-03 complete (Quick Task #3); CODE-02 elevated from Quick Task #7 to full Phase 11*
