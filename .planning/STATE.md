@@ -17,15 +17,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-30)
 
 **Core value:** 讓使用者能快速記錄、回顧和分析 BTC 與 ETH 之間的價格背離事件，累積可靠的歷史觀察數據。
-**Current focus:** Phase 11 - Error Handling & Structured Responses (PLANNING)
+**Current focus:** Phase 12 - Service Layer Pattern (PLANNING)
 
 ## Current Position
 
-Phase: 11 of 11 (Error Handling & Structured Responses) ✅ COMPLETE
-Status: ✅ V1 COMPLETE — All 11 phases finished, production-ready. Error handling system fully implemented.
-Last activity: 2026-09-01 — Phase 11 execution complete (Error Handling & Structured Responses)
+Phase: 12 of 12+ (Service Layer Pattern) 📋 PLANNED
+Status: ✅ V1 COMPLETE & CLEANED — All 11 phases shipped, technical debt cleared, quality assured. Ready for architecture improvements.
+Last activity: 2026-09-01 — Technical debt cleanup complete, Quick Tasks #3 & #5 done, Phase 12 planned
 
-Progress: [████████████] 100% — v1 COMPLETE, all 11 phases finished
+Progress: [████████████] 100% v1 + Debt Cleared — Phase 12 (Service Layer) queued
 
 ## Performance Metrics
 
@@ -81,11 +81,13 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Task | Status | Date | Commit |
 |------|--------|------|--------|
-| Quick Task #3: Centralize Validation Logic | ✅ Complete | 2026-09-01 | 4ea9c33 |
 | Quick Task #5: Shared Enum Definition | ✅ Complete | 2026-09-01 | 0d7aa23 |
+| Quick Task #3: Centralize Validation Logic | ✅ Complete | 2026-09-01 | 4ea9c33 |
+| Technical Debt Cleanup | ✅ Complete | 2026-09-01 | 90745ea |
 
 ## Session Continuity
 
 Last session: 2026-09-01
-Stopped at: Phase 11 planning complete (PLAN.md, CONTEXT.md written; ROADMAP/REQUIREMENTS updated).
-Resume file: Ready for Phase 11 execution (11-01, 11-02, 11-03)
+Stopped at: Entering Phase 12 (Service Layer Pattern) planning.
+Quality status: v1.0 fully shipped, TypeScript clean, 249/249 tests passing, E2E verified.
+Next: Phase 12 planning → Quick Task #1 (Service Layer)
