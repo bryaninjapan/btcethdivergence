@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { DIVERGENCE_TYPES } from '../domains/divergence';
 
-const divergenceType = z.enum(['time_lag', 'structural', 'opposite']);
+const divergenceType = z.enum(DIVERGENCE_TYPES);
 
 const baseFields = {
   start_time: z.number().int(),
@@ -30,7 +31,7 @@ export type CreateRecordInput = z.infer<typeof createRecordSchema>;
 export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
 
 export const listRecordsQuerySchema = z.object({
-  type: z.enum(['time_lag', 'structural', 'opposite']).optional(),
+  type: z.enum(DIVERGENCE_TYPES).optional(),
   tag: z.string().trim().max(200).optional(),
 });
 export type ListRecordsQuery = z.infer<typeof listRecordsQuerySchema>;

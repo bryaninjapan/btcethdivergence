@@ -10,12 +10,7 @@ import {
   yearOptions,
 } from './datetime.js';
 import { recordToRange } from './chart-range.js';
-
-const TYPE_LABELS = {
-  time_lag: '時間差',
-  structural: '結構背離',
-  opposite: '完全反向',
-};
+import { TYPE_LABELS } from './divergence.js';
 
 let recordsCache = [];
 let editingId = null;
