@@ -206,13 +206,13 @@ Plans:
 **Depends on**: Phase 11, Quick Tasks #2, #3, #5
 **Requirements**: CODE-04 (Service Layer Pattern)
 **Success Criteria** (what must be TRUE):
-  1. All business logic extracted to `src/services/` (records, klines, admin domains).
+  1. All business logic extracted to `src/services/` (records, klines, admin domains including binance-spike + ingest orchestration).
   2. Services accept already-validated input (Zod validation at route layer).
-  3. Services have comprehensive unit tests (20+) using real test D1 database.
+  3. Services have 20+ unit tests (isolated with Mock D1 to verify service logic and call sequences).
   4. All routes refactored to use services (HTTP layer thin, ~10-20 lines per endpoint).
   5. Route integration tests pass (no regressions).
   6. E2E tests pass (critical user flows work).
-  7. Code coverage ≥ 80%.
+  7. Code coverage ≥ 80% (aggregate across `src/**` and `public/js/**`).
   8. Code review complete (no HIGH severity issues).
 **Plans**: 12-01 (records service), 12-02 (klines service), 12-03 (admin service), 12-04 (test DB & E2E), 12-05 (code review & docs)
 **Status**: Planning complete, ready for plan check
