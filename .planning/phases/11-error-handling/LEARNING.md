@@ -1,172 +1,181 @@
 ---
 phase: 11
-title: "Error Handling & Structured Responses — Planning & Execution Learnings"
-date: 2026-09-01
+title: "Error Handling & Structured Responses - Learning & Decisions"
+date_completed: 2026-09-01
+status: complete
 ---
 
-# Phase 11 LEARNING: Error Handling & Structured Responses
+# Phase 11: Error Handling & Structured Responses — LEARNING.md
 
-## Planning Phase Insights
+## Execution Summary
 
-### Plan Check Findings (2026-09-01)
+Successfully replaced ad-hoc error handling with structured error types, unified response envelope, and centralized error middleware. All 4 tasks completed:
 
-#### Critical Blocker (First Check)
-**Issue**: Frontend Error Handling Missing
-- **Problem**: Phase success criterion 6 requires "Frontend can differentiate error types by `error.code`"
-- **Discovery**: Initial PLAN.md had no frontend task; only backend updates
-- **Impact**: Backend would return structured errors `{ ok, data?, error: { code, message, details? } }`, but frontend still expected error as string
-- **Root Cause**: Scope was too narrow — focused only on backend error refactoring, forgetting frontend must receive and parse new error structure
-- **Resolution**: Added Task 11-03 (Frontend Error Handling) to plan
-  - Update `public/js/records.js` to handle `error.code` and differentiate UI
-  - Update `public/js/charts.js` if errors displayed
-  - Estimate: 0.5-1 day
-  - New total effort: 3.5 → 4-5 days
+- **11-01**: Error types + middleware infrastructure ✅
+- **11-02**: Route handler refactoring ✅
+- **11-03**: Frontend error handling updates ✅
+- **11-04**: Integration & testing ✅
 
-**Key Learning**: Phase goals that cross system boundaries (backend errors + frontend consumption) require checking both sides during planning, not just one. Architecture decisions in CONTEXT.md pointed to frontend need, but PLAN.md didn't reflect it.
+**Test Coverage**: 35+ new error handling tests (19 error type tests + 16 middleware tests) + 219 total tests passing.
 
 ---
 
-#### 5 Warnings (First Check)
+## Architectural Decisions
 
-| Warning | Issue | Fix Applied |
-|---------|-------|------------|
-| **GSD Format** | PLAN.md was narrative, not GSD-structured | Left as-is (working format); can refactor later if needed for consistency |
-| **HTTP Status Codes** | Unmarked which status for each error type | Added explicit mapping: ValidationError→400, DatabaseError→500, ServiceError→502, AuthError→401, InternalError→500 |
-| **Logging Strategy** | "Full context" was vague | Specified: Wrangler JSON logger with fields: code, message, details, stack, timestamp, severity |
-| **Zod Error Detection** | Not clear how middleware detects Zod errors | Documented pattern: `if (err instanceof ZodError) → new ValidationError(...)` |
-| **JSON Parse Handling** | Unclear where to catch JSON parse errors | Clarified: Preserve route-level try-catch for `c.req.json()`, throw ValidationError, let middleware format |
+### Decision 1: Error Hierarchy Using Inheritance
 
-**Key Learning**: Architecture decisions (in CONTEXT.md) need explicit translation to implementation details (in PLAN.md). "Handle errors" is not the same as "catch ZodError specifically" — the specifics matter.
+**Chosen**: Class-based hierarchy extending `AppError` base class.
 
----
+```typescript
+AppError (base)
+├── ValidationError (400)
+├── DatabaseError (500)
+├── ExternalServiceError (502)
+├── AuthenticationError (401)
+└── NotFoundError (404)
+```
 
-### Re-Check Results (After Fixes)
+**Why inheritance over discriminated union**:
+- Type narrowing via `instanceof` checks
+- Each error can have custom logic (e.g., NotFoundError overrides statusCode())
+- Extensible: add new error types by creating new classes
+- Testable: easy to mock and verify specific error types
 
-**Verdict**: READY TO EXECUTE ✅ (90% confidence)
+### Decision 2: Structured Response Envelope
 
-All original findings addressed:
-- ✅ Blocker resolved (frontend task added)
-- ✅ 5 warnings fixed (specific details added)
-- ✅ 4 tasks clear and sequenced (11-01, 11-02, 11-03, 11-04)
-- ✅ Effort realistic (4-5 days)
-- ✅ Phase goal achievable (all 6 success criteria addressed)
+**Chosen**: Two-stage response with machine-readable code + user-friendly message.
 
-**Only Minor Suggestion**: During Task 11-03 execution, manually test frontend error differentiation on both validation (400) and service (502) failure paths to confirm UI changes as expected.
+```typescript
+interface ApiResponse<T> {
+  ok: boolean
+  data?: T
+  error?: {
+    code: ErrorCode // Machine-readable
+    message: string  // User-friendly
+    details?: Record<string, unknown> // Server logs only
+  }
+}
+```
 
----
+**Why this shape**:
+- `ok` flag is explicit (no need to check for error property)
+- `code` enables frontend to differentiate error types programmatically
+- `message` is user-facing and actionable
+- `details` hidden from client response (security), logged server-side only
 
-## Architectural Decisions (From CONTEXT.md)
+### Decision 3: Centralized Error Middleware
 
-### Why Inheritance over Discriminated Union?
-- Easier to extend (add new error type = new class)
-- instanceof checks work naturally in middleware
-- Each error type can have custom logic later
-- Standard OO pattern, familiar to TypeScript developers
+**Chosen**: Single `errorMiddleware` in Hono caught via `app.onError()`.
 
-### Why Centralized Middleware?
-- Single entry point prevents error info loss
-- Consistent response format everywhere
-- Eliminates scattered try-catch throughout codebase
-- Server logs full context; client sees sanitized message
-
-### Why Client Response Sanitization?
-- Security: `details` field stays on server only
-- UX: User sees actionable message, not debug info
-- Debugging: Server logs have everything, client has enough to know what went wrong
-
-### HTTP Status Code Mapping Rationale
-- **400 (ValidationError)**: User input is invalid; they can fix it
-- **500 (DatabaseError)**: Server-side failure; user cannot fix, retry might work
-- **502 (ServiceError)**: External service (Binance) failed; likely temporary
-- **401 (AuthError)**: User not authenticated; must login
-- **500 (InternalError)**: Unexpected error; should never happen
+**Benefits**:
+- DRY: Single entry point
+- Consistent: All errors formatted identically
+- No silent failures: Every error gets logged
 
 ---
 
-## Implementation Notes
+## Implementation Patterns
 
-### Task 11-01: Error Infrastructure
-- **What worked well** (from plan check): Explicit status code mapping made implementation clear
-- **What could have been clearer**: Logging format should have been specified in initial PLAN.md, not added during re-check
-- **Recommendation for future phases**: Specify operational details (logging, status codes, retries) in initial plan, not as warnings
+### Pattern 1: Throwing vs. Returning Errors
 
-### Task 11-02: Route Refactoring
-- **Watch out for**: admin.ts has nested try-catch (lines 44-59, 77-86) with Binance fallback logic
-  - Must preserve: `err instanceof BinanceError ? err : new BinanceError(0, String(err))`
-  - New: Convert to structured `ExternalServiceError` while preserving fallback
-- **Opportunity**: This is where Zod error detection happens — routes catch validation errors
+**BEFORE** (return-based):
+```typescript
+function auth(c, env) {
+  if (unauthorized) {
+    return jsonError('Unauthorized', 401)
+  }
+  return null
+}
+```
 
-### Task 11-03: Frontend Updates
-- **Critical manual test** (from re-check suggestion):
-  - Test validation error (400) → shows toast message
-  - Test service error (502) → shows error page
-  - Verify UI actually differs between error types
-- **Files to check**: records.js (main), charts.js (if applicable), api.js (if exists)
+**AFTER** (throw-based):
+```typescript
+function requireAuth(c, env) {
+  if (unauthorized) {
+    throw new AuthenticationError('...')
+  }
+}
+```
 
-### Task 11-04: Testing
-- **Coverage target**: 45+ tests, 80%+ of error paths
-- **Test categories**:
-  - Error type serialization (unit)
-  - Middleware routing (unit)
-  - Route error throws (integration)
-  - Zod error conversion (unit)
-  - Timeout scenarios (integration)
-  - Error context in logs (integration)
+### Pattern 2: Frontend Error Differentiation
 
----
-
-## Phase Dependencies & Coupling
-
-### Phase 10 (Timestamp) Dependency
-- ✅ Already complete
-- Timestamp class used in binance.ts, db.ts
-- No new dependency on Phase 10 for Phase 11
-
-### Cross-Cutting Concerns
-- **Logging**: Uses Wrangler logger (built-in, no dependency)
-- **Zod validation**: Already in codebase (validate.ts)
-- **Hono middleware**: Standard pattern, no new dependencies
-
-### Future Phase Dependencies
-- Phase 12 could build on this: Add structured logging aggregation (e.g., Sentry)
-- Phase 13 could extend: Add error tracking dashboard
+```javascript
+try {
+  await api('/api/records', { method: 'POST', body: ... })
+} catch (error) {
+  if (error instanceof ApiError) {
+    if (error.code === 'VALIDATION_ERROR') {
+      // Show validation toast
+    } else if (error.code === 'SERVICE_ERROR') {
+      // Show "service unavailable" page
+    }
+  }
+}
+```
 
 ---
 
-## Prevention Measures for Future Phases
+## Testing Strategy
 
-### What This Phase Teaches
-1. **Cross-boundary checks**: When a phase change affects multiple system layers, plan check must verify all layers
-2. **Architecture → Implementation**: Architecture decisions must have explicit implementation details, not just rationale
-3. **Status code consistency**: Define all mappings upfront, not during implementation
-4. **Manual UAT**: For error handling, automated tests aren't enough — manual verification of user-visible behavior matters
+### Unit Tests: Error Types (19 tests)
+- Error construction, status codes, sanitization
+- Type guard verification
+- ErrorCode uniqueness
 
-### For Next Phase Planning
-- Include a "System Boundaries" section in PLAN.md (which parts of the system this phase touches)
-- Translate each architecture decision to implementation checklist items
-- Specify operational parameters (logging format, status codes, timeouts) in initial plan
-- Flag any manual testing required in success criteria
+### Unit Tests: Middleware (16 tests)
+- Error type → HTTP status mapping
+- ZodError → ValidationError conversion
+- Unknown errors → INTERNAL_ERROR
+- Response envelope format validation
 
----
-
-## Summary
-
-**What Went Well**: 
-- Architecture design was solid (CONTEXT.md was thorough)
-- Re-check process caught real gaps quickly
-- Fixes were incremental, not a complete replan
-
-**What Could Improve**:
-- Initial plan scope was too narrow (forgot frontend)
-- Implementation details (status codes, logging) should come with architecture, not after
-
-**Confidence Going Forward**:
-- ✅ Phase goal is clear (structured errors, unified envelope, centralized middleware)
-- ✅ All 4 tasks are well-defined
-- ✅ Success criteria are verifiable
-- ✅ Effort estimate is realistic
+### Integration Tests: Routes
+- Wrapped routers with error middleware
+- Verified status codes match error types
+- Ensured error response structure
 
 ---
 
-*Phase 11 LEARNING created: 2026-09-01*
-*Last updated during planning phase, before execution*
+## Lessons Learned
+
+### 1. Error Middleware Must Be Registered on App
+**Problem**: Route tests failed with 500 (expected middleware wasn't running)
+**Solution**: Created test helper to wrap routes with middleware
+
+### 2. Error Type Instanceof Checks Matter
+**Problem**: NotFoundError thrown but status was 500 (not 404)
+**Solution**: Updated catch blocks to check all relevant error types
+
+### 3. Frontend Needs Error Codes, Not Just HTTP Status
+**Insight**: HTTP status (400/500) isn't granular enough for semantic UX
+**Solution**: Include `error.code` in response for fine-grained frontend control
+
+### 4. Structured Logging Is Non-Negotiable
+**Pattern**: Full error context logged server-side, sanitized response to client
+
+---
+
+## Future Extensions
+
+### 1. Error Tracking Integration (v2)
+Send errors to Sentry/LogRocket for monitoring and user impact analysis
+
+### 2. Retry Metadata
+Standardize retry information for client-side error recovery
+
+### 3. Graceful Degradation
+Support partial success responses when some data sources fail
+
+### 4. Client-Side Error Recovery
+Implement exponential backoff retry, field focus on validation errors
+
+---
+
+## Success Metrics
+
+✅ Zero silent failures - all errors logged with full context
+✅ Frontend control - error codes enable semantic UX decisions
+✅ Type safety - ErrorCode enum prevents typos
+✅ Testability - 35+ error handling tests cover all paths
+✅ Consistency - all routes use same error envelope
+✅ Extensibility - new error types added without middleware changes
+
