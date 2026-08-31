@@ -8,6 +8,7 @@ const originalFetch = global.fetch;
 // For this test, we'll recreate it with proper error handling
 async function api(path: string, options: Record<string, unknown> = {}) {
   const res = await fetch(path, {
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
@@ -79,5 +80,19 @@ describe('api() fetch wrapper', () => {
       });
 
     await expect(api('/api/test')).rejects.toThrow(/Not Found|Request failed/);
+  });
+
+  it('includes credentials: include in fetch options for Cloudflare Access cookies', async () => {
+    let capturedOptions: any = null;
+    global.fetch = async (url: string, options?: RequestInit) => {
+      capturedOptions = options;
+      return new Response(JSON.stringify({ ok: true, data: { test: true } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    };
+
+    await api('/api/klines');
+    expect(capturedOptions?.credentials).toBe('include');
   });
 });
