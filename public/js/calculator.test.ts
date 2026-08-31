@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { calculatePosition, MAX_LEVERAGE, MIN_LEVERAGE } from './calculator.js';
 
 describe('calculator.js position sizing (CALC-01..CALC-04)', () => {
@@ -298,16 +297,23 @@ describe('calculator.js position sizing (CALC-01..CALC-04)', () => {
   });
 
   it('fully client-side: calculator files never call fetch or import api.js (CALC-07)', () => {
-    const files = [
-      fileURLToPath(new URL('./calculator.js', import.meta.url)),
-      fileURLToPath(new URL('./calculator-init.js', import.meta.url)),
-      fileURLToPath(new URL('../calculator.html', import.meta.url)),
-    ];
-    for (const file of files) {
-      const src = readFileSync(file, 'utf8');
-      expect(src).not.toMatch(/\bfetch\s*\(/);
-      expect(src).not.toMatch(/api\.js/);
-    }
+    // Construct absolute paths from project root
+    const baseDir = process.cwd();
+    const calcPath = `${baseDir}/public/js/calculator.js`;
+    const initPath = `${baseDir}/public/js/calculator-init.js`;
+    const htmlPath = `${baseDir}/public/calculator.html`;
+
+    const calcSrc = readFileSync(calcPath, 'utf8');
+    const initSrc = readFileSync(initPath, 'utf8');
+    const htmlSrc = readFileSync(htmlPath, 'utf8');
+
+    // Verify no fetch calls or api.js imports
+    expect(calcSrc).not.toMatch(/\bfetch\s*\(/);
+    expect(calcSrc).not.toMatch(/api\.js/);
+    expect(initSrc).not.toMatch(/\bfetch\s*\(/);
+    expect(initSrc).not.toMatch(/api\.js/);
+    expect(htmlSrc).not.toMatch(/\bfetch\s*\(/);
+    expect(htmlSrc).not.toMatch(/api\.js/);
   });
 
   // H2 FIX: invalid results should render as dashes, not zeros
