@@ -21,6 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Chart Navigation & Record Deep Link** - Log-scale toggle, custom date range, and record-to-chart deep link ✅
 - [x] **Phase 8: Leverage Calculator** - Independent client-side long/short position-sizing calculator ✅
 - [x] **Phase 9: Access & Launch Hardening** - Shared navigation plus Cloudflare Access gating the whole app ✅
+- [ ] **Phase 10: Timestamp Domain Abstraction** - Eliminate scattered time conversion logic, centralize via strongly-typed Timestamp class
 
 ## Phase Details
 
@@ -162,10 +163,27 @@ Plans:
 Plans:
 - [ ] 09-01: TBD
 
+### Phase 10: Timestamp Domain Abstraction
+**Goal**: Eliminate scattered time conversion logic (`Math.floor(ms / 1000)`) across codebase. Replace with strongly-typed `Timestamp` class for type safety and single source of truth.
+**Depends on**: Phase 9
+**Requirements**: CODE-01 (type safety), CODE-02 (maintainability)
+**Success Criteria** (what must be TRUE):
+  1. All backend time operations use `Timestamp` API instead of `Math.floor(ms / 1000)`.
+  2. All frontend time operations use `Timestamp` API for conversions.
+  3. Zero `Math.floor(ms / 1000)` remains in production code.
+  4. `Timestamp` class fully tested with 44/44 unit tests passing.
+  5. Code review approval with no HIGH issues.
+**Plans**: 10-01 (backend integration), 10-02 (frontend integration)
+**Status**: Timestamp class implemented ✅, ready for integration
+
+Plans:
+- [ ] 10-01: Backend integration (db.ts, klines.ts, types.ts)
+- [ ] 10-02: Frontend integration (charts.js, records.js)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -178,3 +196,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Chart Navigation & Record Deep Link | 0/TBD | Not started | - |
 | 8. Leverage Calculator | 0/TBD | Not started | - |
 | 9. Access & Launch Hardening | 0/TBD | Not started | - |
+| 10. Timestamp Domain Abstraction | 0/2 | Ready | - |
