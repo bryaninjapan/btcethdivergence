@@ -12,8 +12,6 @@ import path from 'path';
  * view-chart navigation.
  */
 
-const originalFetch = global.fetch;
-
 const RECORD_1 = {
   id: 1,
   start_time: 1600000000,
