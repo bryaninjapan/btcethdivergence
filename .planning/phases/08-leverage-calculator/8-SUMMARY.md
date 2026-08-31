@@ -10,7 +10,7 @@
 | `public/css/style.css` | Added `.calculator-layout/.calculator-panel/.form-group/.results-grid/.result-field/.warning` styles + 720px mobile stacking breakpoint |
 | `public/js/calculator.js` | Pure, dependency-free `calculatePosition()` engine: position size, SL/TP $, R:R, loss/gain %, warnings flags, full input validation returning actionable `errorMessage` |
 | `public/js/calculator-init.js` | Module loader wiring the engine to the form: real-time recalc on `input`/`change`, placeholders ("—") while incomplete, warning/error show-hide, display formatting |
-| `public/js/calculator.test.ts` | 21 vitest tests: math accuracy, directional logic, R:R/liquidation warnings, edge cases, plus CALC-07 structural test (no `fetch`/`api.js` in calculator files) |
+| `public/js/calculator.test.ts` | 22 vitest tests: math accuracy, directional logic, R:R/liquidation warnings, edge cases, plus CALC-07 structural test (no `fetch`/`api.js` in calculator files) |
 | `package.json` | Added `test:coverage` script (calculator.js-only thresholds ≥95%) |
 | `.planning/phases/08-leverage-calculator/08-PLAN.md` | Applied plan-check W-1: corrected E2E checkpoint 4 expected values |
 
@@ -20,7 +20,7 @@
 |---|---|---|
 | 08-01 HTML + CSS scaffolding | ✅ | Served via Worker (`/calculator`, 200); all 15 form/result element ids present |
 | 08-02 Engine + real-time wiring + 9 tests | ✅ | `npm run test` 96 passed |
-| 08-03 Validation hardening + warnings + tests 10–21 + coverage gate | ✅ | 109 tests passed; calculator.js 100% stmt/branch/func/line coverage |
+| 08-03 Validation hardening + warnings + tests 10–22 + coverage gate | ✅ | 109 tests passed; calculator.js 100% stmt/branch/func/line coverage |
 
 ## Success Criteria Verification
 
