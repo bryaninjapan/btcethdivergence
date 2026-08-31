@@ -14,34 +14,37 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ## Task Breakdown
 
-### **12-00: Create Test Database Helper (before all tasks)**
+### **12-00: Create Mock D1 Test Helper (before all tasks)**
 
-**Goal:** Set up test D1 infrastructure using SQLite in-memory so 12-01/02/03 can use it.
+**Goal:** Set up mock D1 database for service unit tests so 12-01/02/03 can verify service logic independently.
 
 **Subtasks:**
 
-1. **Install SQLite test dependency**
-   - Add to devDependencies: `sql.js@^1.8.0` (or `better-sqlite3@^9.0.0` if native bindings preferred)
-   - `npm install` to verify
+1. **Create src/lib/test-db.ts helper**
+   - `function createMockD1Database(): D1Database`
+     - Mock the D1Database interface
+     - Implement `prepare(sql).bind(...).all/first/run()` methods
+     - Use vitest `vi.fn()` for tracking calls
+     - Store inserted data in memory for assertions
+   
+   - `function createMockD1WithData(initialData): D1Database`
+     - Helper to pre-populate mock with test data
 
-2. **Create src/lib/test-db.ts helper**
-   - Import `sql.js` (or `better-sqlite3`)
-   - `async function createTestDatabase(): Promise<SQLiteDatabase>`
-     - Create in-memory SQLite instance
-     - Run 0001, 0002, 0003 migrations (SQL strings)
-     - Return fresh DB instance with schema
-   - `async function cleanupTestDatabase(db: SQLiteDatabase): Promise<void>`
-     - Close connection (if needed)
+2. **Create src/lib/test-db.test.ts**
+   - Verify mock interface matches real D1
+   - Test: `prepare().bind().all()` → returns mocked rows
+   - Test: `prepare().bind().first()` → returns single row or null
+   - Test: `prepare().bind().run()` → tracks mutation
 
 3. **Verify helper works**
-   - Write smoke test: `createTestDatabase() → insert record → query → cleanup`
-   - Confirm migrations run without error
+   - Write smoke test: `createMockD1() → service call → verify calls`
+   - Confirm vitest mocks are called correctly
 
 **Success Criteria:**
-- [ ] sql.js added to package.json devDependencies
-- [ ] test-db.ts helper created and imports sql.js
+- [ ] test-db.ts created with `createMockD1Database()` and `createMockD1WithData()`
+- [ ] Mock D1Database interface matches real D1 calls
 - [ ] Simple smoke test passes
-- [ ] No changes to vitest.config.ts
+- [ ] No changes to vitest.config.ts, no new dependencies
 
 ---
 
@@ -164,52 +167,53 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ---
 
-### **12-03: Admin Service Extraction & Testing (0.5 day)**
+### **12-03: Admin Service Extraction & Testing (1 day)**
 
-**Goal:** Extract admin DB operations into services/admin.service.ts (NOT the Binance fetch logic).
+**Goal:** Extract admin business logic (cursor management, Binance fetch, ingest orchestration) into services/admin.service.ts.
 
 **Subtasks:**
 
 1. **Create services/admin.service.ts**
    - `async function getBackfillCursor(db: D1Database, symbol: string): Promise<number | null>`
-     - Trust symbol is valid (Zod checked)
+     - Trust symbol is valid
      - Call existing `db.getBackfillCursor(db, symbol)`
-     - Return cursor (unix seconds) or null if not set
-
+     - Return cursor (unix seconds) or null
+   
    - `async function setBackfillCursor(db: D1Database, symbol: string, cursor: number): Promise<void>`
      - Trust symbol and cursor are valid
      - Call existing DB function
-     - Return void
-
-   - **Note:** Binance fetch/spike logic stays in routes/admin.ts + lib/binance.ts (not extracted)
+   
+   - `async function fetchAndInsertKlines(db: D1Database, env: Env, symbol: string): Promise<{insertedCount: number, cursor: number}>`
+     - Implement binance-spike logic (attempt Binance → fallback to public API)
+     - Call existing `insertKlinesBatch(db, klines)`
+     - Return {insertedCount, cursor}
+   
+   - `async function processIngest(db: D1Database, symbol: string, klines: Kline[]): Promise<{insertedCount: number, newCursor: number}>`
+     - Implement ingest orchestration (insert + update cursor)
+     - Call `insertKlinesBatch(db, klines)`
+     - Query last kline open_time
+     - Call `setBackfillCursor(db, symbol, lastTime)`
+     - Return {insertedCount, newCursor}
 
 2. **Write services/admin.service.test.ts**
-   - Setup: Use createTestDatabase()
-   - Test getBackfillCursor: unset symbol → returns null
-   - Test getBackfillCursor: after set → returns cursor
-   - Test setBackfillCursor: sets and persists
-   - Teardown: cleanupTestDatabase()
+   - Setup: Use `createMockD1Database()`
+   - Test getBackfillCursor: unset → null, after set → returns cursor
+   - Test setBackfillCursor: persists cursor
+   - Test fetchAndInsertKlines: calls Binance, handles fallback, calls insertKlinesBatch
+   - Test processIngest: inserts klines, updates cursor
+   - Total: 5-6 tests
 
 3. **Refactor routes/admin.ts**
-   - Replace inline cursor queries with service calls
-   - Keep: Binance fetch logic, fallback handling, CF Access token validation
-   - Example:
-     ```typescript
-     admin.get('/api/admin/cursor', async (c) => {
-       // Auth + validation at route level
-       const symbol = c.req.query('symbol');
-       
-       // Service: data access
-       const cursor = await adminService.getBackfillCursor(c.env.DB, symbol);
-       return c.json({ ok: true, data: { symbol, cursor, default: 1609459200 } });
-     });
-     ```
+   - Extract binance-spike logic (lines 36-97) → `fetchAndInsertKlines` service call
+   - Extract ingest logic (lines 114-118) → `processIngest` service call
+   - Keep: CF Access token validation, HTTP response formatting
+   - Routes should be ~15-20 lines each
 
 **Success Criteria:**
-- [ ] services/admin.service.ts created with 2 cursor functions
-- [ ] services/admin.service.test.ts created with 3 tests
-- [ ] All 3 tests passing
-- [ ] routes/admin.ts refactored (cursor logic only, fetch stays)
+- [ ] services/admin.service.ts created with 4 functions
+- [ ] services/admin.service.test.ts created with 5-6 tests
+- [ ] All tests passing
+- [ ] routes/admin.ts refactored (business logic moved to service)
 - [ ] Integration tests pass (routes/admin.test.ts)
 
 ---
@@ -311,19 +315,19 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 ## File Changes Summary
 
 ### **New Files**
-- `src/services/records.service.ts` (~60 lines) — createRecord, updateRecord, listRecords, deleteRecord wrappers
-- `src/services/records.service.test.ts` (~200 lines) — 11 test cases
-- `src/services/klines.service.ts` (~30 lines) — queryKlines wrapper
-- `src/services/klines.service.test.ts` (~120 lines) — 5 test cases
-- `src/services/admin.service.ts` (~40 lines) — getBackfillCursor, setBackfillCursor wrappers
-- `src/services/admin.service.test.ts` (~100 lines) — 3 test cases
-- `src/lib/test-db.ts` (~70 lines) — createTestDatabase(), cleanupTestDatabase() helpers (SQLite in-memory)
+- `src/services/records.service.ts` (~70 lines) — createRecord, updateRecord, listRecords, deleteRecord wrappers
+- `src/services/records.service.test.ts` (~220 lines) — 11 test cases
+- `src/services/klines.service.ts` (~40 lines) — queryKlines wrapper
+- `src/services/klines.service.test.ts` (~140 lines) — 5 test cases
+- `src/services/admin.service.ts` (~120 lines) — getBackfillCursor, setBackfillCursor, fetchAndInsertKlines, processIngest
+- `src/services/admin.service.test.ts` (~180 lines) — 6 test cases
+- `src/lib/test-db.ts` (~80 lines) — Mock D1Database helper (createMockD1Database, createMockD1WithData)
 
 ### **Modified Files**
-- `package.json` — add `sql.js@^1.8.0` to devDependencies, update test:coverage script to include `src/**`
+- `package.json` — update test:coverage script to include `src/**` (no new dependencies)
 - `src/routes/records.ts` (~15 lines reduction) — replace logic with service calls
 - `src/routes/klines.ts` (~10 lines reduction) — replace query logic with service calls
-- `src/routes/admin.ts` (~15 lines reduction) — replace cursor logic with service calls
+- `src/routes/admin.ts` (~25 lines reduction) — extract binance-spike + ingest to services
 
 ### **Unchanged**
 - `vitest.config.ts` (NO CHANGES — remains jsdom/pool:undefined for existing tests)
@@ -349,8 +353,8 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ## Success Criteria (Phase-Level)
 
-1. ✅ All business logic extracted to services/ (records, klines, admin)
-2. ✅ 20+ unit tests created, all passing (12-00: 1 + 12-01: 11 + 12-02: 5 + 12-03: 3 = 20)
+1. ✅ All business logic extracted to services/ (records, klines, admin including binance-spike + ingest)
+2. ✅ 20+ unit tests created, all passing (12-00: 1 + 12-01: 11 + 12-02: 5 + 12-03: 6 = 23)
 3. ✅ Integration tests pass (routes still work, no regressions)
 4. ✅ E2E tests pass (calculator flows work)
 5. ✅ `npm run typecheck` passes (no TypeScript errors)
@@ -363,14 +367,14 @@ Extract business logic from 3 route files into dedicated service layer. Implemen
 
 ## Estimated Effort
 
-- 12-00: 0.25 day (1-1.5 hours) — install sql.js + test-db helper (no vitest config needed)
+- 12-00: 0.25 day (1-1.5 hours) — Mock D1 helper (no dependencies, no config changes)
 - 12-01: 1 day (4-6 hours) — records service + 11 tests
 - 12-02: 1 day (4-6 hours) — klines service + 5 tests (can run parallel with 12-01)
-- 12-03: 0.5 day (2-3 hours) — admin service + 3 tests
+- 12-03: 1 day (4-6 hours) — admin service + 6 tests (extract binance-spike + ingest)
 - 12-04: 0.5 day (2-3 hours) — verification, coverage, E2E check
 - 12-05: 0.5 day (2-3 hours) — code review, JSDoc, LEARNING.md
 
-**Total: 3.5 days** (with 12-01/12-02 parallel: effectively 3 days)
+**Total: 4 days** (with 12-01/12-02 parallel: effectively 3.5 days)
 
 ---
 
