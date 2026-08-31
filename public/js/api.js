@@ -43,3 +43,24 @@ export async function api(path, options = {}) {
 
   throw new ApiError(code, message, details);
 }
+
+/**
+ * Convert ApiError to user-friendly message based on error code.
+ * Centralizes error message mapping across frontend.
+ */
+export function describeApiError(error, fallbackMessage = 'An error occurred') {
+  if (!(error instanceof ApiError)) {
+    return error?.message || fallbackMessage;
+  }
+
+  if (error.code === 'VALIDATION_ERROR') {
+    return error.message; // Validation errors are already user-friendly
+  }
+  if (error.code === 'SERVICE_ERROR') {
+    return 'Service temporarily unavailable. Please try again.';
+  }
+  if (error.code === 'DATABASE_ERROR') {
+    return 'Database error. Please try again.';
+  }
+  return error.message || fallbackMessage;
+}

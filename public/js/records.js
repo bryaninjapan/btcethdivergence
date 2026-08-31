@@ -1,4 +1,4 @@
-import { api, ApiError } from './api.js';
+import { api, ApiError, describeApiError } from './api.js';
 import { Timestamp } from './timestamp.js';
 import {
   buildUtcEpoch,
@@ -87,29 +87,12 @@ async function loadRecords() {
 
 /**
  * Display error based on error type.
- * VALIDATION_ERROR: Shows as user-friendly message
- * SERVICE_ERROR/DATABASE_ERROR: Shows generic message
- * INTERNAL_ERROR: Shows generic message
  */
 function showFilterError(error) {
   const filterError = document.querySelector('#filter-error');
   if (!filterError) return;
 
-  let message = 'Failed to load records';
-
-  if (error instanceof ApiError) {
-    if (error.code === 'VALIDATION_ERROR') {
-      message = error.message; // Show validation details to user
-    } else if (error.code === 'SERVICE_ERROR') {
-      message = 'Service temporarily unavailable. Please try again.';
-    } else if (error.code === 'DATABASE_ERROR') {
-      message = 'Database error. Please try again.';
-    } else {
-      message = error.message;
-    }
-  } else {
-    message = error.message || message;
-  }
+  const message = describeApiError(error, 'Failed to load records');
 
   filterError.textContent = message;
   filterError.hidden = false;
@@ -212,17 +195,7 @@ async function submitForm() {
     document.querySelector('#record-dialog').close();
     await loadRecords();
   } catch (error) {
-    let message = error.message || 'Failed to save record';
-
-    if (error instanceof ApiError) {
-      if (error.code === 'VALIDATION_ERROR') {
-        message = `Validation error: ${error.message}`;
-      } else if (error.code === 'SERVICE_ERROR') {
-        message = 'Service temporarily unavailable. Please try again.';
-      } else if (error.code === 'DATABASE_ERROR') {
-        message = 'Database error. Please try again.';
-      }
-    }
+    const message = describeApiError(error, 'Failed to save record');
 
     formError.textContent = message;
     formError.hidden = false;
@@ -250,17 +223,7 @@ async function confirmDeleteAction() {
     closeDeleteDialog();
     await loadRecords();
   } catch (error) {
-    let message = error.message || 'Failed to delete record';
-
-    if (error instanceof ApiError) {
-      if (error.code === 'VALIDATION_ERROR') {
-        message = error.message; // e.g., "Record not found"
-      } else if (error.code === 'SERVICE_ERROR') {
-        message = 'Service temporarily unavailable. Please try again.';
-      } else if (error.code === 'DATABASE_ERROR') {
-        message = 'Database error. Please try again.';
-      }
-    }
+    const message = describeApiError(error, 'Failed to delete record');
 
     deleteError.textContent = message;
     deleteError.hidden = false;

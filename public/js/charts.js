@@ -1,4 +1,4 @@
-import { api, ApiError } from './api.js';
+import { api, ApiError, describeApiError } from './api.js';
 import { createRangeSync } from './chart-sync.js';
 import { Timestamp } from './timestamp.js';
 import {
@@ -139,19 +139,9 @@ async function loadRange(startMs, endMs) {
   } catch (error) {
     if (loadingEl) loadingEl.hidden = true;
 
-    let message = error.message || '載入 K 線失敗';
-
-    if (error instanceof ApiError) {
-      if (error.code === 'VALIDATION_ERROR') {
-        message = `驗證錯誤：${error.message}`;
-      } else if (error.code === 'SERVICE_ERROR') {
-        message = 'K 線服務暫時不可用，請稍後重試。';
-      } else if (error.code === 'DATABASE_ERROR') {
-        message = '資料庫錯誤，請稍後重試。';
-      } else {
-        message = `載入 K 線失敗：${error.message}`;
-      }
-    } else {
+    let message = describeApiError(error, '載入 K 線失敗');
+    // For non-ApiError, add fallback prefix
+    if (!(error instanceof ApiError)) {
       message = `載入 K 線失敗：${message}`;
     }
 
@@ -202,20 +192,10 @@ init().catch((error) => {
   console.error('Charts initialization failed:', error);
   const errorEl = document.getElementById('chart-error');
   if (errorEl) {
-    let message = '圖表初始化失敗';
-
-    if (error instanceof ApiError) {
-      if (error.code === 'VALIDATION_ERROR') {
-        message = `驗證錯誤：${error.message}`;
-      } else if (error.code === 'SERVICE_ERROR') {
-        message = 'K 線服務暫時不可用，請稍後重試。';
-      } else if (error.code === 'DATABASE_ERROR') {
-        message = '資料庫錯誤，請稍後重試。';
-      } else {
-        message = `圖表初始化失敗：${error.message}`;
-      }
-    } else {
-      message = `圖表初始化失敗：${error.message || message}`;
+    let message = describeApiError(error, '圖表初始化失敗');
+    // For non-ApiError, add fallback prefix
+    if (!(error instanceof ApiError)) {
+      message = `圖表初始化失敗：${message}`;
     }
 
     errorEl.textContent = message;

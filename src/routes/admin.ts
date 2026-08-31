@@ -26,7 +26,9 @@ function requireAuth(c: Context<{ Bindings: Env }>, env: Env): void {
       throw new AuthenticationError('Invalid authorization header');
     }
   } catch (error) {
+    // Every throw inside try is already AuthenticationError, so rethrow as-is
     if (error instanceof AuthenticationError) throw error;
+    // Should never reach here, but keep as safety net
     throw new AuthenticationError('Authorization check failed');
   }
 }
@@ -124,7 +126,7 @@ admin.post('/api/admin/ingest', async (c) => {
     if (error instanceof ValidationError || error instanceof AuthenticationError) {
       throw error;
     }
-    throw new DatabaseError(`Ingest failed: ${String(error)}`);
+    throw new DatabaseError('Ingest failed', { originalError: String(error) });
   }
 });
 
@@ -141,7 +143,7 @@ admin.get('/api/admin/backfill-cursor', async (c) => {
     };
     return c.json(response);
   } catch (error) {
-    throw new DatabaseError(`Failed to get backfill cursor: ${String(error)}`);
+    throw new DatabaseError('Failed to get backfill cursor', { originalError: String(error) });
   }
 });
 

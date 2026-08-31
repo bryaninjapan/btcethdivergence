@@ -38,7 +38,7 @@ klines.get('/api/klines', async (c) => {
     };
     return c.json(response);
   } catch (error) {
-    throw new DatabaseError(`Database query failed: ${String(error)}`);
+    throw new DatabaseError('Database query failed', { originalError: String(error) });
   }
 });
 
