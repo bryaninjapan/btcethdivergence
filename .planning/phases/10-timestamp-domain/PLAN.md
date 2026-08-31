@@ -49,7 +49,7 @@ Currently, timestamp conversions are scattered:
 
 ✅ **Code Quality**:
 - [x] Timestamp class 100% tested (44 unit tests passing)
-- [ ] All 10 conversion expressions use Timestamp API (see Conversion Inventory below)
+- [ ] All 10 conversion expressions use Timestamp API (see Conversion Inventory below) — applies to `Math.floor(ms/1000)` pattern only
 - [ ] Zero `Math.floor(ms / 1000)` in production code (verified via grep)
 - [ ] Zero `Math.floor(Date.now() / 1000)` in production code (verified via grep)
 - [ ] Zero `Math.floor(Date.UTC(...) / 1000)` in production code (verified via grep)
@@ -58,7 +58,7 @@ Currently, timestamp conversions are scattered:
 - [ ] Code review: gsd-code-review run, no HIGH issues fixed
 
 ✅ **Integration**:
-- [ ] Backend: db.ts (3x), binance.ts, klines.ts all converted
+- [ ] Backend: db.ts (3x), binance.ts, klines.ts all converted (Math.floor pattern)
 - [ ] Frontend: charts.js (2x), datetime.js, records.js all converted
 - [ ] Parity tests verify public/js/timestamp.js matches src/lib/timestamp.ts
 - [ ] All backend tests pass (`npm test -- src/`)
@@ -121,13 +121,15 @@ Currently, timestamp conversions are scattered:
 **Tasks**:
 - [ ] Import Timestamp class in db.ts, binance.ts, klines.ts
 - [ ] Replace 6 conversion expressions: db.ts (3x), binance.ts (1x), klines.ts (2x)
-- [ ] Handle edge case: klines.ts currently accepts any numeric start/end; `Timestamp.fromMillis(negative)` throws. Keep guard: reject `startMs < 0` before conversion (deliberate behavior change: 400 Bad Request vs current 200 with empty results).
-- [ ] Run backend tests: `npm test -- src/` (should all pass)
+- [ ] Handle edge case: klines.ts currently accepts any numeric start/end; `Timestamp.fromMillis(negative)` throws. Add guard before conversion:
+  - Guard both `startMs < 0` and `endMs < 0`, reject with 400 Bad Request (deliberate behavior change vs current 200 with empty results per W3 fix)
+  - Add one klines.test.ts case asserting 400 response for negative start/end (document the deliberate behavior change)
+- [ ] Run backend tests: `npm test -- src/` (should all pass, including new negative-input test)
 - [ ] Run typecheck: `npm run typecheck` (should pass)
 - [ ] Run typecheck for scripts: `npm run typecheck:scripts` (should pass)
 - [ ] Verify grep (backend): `rg -n "Math\.floor" src --type ts -g '!*.test.*'` returns only timestamp.ts:27 (sanctioned exception)
 - [ ] Verify existing tests: `npm test -- src/binance.test.ts` exercises parseKline conversion without updates needed (D1 Option B holds)
-- [ ] Commit: "feat: Use Timestamp API throughout backend (db, binance, klines)"
+- [ ] Commit: "feat: Use Timestamp API throughout backend (db, binance, klines); add input validation for negative timestamps"
 
 **Success**: All 6 backend conversions use Timestamp API; tests pass; typecheck passes; grep clean (except sanctioned exception); no Kline type change.
 
@@ -160,7 +162,7 @@ Currently, timestamp conversions are scattered:
 - [ ] Run parity tests: `npm test public/js/timestamp.test.js` (verify both implementations behave identically, including negative rejection)
 - [ ] Run existing frontend test suite: `npm test public/js/` (verify no regressions in datetime.js or other tests)
 - [ ] Verify grep (backend): `rg -n "Math\.floor" src --type ts -g '!*.test.*'` returns only timestamp.ts:27 (sanctioned exception)
-- [ ] Verify grep (frontend): `rg -n "Math\.floor" public/js --type js` returns empty (all replaced with Timestamp)
+- [ ] Verify grep (frontend): `rg -n "Math\.floor" public/js --type js -g '!*.test.js'` returns empty (all production code replaced with Timestamp; test file excluded per W2 fix)
 - [ ] Commit: "feat: Use Timestamp API throughout frontend (charts, datetime, records); add duplicate Timestamp class with Math.trunc + negative guard"
 
 **Success**: All 4 frontend conversions use Timestamp API; parity tests pass (including negative rejection); zero Math.floor in frontend; all existing tests still pass; charts + records UI fully functional.
