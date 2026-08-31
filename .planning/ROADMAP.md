@@ -21,7 +21,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Chart Navigation & Record Deep Link** - Log-scale toggle, custom date range, and record-to-chart deep link ✅
 - [x] **Phase 8: Leverage Calculator** - Independent client-side long/short position-sizing calculator ✅
 - [x] **Phase 9: Access & Launch Hardening** - Shared navigation plus Cloudflare Access gating the whole app ✅
-- [ ] **Phase 10: Timestamp Domain Abstraction** - Eliminate scattered time conversion logic, centralize via strongly-typed Timestamp class
+- [x] **Phase 10: Timestamp Domain Abstraction** - Eliminate scattered time conversion logic, centralize via strongly-typed Timestamp class ✅
+- [ ] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware
 
 ## Phase Details
 
@@ -180,6 +181,25 @@ Plans:
 - [ ] 10-01: Backend integration (db.ts, klines.ts, types.ts)
 - [ ] 10-02: Frontend integration (charts.js, records.js)
 
+### Phase 11: Error Handling & Structured Responses
+**Goal**: Eliminate scattered `try-catch` blocks and string-based errors. Implement structured error types, unified response envelope, and centralized error middleware for all API routes.
+**Depends on**: Phase 10
+**Requirements**: CODE-02 (Error Handling)
+**Success Criteria** (what must be TRUE):
+  1. All errors inherit from `AppError` base class with structured types (`ValidationError`, `DatabaseError`, `ExternalServiceError`, `AuthenticationError`).
+  2. All API responses follow unified envelope: `{ ok, data?, error? }` with `ErrorDetails = { code, message, details }`.
+  3. Centralized error middleware catches all errors, logs full context server-side, returns sanitized response to client.
+  4. Zero silent error failures: no more `catch (error) { console.error(...) }` in route handlers.
+  5. 40+ unit + integration tests covering all error types and routes.
+  6. Frontend can differentiate error types by `error.code` (VALIDATION_ERROR vs. SERVICE_ERROR vs. DATABASE_ERROR).
+**Plans**: 11-01 (error types & middleware), 11-02 (route refactoring), 11-03 (testing & verification)
+**Status**: Planned, ready to execute
+
+Plans:
+- [ ] 11-01: Error type definitions and centralized middleware (1 day)
+- [ ] 11-02: Refactor all route handlers to use structured errors (1.5 days)
+- [ ] 11-03: Comprehensive error handling tests and UAT (1 day)
+
 ## Quick Tasks & Architecture Improvements
 
 These are lightweight refactoring and code quality improvements executed between phases, tracked in `.planning/quick/`.
@@ -204,10 +224,11 @@ These are lightweight refactoring and code quality improvements executed between
    - **Benefit**: Type updates now affect 2 files instead of 3; no more duplication
    - **Commit**: `0d7aa23`
 
-3. [ ] **#7 Improved Error Handling & Structured Responses** — Next
-   - Structured error envelopes with codes and context
-   - Consistent error messaging across endpoints
-   - User-friendly error text vs. internal debugging info
+3. [ ] **#7 Improved Error Handling & Structured Responses** → **Phase 11** ✅ Promoted to full phase
+   - Structured error types (ValidationError, DatabaseError, ExternalServiceError)
+   - Unified `{ ok, data?, error? }` response envelope
+   - Centralized error middleware + 40+ tests
+   - Phase 11 plan: 11-01, 11-02, 11-03
 
 4. [ ] **#3 Centralized Validation Framework**
    - Extract common validation patterns from multiple endpoints
