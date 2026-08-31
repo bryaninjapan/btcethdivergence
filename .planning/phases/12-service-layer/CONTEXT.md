@@ -105,30 +105,33 @@ src/
 - Services close to routes they serve
 - Same structure as current DB functions
 
-### Decision 3: Input Validation in Services
+### Decision 3: Input Validation Strategy — Single Layer at Route Boundary
 
-**Chosen:** Services accept **already-validated input**
+**Chosen:** Validation happens ONLY at route layer (Zod); services trust all input is valid.
 
 ```typescript
-// routes/records.ts
+// routes/records.ts — ONLY place validation happens
 const parsed = createRecordSchema.safeParse(body);
 if (!parsed.success) throw ValidationError(...);
+// Schema covers: types, formats, ranges, AND business rules (startTime < endTime)
 
-// Pass validated data to service
-const row = await recordService.createRecord(parsed.data);
+// Service receives pre-validated input
+const row = await recordService.createRecord(db, parsed.data);
 
-// services/records.service.ts
+// services/records.service.ts — NO validation, pure business logic
 export async function createRecord(db: D1Database, input: CreateRecordInput) {
-  // input is guaranteed valid (via Zod schema in route)
+  // input is GUARANTEED valid by Zod; no re-checking needed
   return await db.prepare(...).bind(input).run();
 }
 ```
 
 **Rationale:**
-- Zod validation already at HTTP boundary (validates external input)
-- Services trust input is valid
-- Avoids double-validation
-- Clear responsibility: routes validate, services execute
+- Single validation layer is simpler and less error-prone
+- Zod schema enforces types, ranges, AND business rules (e.g., `.refine()` for startTime < endTime)
+- Services focus on data access, not validation
+- Routes own the HTTP boundary responsibility
+- Avoids double-validation overhead
+- Clear ownership: HTTP layer validates, business layer executes
 
 ## Scope & Boundaries
 

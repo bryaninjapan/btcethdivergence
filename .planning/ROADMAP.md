@@ -201,6 +201,29 @@ Plans:
 - [ ] 11-02: Refactor all route handlers to use structured errors (1.5 days)
 - [ ] 11-03: Comprehensive error handling tests and UAT (1 day)
 
+### Phase 12: Service Layer Pattern
+**Goal**: Extract business logic from route handlers into dedicated service layer. Improve testability, code reuse, and maintainability by separating HTTP concerns from business logic.
+**Depends on**: Phase 11, Quick Tasks #2, #3, #5
+**Requirements**: CODE-04 (Service Layer Pattern)
+**Success Criteria** (what must be TRUE):
+  1. All business logic extracted to `src/services/` (records, klines, admin domains).
+  2. Services accept already-validated input (Zod validation at route layer).
+  3. Services have comprehensive unit tests (20+) using real test D1 database.
+  4. All routes refactored to use services (HTTP layer thin, ~10-20 lines per endpoint).
+  5. Route integration tests pass (no regressions).
+  6. E2E tests pass (critical user flows work).
+  7. Code coverage ≥ 80%.
+  8. Code review complete (no HIGH severity issues).
+**Plans**: 12-01 (records service), 12-02 (klines service), 12-03 (admin service), 12-04 (test DB & E2E), 12-05 (code review & docs)
+**Status**: Planning complete, ready for plan check
+
+Plans:
+- [ ] 12-01: Records service extraction & testing (1 day)
+- [ ] 12-02: Klines service extraction & testing (1 day)
+- [ ] 12-03: Admin service extraction & testing (0.5 day)
+- [ ] 12-04: Test database setup & E2E verification (0.5 day)
+- [ ] 12-05: Code review & documentation (0.5 day)
+
 ## Quick Tasks & Architecture Improvements
 
 These are lightweight refactoring and code quality improvements executed between phases, tracked in `.planning/quick/`.
