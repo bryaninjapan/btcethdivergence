@@ -117,6 +117,21 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
     expect(db.calls).toHaveLength(0);
   });
 
+  it('rejects negative timestamp query params with 400 (Phase 10 behavior change)', async () => {
+    const db = new FakeD1Database([SAMPLE_ROW]);
+    const res = await klines.request(
+      '/api/klines?symbol=BTCUSDT&start=-1000&end=1627477200000',
+      {},
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(400);
+    expect(db.calls).toHaveLength(0); // Guard prevents DB query
+    const body = (await res.json()) as { ok: boolean; error?: string };
+    expect(body.ok).toBe(false);
+    expect(body.error).toContain('non-negative');
+  });
+
   it('returns 500 with a generic message when the DB query throws', async () => {
     class ThrowingDb {
       prepare() {

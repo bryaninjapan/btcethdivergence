@@ -1,0 +1,27 @@
+I'll start by reading the required planning files in order.
+No files found under `.planning/phases/`. Let me check the actual directory structure.
+Now let me read the Phase 9 plan, CONTEXT.md, and PLAN-REVISION.md.
+Now let me verify the plan's load-bearing claims against the actual source tree. Let me examine the project structure.
+`workers_dev: false` is notable. Let me verify the source files the plan references.
+CSS variables verified. Now the Worker source, scripts, CI workflow, and launchd runners.
+There's a prior check (10:25) that the plan post-dates (10:35). Let me verify the API routes and auth layer — critical for the `/api/*` gating question.
+`/api/records` has POST/PUT/DELETE mutations — important. Let me read the actual runner scripts and remaining config.
+Let me check STATE.md, launchd schedule, and the phase 3 cron setup for the claims about the automation pipeline.
+Let me verify which API endpoints the UI calls and whether it sends any auth headers — load-bearing for the gating design.
+Let me confirm the timing of the workers_dev disable relative to the last cron run, and check the backfill log state.
+I now have all the facts verified. Key findings: the plan post-dates the prior check and fixes several warnings (deploy step, CSS vars, 401-for-APIs, CI re-point, Cf-Access headers), but the `/api/*` gating blocker remains — now reinforced by the fact that `/api/records` carries POST/PUT/DELETE mutations (D-09-04's "read-only" rationale is false) and the plan's own curl verification contradicts its own policy design. Writing the check report.
+Verification complete. `.planning/phases/09-access-launch/9-PLAN-CHECK.md` written.
+
+**Summary:** Re-checked the current 09-PLAN.md (post-revision) against ROADMAP SC1–SC3, CONTEXT D-09-01…04, and the actual source.
+
+**Confirmed fixed since the prior check:** 09-01 now deploys + live-curls the nav, uses existing light-theme CSS vars, and statically greps all three pages; 09-02 uses correct `Cf-Access-Client-Id/Secret` headers, re-points launchd + CI to the custom domain, and has a live-sync checkpoint.
+
+**1 blocker (B1):** SC2/INFRA-04 require *every* `/api/*` route gated, but the plan leaves `/api/records` and `/api/klines` public with the decision deferred (line 381) — and its own verification expects 401 on those exact routes. The plan is internally contradictory. D-09-04's "read-only / no mutations" rationale is **false**: `records.ts` exposes POST/PUT/DELETE mutations, so public means unauthenticated write access to the owner's records. A covered-but-policyless path in Cloudflare Access is denied by default, which would also break the Records/Charts UI (api.js sends no auth headers).
+
+**6 warnings:** TDD Test 1 vacuous (same 401 before/after policy); no `typecheck:scripts`/`test` after the fetcher edit; Service-Token headers shown for only one of two fetch sites; cron is already broken (`workers_dev:false` since 00:56 UTC, runners still hit the dead workers.dev host); CI secrets not wired into the workflow env; TDD documented before the Access app exists.
+
+**6 info:** `/api/health` uncovered, "No Code Changes Required" wording, nav double-spec, D-09-02 CNAME confusion, SC3 manual-only, nav typecheck scope.
+
+**Recommendation:** fix B1 (extend Policy 1 to the data endpoints or explicitly amend ROADMAP SC2/INFRA-04; correct D-09-04's factual error; remove the hedge), then W1–W6.
+
+1 blocker(s) found — plan needs revision before execution.

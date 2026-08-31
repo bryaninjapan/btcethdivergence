@@ -1,0 +1,15 @@
+Plan check complete. Report written to `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+**Summary**: The foundation is real (Timestamp class, 112 lines, full API, 44/44 tests verified; plain-ESM frontend duplicate is no-build-step compliant), and all line numbers the plan cites for its 6 covered conversion sites are accurate. But the plan still misses the phase goal:
+
+**Blockers (4)**:
+1. **db.ts:51/89/124** (3× `Math.floor(Date.now()/1000)`) have no task — the plan's *own* checklist says "db.ts, binance.ts, klines.ts all converted", but 10-01 only touches binance.ts/klines.ts. SC1/SC3 fail.
+2. **records.js:124** (`Math.floor(Date.now()/1000)`) has no frontend task — ROADMAP names records.js in 10-02's scope. SC2/SC3 fail.
+3. **Verify grep is blind**: `Math\.floor\([^)]*/ 1000\)` cannot match nested-paren forms (`Date.now()`, `Date.UTC(...)`) — the exact patterns in db.ts, records.js, and datetime.js. Empirically it also returns `timestamp.test.ts:55-56`, so "returns only timestamp.ts" is false. SC3 can't be proven; verification would falsely pass.
+4. **SC5** (code review, no HIGH) has no covering task.
+
+**Warnings (5)**: charts.js off-by-one line ref (95 vs 96); parity-test purpose/wording; dangling checklist items (`typecheck:scripts`, backfill dry-run, LEARNING.md); negative-input behavior change in klines.ts (`Timestamp` throws on negative seconds); inventory undercount (plan says 6 expressions, actual is 11 across 10 sites).
+
+**Passes**: dependency ordering, locked-decision compliance (D1 Option B, D2 Option A), scope granularity.
+
+4 blocker(s) found — plan needs revision before execution.

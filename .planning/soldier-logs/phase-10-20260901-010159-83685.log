@@ -1,0 +1,14 @@
+Now let me verify the plan's load-bearing claims against actual source.
+Frontend claims verified. Now let me run the actual greps the plan relies on, and check build/test config.
+All claims verified against source. Now writing the updated plan-check report.
+Plan check complete. Wrote `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+**Findings: 1 blocker, 4 warnings, 5 info.**
+
+The revised plan fixed all four prior blockers — `db.ts:51/89/124` and `records.js:124` are now tasked (all 10 conversion sites verified against real source via `rg`), the negative-input guard is handled, and `npm run typecheck`/`typecheck:scripts` are present. D1 Option B and D2 Option A both comply with locked decisions; SC1/SC2/SC4 are deliverable.
+
+**Blocker (B1):** The plan creates `public/js/timestamp.js` as a mirror of `src/lib/timestamp.ts`, whose `fromMillis` uses `Math.floor(millis / 1000)` at line 27. The duplicate therefore re-introduces a second production `Math.floor(ms/1000)`, making the plan's own frontend gate ("grep returns empty") unachievable and SC3 false. The plan must either sanction the frontend exception (and fix the gate to expect it) or require the copy to use `Math.trunc` (identical for non-negative millis).
+
+**Warnings:** backend grep gate claim false as written (`timestamp.test.ts:55–56` also matches); the backfill `--dry-run` command doesn't exist in `backfill-fetcher.mts` (exits on missing env or hits live APIs); SC5 code review still untasked; inventory count misstated (6 files, not 5).
+
+1 blocker(s) found — plan needs revision before execution.

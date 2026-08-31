@@ -1,0 +1,15 @@
+Now let me examine the actual source tree to fact-check the plan's load-bearing claims.
+All evidence gathered. Now writing the verification report.
+Report written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md`.
+
+**Summary:**
+
+Verified 09-PLAN.md v1.0 (tasks 09-01, 09-02) against ROADMAP phase 9, CONTEXT.md (D-09-01/02/03), PROJECT.md, REQUIREMENTS.md, and the real source tree.
+
+Confirmed accurate: all three pages + `style.css` exist; nav hrefs match; `/api/records` (records.ts:14) and `/api/klines` (klines.ts:8) are real; wrangler route `btcethdivergence.bryanlab.cc/*` and `workers_dev: false` are both committed — so the prior "workers.dev ungated" blocker is resolved and "no changes required" holds. Both requirement IDs (INFRA-04/06) have covering tasks; all three SCs trace to tasks; scope is 2 tasks.
+
+One **BLOCKER (B1)**: the plan severs the app's only automated data path. The live Phase 3 launchd runners (`~/.config/btcethdivergence/backfill-runner*.sh`) and `fetch-binance.yml` hard-code `WORKER_URL=https://btcethdivergence.gn01968711.workers.dev` and call `/api/admin/backfill-cursor` + `/api/admin/ingest` with only a Bearer token. After the next deploy (`workers_dev: false`) that host dies, and even re-pointed to the custom domain, Access returns 401 to the cron. The plan neither re-wires the runners nor configures an Access Service Token policy for `/api/admin/*` — the daily kline sync silently breaks at launch.
+
+Four **WARNINGS**: W1 `/api/*` curl expectations say 302 but Access returns 401; W2 no explicit `wrangler deploy` step linking 09-01's nav edits to the live site; W3 proposed dark-navy nav styling contradicts the existing light theme and the plan's own consistency goal; W4 no automated assertion that all three pages include the nav. Four INFO items (SC3 manual evidence, DNS not repo-verifiable, plan doesn't state workers_dev is disabled, inline-vs-extracted script ambiguity, typecheck scope).
+
+1 blocker(s) found — plan needs revision before execution.

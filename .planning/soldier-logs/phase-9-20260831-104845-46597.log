@@ -1,0 +1,26 @@
+I'll start by reading the required planning files in order.
+Now let me read the requirements (INFRA-04, INFRA-06) and the existing plan check, plus explore the source tree.
+Now let me fact-check against the actual source tree.
+Let me verify a few more load-bearing claims: vitest config, STATE.md, and git history for the revision state.
+The plan was revised after the prior check. Let me see the uncommitted diff to understand the current state precisely.
+The plan was revised after the prior check and now resolves the old B1/B2. Let me check remaining load-bearing claims: cron state, launchd, and research docs.
+I have all the evidence I need. The plan was revised (uncommitted) after the prior check and the old blockers are resolved. Let me write the new plan-check report.
+## Phase 9 Plan Check — Summary
+
+Reviewed the **current working-tree** `09-PLAN.md` (revised after the prior check) against ROADMAP SC1–SC3, REQUIREMENTS INFRA-04/INFRA-06, locked decisions D-09-01..04, and the actual source.
+
+**Result: 0 blockers, 6 warnings, 8 info.**
+
+The prior two blockers are resolved: data endpoints `/api/records` and `/api/klines` are now gated by Policy 1 (owner email OTP) per the amended D-09-04, `/api/admin/*` by Service Token (Policy 2), default Block covers the rest, and the checkpoints (302 for HTML, 401+Cf-Access-Denied for every `/api/*`) are internally consistent. All three success criteria trace to concrete tasks; all load-bearing claims verified on disk (routes, `workers_dev:false`, runners pointing at the dead workers.dev URL, fetcher call sites, GH Actions env block, `#new-record` binding).
+
+Remaining warnings are execution-ordering/wiring, not structural gaps:
+- **W1** — TDD sub-task is ordered before Access Application Setup, but Test 1 RED needs Access live and Test 3 needs runners re-pointed (false-positive risk).
+- **W2** — `fetch-binance.yml` env block never extended with the Service Token secrets; file missing from Files-Modified.
+- **W3** — Cf-Access headers must go on both fetcher fetch calls.
+- **W4** — use `npm run typecheck:scripts`, not `npm run typecheck -- <file>`.
+- **W5** — 09-01's live nav curls must run before Access goes live.
+- **W6** — header rewrite must preserve `#new-record` or the records page breaks.
+
+Report written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md` (PLAN.md untouched).
+
+Plans verified. Ready to execute.

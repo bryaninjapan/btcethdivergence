@@ -50,8 +50,8 @@ export async function fetchCursor(
     `${workerUrl}/api/admin/backfill-cursor?symbol=${encodeURIComponent(symbol)}`,
     {
       headers: {
-        'Cf-Access-Client-Id': process.env.CF_CLIENT_ID || '',
-        'Cf-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
+        'CF-Access-Client-Id': process.env.CF_CLIENT_ID || '',
+        'CF-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
         Authorization: `Bearer ${ingestToken}`,
       },
     },
@@ -98,8 +98,8 @@ async function main(): Promise<void> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Cf-Access-Client-Id': process.env.CF_CLIENT_ID || '',
-      'Cf-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
+      'CF-Access-Client-Id': process.env.CF_CLIENT_ID || '',
+      'CF-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
       Authorization: `Bearer ${ingestToken}`,
     },
     body: JSON.stringify({ symbol, klines: result.klines }),

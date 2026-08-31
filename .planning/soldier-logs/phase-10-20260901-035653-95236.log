@@ -1,0 +1,27 @@
+I'll verify the plan systematically. Let me read the required files in order.
+Note there's already a `10-PLAN-CHECK.md`. Let me read the PLAN.md, CONTEXT.md, and research files.
+Now let me examine the existing PLAN-CHECK.md, research directory, and the actual source tree to fact-check the plan's claims.
+Now let me fact-check the plan's load-bearing claims against the actual source files.
+Now let me read the frontend files and test files to verify the plan's claims.
+Let me verify the test files, admin.ts, and other time-conversion sites in the backend.
+Let me check chart-range.js, the TDD verification scripts, and binance.test.ts.
+Let me check the scripts tsconfig, the existing timestamp tests, and the prior PLAN-CHECK for context.
+Let me verify types.ts, wrangler.jsonc, and check the frontend conversion edge case in records.js formatTime usage.
+Let me check the scripts directory and test scripts for any missed conversion sites, plus confirm the frontend ESM import graph.
+All facts verified. Let me write the fresh verification report.
+Verification complete. Wrote `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+## Summary
+
+**Phase 10 Plan Check — 0 blockers, 3 warnings, 7 info.**
+
+Every load-bearing claim was verified against real source: all 10 conversion sites and line numbers are exact (db.ts:51/89/124, binance.ts:17, klines.ts:21/22, charts.js:95/96, datetime.js:42, records.js:124); timestamp.ts is 112 lines with 44 `it()` tests; the sanctioned `Math.floor` at timestamp.ts:27 exists; `Kline.open_time: number` (types.ts:7) confirms D1 boundaries-only; static-assets ESM confirms D2 no-build-step; no `--dry-run` exists; admin.ts and scripts contain no target conversions. SC1/SC4/SC5 fully covered, SC2/SC3 partial.
+
+Warnings (all cheap to fix):
+- **W1** — SC2 wording broader than the 4 frontend sites converted; 4 sec→ms sites left raw (documented decision). Fix: convert them or tighten ROADMAP wording.
+- **W2** — the two frontend grep commands in the plan disagree on `-g '!*.test.js'`; the new `.js` parity test could spuriously fail one.
+- **W3** — SC3's literal "zero Math.floor" vs. the retained timestamp.ts:27 exception; switching to Math.trunc (already TDD-validated) or rewording SC3 closes it.
+
+Worth noting the negative-millis guard on the frontend duplicate is genuinely required (Math.trunc ≠ Math.floor for −1000<ms<0) and the plan handles it correctly; the new klines 400 guard now covers both start/end with a test.
+
+Plans verified. Ready to execute.

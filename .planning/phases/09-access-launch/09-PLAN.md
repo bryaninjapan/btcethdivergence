@@ -69,19 +69,23 @@ The finished app is navigable as one cohesive site via a shared navigation bar, 
 
 ### Navigation Bar Styling
 
+Use existing CSS variables from `public/css/style.css` for consistency:
+
 ```css
 .top-nav {
-  background-color: #2c3e50;
-  color: white;
+  background-color: var(--panel);        /* Light background, matches existing */
+  color: var(--text);                     /* Dark text, matches existing */
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid var(--border);
 }
 
 .top-nav h1 {
   margin: 0;
   font-size: 1.5rem;
+  color: var(--text);
 }
 
 .nav-links {
@@ -93,19 +97,19 @@ The finished app is navigable as one cohesive site via a shared navigation bar, 
 }
 
 .nav-link {
-  color: white;
+  color: var(--text);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .nav-link:hover {
-  color: #ecf0f1;
+  color: var(--accent);
 }
 
 .nav-link.active {
-  color: #3498db;
-  border-bottom: 2px solid #3498db;
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
   padding-bottom: 0.25rem;
 }
 
@@ -226,39 +230,184 @@ Add a simple client-side script to highlight the current page's navigation link:
 - Mobile viewport (375px) shows properly stacked navigation
 - No console errors when navigating between pages
 - **Automated**: `npm run test -- public/js/nav.test.ts` passes (active-page logic tested)
+- **Static verification** — All three pages include nav code:
+  ```bash
+  for page in public/index.html public/charts.html public/calculator.html; do
+    if grep -q 'class="nav-link"' "$page" && grep -q 'src="/js/nav.js"' "$page"; then
+      echo "✓ $page has nav"
+    else
+      echo "✗ $page missing nav"
+      exit 1
+    fi
+  done
+  ```
+- **Deploy to live** (W2 verification):
+  ```bash
+  npm run deploy
+  # Verify output reports: "✓ Route btcethdivergence.bryanlab.cc/* deployed"
+  
+  # Verify nav appears on live site
+  for page in / /charts.html /calculator.html; do
+    if curl -s https://btcethdivergence.bryanlab.cc$page | grep -q 'nav-link'; then
+      echo "✓ Live page $page has nav"
+    else
+      echo "✗ Live page $page missing nav"
+      exit 1
+    fi
+  done
+  ```
 
 ---
 
-### Task 09-02: Cloudflare Access Configuration & Documentation
+### Task 09-02: Cloudflare Access Configuration & Service Token Authentication
 
-**Objective**: Gate the entire app behind Cloudflare Access authentication, allowing only the owner's email.
+**Objective**: Gate the entire app behind Cloudflare Access authentication (owner email + Service Token for `/api/admin/*`), ensuring launchd cron continues to function.
+
+**Critical Dependency**: The existing Phase 3 cron (launchd runners + GitHub Actions) must continue working after deploying Access. This task uses **TDD to verify the Service Token approach works before full implementation**.
 
 **Files Modified**:
-- `wrangler.jsonc` (no changes required; routes already configured via D-09-02)
-- `.planning/phases/09-access-launch/ACCESS-CONFIG.md` (new, documents setup steps and verification)
+- `wrangler.jsonc` (no code changes; routes already configured)
+- `scripts/backfill-fetcher.mts` (add Service Token header)
+- `~/.config/btcethdivergence/backfill-runner.sh` (update environment)
+- `.planning/phases/09-access-launch/ACCESS-CONFIG.md` (new, documents setup + testing)
 
 **Deliverables**:
 
+### Sub-Task 09-02-TDD: Test-Driven Verification of Service Token Approach
+
+**Objective**: Verify that Cloudflare Access Service Tokens work with the launchd cron workflow before implementing the full Access configuration.
+
+**TDD Tests** (execute in order):
+
+**Test 1: Service Token passes Cloudflare Access (RED → GREEN)**
+```bash
+# Retrieve Service Token credentials from Cloudflare dashboard
+# Format: CF_CLIENT_ID and CF_CLIENT_SECRET
+
+# RED: Before creating Service Token policy
+curl -i -H "Cf-Access-Client-Id: <CF_CLIENT_ID>" \
+        -H "Cf-Access-Client-Secret: <CF_CLIENT_SECRET>" \
+     https://btcethdivergence.bryanlab.cc/api/admin/backfill-cursor
+# Expected: HTTP 401 with header "Cf-Access-Denied: true" 
+# (proves Cloudflare Access blocked it because no policy exists yet)
+
+# Configure Service Token policy in Cloudflare Access dashboard
+# GREEN: After policy configuration
+curl -i -H "Cf-Access-Client-Id: <CF_CLIENT_ID>" \
+        -H "Cf-Access-Client-Secret: <CF_CLIENT_SECRET>" \
+     https://btcethdivergence.bryanlab.cc/api/admin/backfill-cursor
+# Expected: HTTP 401 WITHOUT "Cf-Access-Denied" header
+# (proves Access LET the request through; app rejected it for missing INGEST_TOKEN)
+```
+
+**Test 2: Dual-layer authentication works (RED → GREEN)**
+```bash
+# Verify both Cloudflare Access (Service Token) AND app-level (INGEST_TOKEN) work together
+curl -H "Cf-Access-Client-Id: <CF_CLIENT_ID>" \
+     -H "Cf-Access-Client-Secret: <CF_CLIENT_SECRET>" \
+     -H "Authorization: Bearer <INGEST_TOKEN>" \
+     https://btcethdivergence.bryanlab.cc/api/admin/backfill-cursor
+# Expected: 200 OK (both layers authenticated, API returns success)
+```
+
+**Test 3: launchd cron can use Service Token (REAL WORLD TEST)**
+```bash
+# Update scripts/backfill-fetcher.mts to include Service Token
+# Run launchd job manually
+# Expected: Cron executes successfully, data syncs correctly
+```
+
+**Fallback Decision**:
+- If any test fails → Use conservative approach (Bypass internal IP or exclude `/api/admin/*` from Access)
+- If all tests pass → Proceed with full Service Token implementation
+
+---
+
 1. **Access Application Setup** (manual, in Cloudflare dashboard)
    - Create "BTC/ETH Divergence Tracker" application
-   - Set application domain to the live URL
+   - Set application domain to `https://btcethdivergence.bryanlab.cc`
+   - Set application include to **entire domain** (`/`) to gate all paths (UI + API)
    - Configure email OTP login method
    - Add owner email to allow-list
 
-2. **Policy Configuration**
-   - Policy name: "Owner Email Only"
-   - Condition: user email == `gn01968711@gmail.com`
-   - Action: Allow
-   - Default: Block
+2. **Policy Configuration** (after TDD verification)
+   - **Policy 1 (User Routes + Data APIs)**: "Owner Email Only"
+     - Match type: Hostnames + Paths
+     - Paths include: `/`, `/charts.html`, `/calculator.html`, `/api/records*`, `/api/klines*`
+     - Condition: user email == `gn01968711@gmail.com` (D-09-01)
+     - Action: Allow
+   
+   - **Policy 2 (Admin APIs)**: "Service Token for Admin APIs"
+     - Match type: Hostnames + Paths  
+     - Paths include: `/api/admin/*`
+     - Condition: Cloudflare Access Service Token (with CF_CLIENT_ID/SECRET)
+     - Action: Allow
+   
+   - **Default action**: Block (deny all routes not explicitly Allow'd by a policy)
 
-3. **Route Coverage**
-   - Ensure all routes are covered:
-     - `/` (Records)
-     - `/charts.html` (Charts)
-     - `/calculator.html` (Calculator)
-     - `/api/*` (all backend endpoints)
+**How Access policies work** (clarification for B2):
+- The application **include** (`/`) gates all traffic at the network layer
+- Each **policy** matches paths and conditions; policies are evaluated in order
+- Policy 1 allows `/api/records*` + `/api/klines*` only for owner email
+- Policy 2 allows `/api/admin/*` only for Service Token
+- Default block denies all other paths (including unauthenticated attempts to `/api/records` or `/api/admin/*`)
+- Result: All `/api/*` routes are protected; each requires different credentials
 
-4. **Documentation** — Create `ACCESS-CONFIG.md` with:
+3. **Service Token Implementation** (if TDD passes)
+   - Create a Cloudflare Access Service Token in the dashboard:
+     - Generate new token with 90-day expiration
+     - Copy `CF_CLIENT_ID` and `CF_CLIENT_SECRET` values
+   
+   - **Update launchd runners**:
+     - `~/.config/btcethdivergence/backfill-runner.sh`: 
+       ```bash
+       export WORKER_URL="https://btcethdivergence.bryanlab.cc"
+       export CF_CLIENT_ID="<token-client-id>"
+       export CF_CLIENT_SECRET="<token-client-secret>"
+       ```
+     - `~/.config/btcethdivergence/backfill-runner-eth.sh`: Same env vars
+   
+   - **Update GitHub Actions CI** (`.github/workflows/fetch-binance.yml`):
+     - Update `WORKER_URL` secret to point to `https://btcethdivergence.bryanlab.cc`
+     - Add `CF_CLIENT_ID` secret with token client ID
+     - Add `CF_CLIENT_SECRET` secret with token client secret
+   
+   - **Update `scripts/backfill-fetcher.mts`** to add Cloudflare Access headers:
+     ```typescript
+     // Add Service Token headers for Cloudflare Access
+     headers: {
+       'Cf-Access-Client-Id': process.env.CF_CLIENT_ID || '',
+       'Cf-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
+       'Authorization': `Bearer ${process.env.INGEST_TOKEN}`,
+     }
+     ```
+   
+   - **Type-check the modified script**:
+     ```bash
+     npm run typecheck -- scripts/backfill-fetcher.mts
+     # Verify: no TypeScript errors
+     ```
+   
+   - **Verify one live sync run**:
+     ```bash
+     launchctl kickstart -k gui/$(id -u)/com.btcethdivergence.backfill
+     # Check logs for success: { inserted: N, skipped: M, cursor: X }
+     ```
+
+4. **Route Coverage** (All routes fully gated per SC2/INFRA-04)
+   - **UI Routes** (Policy 1 — Owner Email OTP):
+     - `/` (Records) — gated by email OTP
+     - `/charts.html` (Charts) — gated by email OTP
+     - `/calculator.html` (Calculator) — gated by email OTP
+   
+   - **Data API Routes** (Policy 1 — Owner Email OTP per D-09-04):
+     - `/api/records` — gated by email OTP (POST/PUT/DELETE write operations protected)
+     - `/api/klines` — gated by email OTP (read-only market data protected)
+   
+   - **Admin API Routes** (Policy 2 — Service Token + INGEST_TOKEN):
+     - `/api/admin/backfill-cursor`, `/api/admin/ingest` — gated by Service Token (dual-layer auth)
+
+5. **Documentation** — Create `ACCESS-CONFIG.md` with:
    - Step-by-step setup instructions (for future reference or if config needs to be recreated)
    - Screenshot references showing key configuration screens
    - Fallback procedure if Access needs to be disabled
@@ -273,16 +422,20 @@ Add a simple client-side script to highlight the current page's navigation link:
 - Logout functionality available (standard Cloudflare Access feature)
 - **Automated verification** (post-deploy):
   ```bash
-  # Unauthenticated requests to main pages should redirect (HTTP 302)
-  curl -I https://btcethdivergence.bryanlab.cc/ 2>&1 | grep -E "HTTP|Location"
-  curl -I https://btcethdivergence.bryanlab.cc/charts.html 2>&1 | grep -E "HTTP|Location"
-  curl -I https://btcethdivergence.bryanlab.cc/calculator.html 2>&1 | grep -E "HTTP|Location"
+  # Unauthenticated requests to HTML pages should redirect (HTTP 302)
+  # Browser requests get redirected to login
+  curl -s -o /dev/null -w "%{http_code}\n" https://btcethdivergence.bryanlab.cc/
+  curl -s -o /dev/null -w "%{http_code}\n" https://btcethdivergence.bryanlab.cc/charts.html
+  curl -s -o /dev/null -w "%{http_code}\n" https://btcethdivergence.bryanlab.cc/calculator.html
+  # Expected: HTTP 302 (with Location: *.cloudflareaccess.com header)
   
-  # Unauthenticated requests to API should return 401 or redirect
-  curl -I https://btcethdivergence.bryanlab.cc/api/records 2>&1 | grep -E "HTTP|Location"
-  curl -I https://btcethdivergence.bryanlab.cc/api/klines 2>&1 | grep -E "HTTP|Location"
-  
-  # Expect: HTTP/2 302 with Location: *.cloudflareaccess.com
+  # Unauthenticated requests to ALL /api/* should return 401 with Cf-Access-Denied
+  # Access blocks non-browser (API) requests; no redirect for API clients
+  curl -i https://btcethdivergence.bryanlab.cc/api/records 2>&1 | grep -E "HTTP|Cf-Access-Denied"
+  curl -i https://btcethdivergence.bryanlab.cc/api/klines 2>&1 | grep -E "HTTP|Cf-Access-Denied"
+  curl -i https://btcethdivergence.bryanlab.cc/api/admin/backfill-cursor 2>&1 | grep -E "HTTP|Cf-Access-Denied"
+  curl -i https://btcethdivergence.bryanlab.cc/api/admin/ingest 2>&1 | grep -E "HTTP|Cf-Access-Denied"
+  # Expected: HTTP 401 with header "Cf-Access-Denied: true" — proves Policy 1/2 are working
   ```
 
 ---
@@ -299,15 +452,16 @@ Add a simple client-side script to highlight the current page's navigation link:
 - Test all page features after each navigation change
 - Mobile layout should stack navigation above page-specific controls
 
-### Risk 2: Cloudflare Access Blocking API Calls During Development
+### Risk 2: Cloudflare Access Breaking Automated Cron Jobs
 
-**Risk**: If Access is enabled before development is complete, local dev testing and CI/CD might be blocked.
+**Risk**: If Access is enabled before launchd runners and GitHub Actions are re-wired with Service Tokens, the daily kline sync will fail, causing chart data to go stale.
 
 **Mitigation**:
-- Enable Access only after Phase 9 implementation is complete and tested locally
-- Use Cloudflare's "Bypass for internal traffic" rules if needed for CI/CD
-- Document a temporary bypass procedure for development/testing
-- Test Access with a staging URL first, then apply to production
+- **TDD Verification** (Sub-Task 09-02-TDD): Validate Service Token approach passes all three tests before full deployment
+- Update both launchd runners **and** GitHub Actions CI with Service Token configuration before deploying Access
+- **Checkpoint before deployment**: Run one live launchd job manually and verify it succeeds (log output shows `{ inserted: N, skipped: M, cursor }`）
+- If Service Token TDD fails, use conservative fallback: either exclude `/api/admin/*` from Access gating or use a static IP bypass for CI runners
+- **Document the automation impact** in `ACCESS-CONFIG.md` so future maintainers know the sync dependency
 
 ### Risk 3: OTP Delivery Delays or Email Filtering
 

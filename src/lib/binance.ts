@@ -1,3 +1,4 @@
+import { Timestamp } from './timestamp';
 import type { BinanceKlineTuple, Kline } from '../types';
 
 export class BinanceError extends Error {
@@ -14,7 +15,7 @@ export class BinanceError extends Error {
 
 export function parseKline(raw: BinanceKlineTuple): Kline {
   return {
-    open_time: Math.floor(raw[0] / 1000),
+    open_time: Timestamp.fromMillis(raw[0]).toSeconds(),
     open: Number(raw[1]),
     high: Number(raw[2]),
     low: Number(raw[3]),

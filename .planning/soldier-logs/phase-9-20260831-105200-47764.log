@@ -1,0 +1,14 @@
+Existing 9-PLAN-CHECK.md is stale (reviewed pre-revision plan). The plan and CONTEXT.md were updated after it (timestamps: check 10:44, CONTEXT 10:44, plan 10:48). Now verifying the current plan against real source.
+Now checking vitest config, an existing test pattern, REQUIREMENTS.md for INFRA-04/06, and the fetcher test (to see if adding headers breaks it).
+All load-bearing claims verified. Both prior blockers (SC2 coverage, config self-contradiction) are resolved — ROADMAP SC2, REQUIREMENTS INFRA-04, and CONTEXT D-09-04 were amended to the layered policy split, and the plan's Route Coverage + checkpoints now agree. Writing the fresh check report.
+Plan check complete. Wrote `.planning/phases/09-access-launch/9-PLAN-CHECK.md` (supersedes the stale prior check).
+
+**Summary**
+
+- **Status: ISSUES FOUND — 0 blockers, 7 warnings, 7 info.**
+- **Requirement coverage**: INFRA-06 → 09-01 (nav bar), INFRA-04 → 09-02 (layered Access). Both covered.
+- **SC traceability**: SC1 → 09-01; SC2 (UI + `/api/records`/`/api/klines` → email OTP Policy 1; `/api/admin/*` → Service Token Policy 2) → 09-02; SC3 (owner email only) → 09-02. All three now have covering tasks.
+- **Prior blockers resolved**: ROADMAP SC2, REQUIREMENTS INFRA-04, and CONTEXT D-09-04 were amended to agree that data endpoints are email-OTP-gated, and the plan's Policy 1 paths (`/api/records*`, `/api/klines*`), Route Coverage, and checkpoints (401 + `Cf-Access-Denied`) are internally consistent. Verified on disk: wrangler routes/`workers_dev:false`, dead workers.dev URLs in both launchd runners, fetcher endpoints, admin `auth()`, `#new-record`/header structure, CSS vars.
+- **Warnings** (all execution-time clarity, not goal-blocking): TDD must run after Access is live (W1); use `npm run typecheck:scripts` (W2); extend `fetch-binance.yml` `env:` block + add to Files Modified (W3); add CF headers to both fetcher fetches (W4); bare curl gets 401, not 302, from Access on UI routes (W5); nav.js must be an ES module with pure `setActivePage` (W6); finish 09-01's live nav curls before enabling Access (W7).
+
+Plans verified. Ready to execute.

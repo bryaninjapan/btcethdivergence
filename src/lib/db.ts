@@ -1,4 +1,5 @@
 import { buildKlineInsertChunks } from './kline-insert';
+import { Timestamp } from './timestamp';
 import type { DivergenceRecord, Env, Kline } from '../types';
 
 function escapeLikeWildcards(s: string): string {
@@ -48,7 +49,7 @@ export async function createRecord(
   db: D1Database,
   payload: { start_time: number; end_time: number; type: string; notes?: string; tags?: string },
 ): Promise<DivergenceRecord> {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Timestamp.now().toSeconds();
   const result = await db
     .prepare(
       'INSERT INTO divergence_records (start_time, end_time, type, notes, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *',
@@ -86,7 +87,7 @@ export async function updateRecord(
     ...payload,
     notes: payload.notes ?? existing.notes,
     tags: payload.tags ?? existing.tags,
-    updated_at: Math.floor(Date.now() / 1000),
+    updated_at: Timestamp.now().toSeconds(),
   };
   await db
     .prepare(
@@ -121,7 +122,7 @@ export async function setBackfillCursor(
   db: D1Database,
   symbol: string,
   cursor: number,
-  now = Math.floor(Date.now() / 1000),
+  now = Timestamp.now().toSeconds(),
 ): Promise<void> {
   await db
     .prepare(

@@ -1,0 +1,11 @@
+Plan-check complete. Report written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md`.
+
+**Summary:**
+- **Requirements covered:** INFRA-06 → 09-01; INFRA-04 → 09-02. Both mapped.
+- **SC traceability:** All 3 SCs have covering tasks, but SC2/SC3 are impaired.
+- **1 BLOCKER (B1):** 09-02 configures Cloudflare Access on `btcethdivergence.com` "(or whatever the custom domain is)" — no custom domain exists anywhere in the repo; the authoritative live host is `https://btcethdivergence.gn01968711.workers.dev` (`.continue-here.md:90`, `wrangler.jsonc` has no routes). Gating a domain that doesn't serve the app fails SC2/SC3. The "SaaS" app type is also wrong for a workers.dev host (must be Self-hosted).
+- **4 WARNINGS:** (W2) owner email `gn01968711@gmail.com` asserted as fact but is not a locked D-XX decision (no CONTEXT.md); (W3) `wrangler.toml` doesn't exist — project uses `wrangler.jsonc`, and hostname-level Access needs no wrangler changes; (W4) verification table is 100% manual — no curl status-code checks for `/` and `/api/*` (per PITFALLS.md) and no jsdom/static nav assertion despite vitest+jsdom being available; (W5 folded) nav header changes have no regression guard.
+- **3 INFO:** move active-page snippet into `public/js/nav.js` + test; note single-host coupling for future Access apps; "staging URL" mitigation is not executable (no staging host exists).
+- **PASS:** scope sanity (2 tasks), dependency correctness, no locked-decision conflicts.
+
+1 blocker(s) found — plan needs revision before execution.

@@ -1,0 +1,10 @@
+Now let me verify the plan's load-bearing claims against actual source. Reading the key files:
+Now let me empirically test the plan's verification greps and count the tests:
+All facts verified. Writing the check report:
+Report written to `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+Summary: The revised plan fixes the prior blockers — all 10 `Math.floor(ms/1000)` sites (db.ts ×3, binance.ts, klines.ts ×2, charts.js ×2, datetime.js, records.js) now have concrete tasks, and every cited line number/API claim verified accurate against source. `timestamp.ts` (112 lines, 44/44 tests, strict-mode) and the no-build-step D2 duplicate are real and load-bearing-compatible.
+
+Remaining issues: **1 blocker** — SC5 (code review approval, no HIGH) still has no covering task; it appears only as a checklist line + effort note, so the criterion has no traceable delivery point despite the plan claiming "all blockers resolved". **5 warnings** — (W1) the plan's two `[^)]*/ 1000` grep expectations are empirically false (`timestamp.test.ts:55-56` and the new `public/js/timestamp.js` will still match; sanctioned exceptions + test-file exclusion undeclared); (W2) charts.js cited as line 96 for both conversions (actual 95–96); (W3) `typecheck:scripts`, backfill dry-run, and LEARNING.md are dangling checklist items with no tasks; (W4) klines.ts changes 400→500 on negative inputs (`Timestamp.fromMillis` throws) — undocumented; (W5) chart-range.js/chart-sync.js scope vs SC2's "all frontend time operations" undeclared. **4 info** — CODE ID mapping, admin.ts carve-out, inventory count (10 sites/6 files, not 8/5), parity-test file convention.
+
+1 blocker(s) found — plan needs revision before execution.

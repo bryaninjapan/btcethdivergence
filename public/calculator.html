@@ -7,11 +7,15 @@
     <link rel="stylesheet" href="/css/style.css" />
   </head>
   <body>
-    <header>
+    <nav class="top-nav">
       <h1>BTC/ETH Divergence Tracker</h1>
-      <a href="/">← 記錄表</a>
-      <a href="/charts.html">K線圖</a>
-    </header>
+      <div class="nav-links">
+        <a href="/" class="nav-link" data-page="records">記錄表</a>
+        <a href="/charts.html" class="nav-link" data-page="charts">K線圖</a>
+        <a href="/calculator.html" class="nav-link" data-page="calculator">槓桿計算</a>
+      </div>
+    </nav>
+    <header></header>
 
     <main class="calculator-layout">
       <section class="calculator-panel">
@@ -100,5 +104,6 @@
       </section>
     </main>
     <script type="module" src="/js/calculator-init.js"></script>
+    <script type="module" src="/js/nav.js"></script>
   </body>
 </html>

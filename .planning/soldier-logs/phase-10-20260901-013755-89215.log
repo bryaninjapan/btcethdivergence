@@ -1,0 +1,21 @@
+I'll start by reading the required planning files in order.
+Let me look at the phase 10 directory contents and read the plan files.
+Now let me read the existing PLAN-CHECK.md and verify the source files the plan makes claims about.
+Let me verify the load-bearing claims against the actual source files.
+The grep confirms the conversion inventory. Let me verify the remaining files and scripts referenced in the plan.
+Let me verify the test files the plan relies on, and check the remaining plan claims.
+All claims verified against source. Now I'll write the PLAN-CHECK report.
+Plan check complete. Wrote `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+**Summary** — Phase 10 (Timestamp Domain Abstraction), plans 10-01/10-02/10-03:
+
+- **Requirements**: CODE-01 (type safety) and CODE-02 (maintainability) both have concrete covering tasks.
+- **Fact-check (dimension 10)**: All 10 conversion sites, line numbers, and function names verified against source via ripgrep — exact match. `timestamp.ts` is 112 lines / 44 `it()` tests; `Kline.open_time` is `number` (D1 Option B holds); no `--dry-run` flag exists (plan removed it correctly); typecheck scripts and vitest filters are valid; `--type ts`/`--type js` rg behavior confirmed.
+- **Locked decisions**: D1 (boundaries only) and D2 (duplicate plain-ESM, no build step) both honored, no PROJECT.md/CONTEXT.md contradiction.
+- **Success criteria**: SC1/SC3/SC4/SC5 fully delivered; SC2 partial (4 frontend sec→ms sites stay on raw arithmetic — documented, fix cheap).
+- **Issues**: 0 blockers, 3 warnings, 6 info.
+  - W1: SC2 wording broader than conversion set (convert 4 `* 1000` sites or tighten SC2).
+  - W2: frontend grep `--type js` will also scan the new `timestamp.test.js` — add `-g '!*.test.js'`.
+  - W3: klines negative guard specified for `startMs` only; `endMs` also throws, and the new 400 behavior is untested.
+
+Plans verified. Ready to execute.

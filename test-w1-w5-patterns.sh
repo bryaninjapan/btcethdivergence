@@ -1,0 +1,132 @@
+#!/bin/bash
+# TDD: W5=B (exclude chart-range.js) + W1 (fix grep)
+# Question: What's the best grep pattern?
+
+echo "🔍 Testing W5(B) + W1: Best grep pattern for verification"
+echo ""
+
+# ============================================================================
+# Context: With W5=B, we exclude chart-range.js (* 1000)
+# So we ONLY need to find Math.floor(ms/1000) patterns
+# ============================================================================
+
+echo "📋 EXPECTED RESULTS (with W5=B):"
+echo "   - 10 production Math.floor(ms/1000) sites"
+echo "   - 1 sanctioned exception (timestamp.ts:27)"
+echo "   - 0 chart-range.js (excluded per W5=B)"
+echo "   - 0 test files"
+echo ""
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "PATTERN OPTION 1: Broad + Exclude"
+echo "Pattern: rg \"Math\\.floor\\(.*/ 1000\\)\" (excludes test, chart-range)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Command:"
+echo "  rg \"Math\\.floor\\(.*/ 1000\\)\" src public/js --type ts --type js | grep -v '\\.test\\.' | grep -v 'chart-range'"
+echo ""
+echo "Results:"
+rg "Math\.floor\(.*/ 1000\)" src public/js --type ts --type js 2>/dev/null | grep -v "\.test\." | grep -v "chart-range"
+echo ""
+COUNT1=$(rg "Math\.floor\(.*/ 1000\)" src public/js --type ts --type js 2>/dev/null | grep -v "\.test\." | grep -v "chart-range" | wc -l)
+echo "Count: $COUNT1"
+echo "Expected: 11 ✓ PASS" || echo "Expected: 11 ✗ FAIL"
+echo ""
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "PATTERN OPTION 2: Two-pass (divide by concern)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Backend (Math.floor on Date.now or numeric):"
+echo "  rg \"Math\\.floor\\((Date\\.now|[^)].*startMs|raw\\[0\\])\" src --type ts | grep -v '\\.test\\.'"
+echo ""
+rg "Math\.floor\((Date\.now|[^)].*startMs|raw\[0\])" src --type ts 2>/dev/null | grep -v "\.test\."
+BACKEND=$(rg "Math\.floor\((Date\.now|[^)].*startMs|raw\[0\])" src --type ts 2>/dev/null | grep -v "\.test\." | wc -l)
+echo "Count: $BACKEND (expected 6)"
+echo ""
+
+echo "Frontend (Math.floor on Date.now or Date.UTC):"
+echo "  rg \"Math\\.floor\\((Date\\.(now|UTC))\" public/js --type js | grep -v '\\.test\\.'"
+echo ""
+rg "Math\.floor\((Date\.(now|UTC))" public/js --type js 2>/dev/null | grep -v "\.test\."
+FRONTEND=$(rg "Math\.floor\((Date\.(now|UTC))" public/js --type js 2>/dev/null | grep -v "\.test\." | wc -l)
+echo "Count: $FRONTEND (expected 3)"
+echo ""
+echo "Sanctioned (timestamp.ts:27):"
+echo "  rg \"Math\\.floor\" src/lib/timestamp.ts"
+echo ""
+rg "Math\.floor" src/lib/timestamp.ts 2>/dev/null
+SANCTIONED=$(rg "Math\.floor" src/lib/timestamp.ts 2>/dev/null | wc -l)
+echo "Count: $SANCTIONED (expected 1)"
+echo ""
+TOTAL=$((BACKEND + FRONTEND + SANCTIONED))
+echo "Total: $TOTAL"
+echo "Expected: 11 ✓ $([ $TOTAL -eq 11 ] && echo 'PASS' || echo 'FAIL')"
+echo ""
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "PATTERN OPTION 3: Universal + Explicit Exclusions"
+echo "Pattern: Find Math.floor, exclude test + chart-range + timestamp.ts:27"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Command:"
+echo "  rg \"Math\\.floor\" src public/js --type ts --type js | grep -v '\\.test\\.' | grep -v 'chart-range' | grep -v 'timestamp\\.ts:27'"
+echo ""
+echo "Results:"
+rg "Math\.floor" src public/js --type ts --type js 2>/dev/null | grep -v "\.test\." | grep -v "chart-range" | grep -v "timestamp\.ts:27"
+echo ""
+COUNT3=$(rg "Math\.floor" src public/js --type ts --type js 2>/dev/null | grep -v "\.test\." | grep -v "chart-range" | grep -v "timestamp\.ts:27" | wc -l)
+echo "Count: $COUNT3"
+echo "Expected: 10 ✓ PASS" || echo "Expected: 10 ✗ FAIL"
+echo ""
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📊 SUMMARY: Which Pattern is Best?"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "OPTION 1: Broad + Exclude"
+echo "  Pattern: rg \"Math\\.floor\\(.*/ 1000\\)\" src public/js | grep -v '\\.test\\.' | grep -v 'chart-range'"
+echo "  Pros:"
+echo "    ✓ Catches all Math.floor(ms/1000) forms (Date.now, Date.UTC, simple division)"
+echo "    ✓ Single pattern, simple to understand"
+echo "    ✓ Explicit about what to exclude"
+echo "  Cons:"
+echo "    ✗ Relies on grep -v (negative patterns are error-prone)"
+echo ""
+
+echo "OPTION 2: Two-pass (Divide by Concern)"
+echo "  Pattern: Backend regex + Frontend regex + Timestamp check (3 separate commands)"
+echo "  Pros:"
+echo "    ✓ Each pattern is specific to its context"
+echo "    ✓ Clear what's being checked (backend vs frontend)"
+echo "    ✓ Easiest to explain and maintain"
+echo "  Cons:"
+echo "    ✗ Three commands instead of one (less elegant)"
+echo "    ✓ But more readable in PLAN.md"
+echo ""
+
+echo "OPTION 3: Universal + Explicit Exclusions"
+echo "  Pattern: rg \"Math\\.floor\" | grep -v '\\.test\\.' | grep -v 'chart-range' | grep -v 'timestamp\\.ts:27'"
+echo "  Pros:"
+echo "    ✓ Broadest pattern (catches anything with Math.floor)"
+echo "    ✓ Explicit about sanctioned exception (timestamp.ts:27)"
+echo "  Cons:"
+echo "    ✗ Most chained exclusions (hardest to debug)"
+echo "    ✗ Would also catch future Math.floor that isn't about time"
+echo ""
+
+echo "🎯 RECOMMENDATION for W5(B) + W1:"
+echo ""
+echo "Use OPTION 2 (Two-pass)"
+echo ""
+echo "In PLAN.md, write:"
+echo "  \"Verify no unconverted sites remain (excluding chart-range.js per W5=B):\""
+echo "  Backend: rg \"Math\\.floor\\((Date\\.now|startMs|raw\\[0\\])\" src --type ts"
+echo "  Frontend: rg \"Math\\.floor\\((Date\\.(now|UTC))\" public/js --type js"
+echo "  Sanctioned: rg \"Math\\.floor\" src/lib/timestamp.ts (should show 1: line 27)"
+echo ""
+echo "Why Option 2:"
+echo "  - Each command has a clear purpose"
+echo "  - Easy to explain in PLAN.md"
+echo "  - No fragile grep -v chains"
+echo "  - Future maintainer knows exactly what each check does"

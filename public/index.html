@@ -7,10 +7,15 @@
     <link rel="stylesheet" href="/css/style.css" />
   </head>
   <body>
-    <header>
+    <nav class="top-nav">
       <h1>BTC/ETH Divergence Tracker</h1>
-      <a href="/charts.html">K線圖</a>
-      <a href="/calculator.html">槓桿計算</a>
+      <div class="nav-links">
+        <a href="/" class="nav-link" data-page="records">記錄表</a>
+        <a href="/charts.html" class="nav-link" data-page="charts">K線圖</a>
+        <a href="/calculator.html" class="nav-link" data-page="calculator">槓桿計算</a>
+      </div>
+    </nav>
+    <header>
       <button id="new-record" type="button">+ 新增</button>
     </header>
     <p class="utc-note">所有時間皆為 UTC</p>
@@ -102,5 +107,6 @@
 
     <script type="module" src="/js/api.js"></script>
     <script type="module" src="/js/records.js"></script>
+    <script type="module" src="/js/nav.js"></script>
   </body>
 </html>

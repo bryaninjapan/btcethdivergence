@@ -1,0 +1,12 @@
+I'll start by reading the required planning files and examining the project structure.
+Now let me verify the plan's load-bearing claims against the actual source tree.
+I have verified the plan against the actual source. Now let me check for any remaining details — the git status of the workers_dev commit and confirm a couple of plan line references before writing the report.
+Phase 9 plan check complete — wrote `.planning/phases/09-access-launch/9-PLAN-CHECK.md` (supersedes prior check).
+
+**Summary:**
+- **Resolved since last check:** cron re-wiring (launchd runners + fetcher Service-Token headers + live-sync checkpoint), deploy step in 09-01, static 3-page nav grep, TDD Test 1 now keyed on the `Cf-Access-Denied` header, and light-theme nav CSS. All source claims verified on disk (wrangler route, `workers_dev:false`, runner URLs, fetcher endpoints, `admin.ts` exact-match auth, page/nav hrefs, CSS vars).
+- **B1 — SC2/INFRA-04 not delivered as written:** ROADMAP SC2 ("any `/api/*` route blocked") has no covering task; plan leaves `/api/records`+`/api/klines` public per locked D-09-04, which contradicts the unchanged ROADMAP/REQUIREMENTS. Must gate them or formally amend SC2/INFRA-04 before execution.
+- **B2 — config can't deliver its own claim:** all-path Access app + default block + only two Allow policies means data endpoints are actually *blocked*, not public as Route Coverage says; no "Everyone allow" policy exists, and the checkpoints expect 401 for them — internally inconsistent.
+- **5 warnings:** TDD ordered before Access is live (false GREEN possible); `npm run typecheck -- scripts/...` wrong (use `typecheck:scripts`); CI `fetch-binance.yml` env block never extended with new secrets and missing from Files Modified; data-endpoint checkpoint contradicts Route Coverage; 09-01 live curls break after Access enables; `#new-record`/header rewrite risk.
+
+2 blocker(s) found — plan needs revision before execution.

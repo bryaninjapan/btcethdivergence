@@ -1,0 +1,20 @@
+Now let me examine the actual source tree to verify the plan's load-bearing claims.
+Now let me read the key source files to verify the plan's claims.
+Let me check the remaining files: chart-range.js, scripts, vitest config, HTML module wiring, and the existing PLAN-CHECK for history.
+Let me read the existing PLAN-CHECK (prior run history) and the .continue-here notes.
+The prior check found 1 blocker (B1: frontend duplicate re-introducing `Math.floor`) that the current PLAN.md claims to have resolved via `Math.trunc`. Let me verify the remaining load-bearing claims: the `--dry-run` flag, binance tests, and REQUIREMENTS IDs.
+I have a complete picture. Let me verify one last claim — that `klines.test.ts` has no negative-input assertion — then write the check report.
+Re-check of the revised Phase 10 plan complete. Report written to `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+**Verdict: 0 blockers, 5 warnings, 8 info.**
+
+The prior blocker (B1) is genuinely resolved: the frontend duplicate `timestamp.js` now uses `Math.trunc`, so no second production `Math.floor(ms/1000)` is introduced and the frontend grep gate is achievable. All 10 conversion sites (line-verified: db.ts 51/89/124, binance.ts 17, klines.ts 21–22, charts.js 95–96, datetime.js 42, records.js 124) are fully tasked; the 44/44 test count is confirmed; SC1–SC5 all have covering tasks; D1 Option B and D2 Option A comply with locked decisions; dependencies are acyclic.
+
+Top warnings to fix during/after execution:
+- **W1** — `npx tsx scripts/backfill-fetcher.mts --dry-run` doesn't exist; with env set it does a *live* ingest write. Replace with `npm test -- scripts/`.
+- **W2** — SC3's literal "zero Math.floor" stays violated by `timestamp.ts:27`; trivial fix is `Math.trunc`.
+- **W3** — Testing-Strategy grep lacks `-g '!*.test.*'` (would also match timestamp.test.ts:55–56).
+- **W4** — klines guard covers `startMs` only; negative `endMs` regresses 200-empty → 500.
+- **W5** — chart-range.js exclusion narrows literal SC2 wording.
+
+**Plans verified. Ready to execute.**

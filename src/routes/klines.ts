@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { Timestamp } from '../lib/timestamp';
 import { queryKlines } from '../lib/db';
 import { jsonError, jsonOk } from '../lib/response';
 import type { Env } from '../types';
@@ -17,9 +18,13 @@ klines.get('/api/klines', async (c) => {
   if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
     return jsonError('start and end must be numeric timestamps', 400);
   }
-  // Convert milliseconds to seconds for database query
-  const startSec = Math.floor(startMs / 1000);
-  const endSec = Math.floor(endMs / 1000);
+  // Guard against negative timestamps (deliberate behavior change: 400 vs current 200 empty)
+  if (startMs < 0 || endMs < 0) {
+    return jsonError('Timestamps must be non-negative', 400);
+  }
+  // Convert milliseconds to seconds for database query using Timestamp API
+  const startSec = Timestamp.fromMillis(startMs).toSeconds();
+  const endSec = Timestamp.fromMillis(endMs).toSeconds();
   try {
     const rows = await queryKlines(c.env.DB, symbol, startSec, endSec);
     return jsonOk(rows);

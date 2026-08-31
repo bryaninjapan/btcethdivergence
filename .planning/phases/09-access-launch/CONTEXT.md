@@ -51,3 +51,22 @@ Type:        CNAME (Proxied via Cloudflare)
 
 **Scope**: Cloudflare Access setup procedures in Phase 9-02
 
+---
+
+### D-09-04: Data Endpoint Access Policy
+
+**Decision**: Data endpoints `/api/records` and `/api/klines` are **gated by Cloudflare Access** (Policy 1: Owner Email OTP).
+
+**Rationale**:
+- `/api/records` is NOT read-only — it exposes `POST` (create), `PUT` (edit), `DELETE` (remove) endpoints
+- `/api/klines` is read-only but returns market data tied to the owner's analysis
+- Both are sensitive internal data; public access would allow anyone to:
+  - Forge/modify trading records (POST/PUT)
+  - Delete the owner's record history (DELETE)
+  - Extract price data for analysis/scraping (GET)
+- **Security boundary**: All API routes are protected by Access
+  - `/api/records`, `/api/klines` → Cloudflare Access email OTP (Policy 1)
+  - `/api/admin/*` → Cloudflare Access Service Token (Policy 2) + INGEST_TOKEN
+
+**Scope**: All public URLs (UI + APIs) are fully gated behind Cloudflare Access per SC2/INFRA-04
+

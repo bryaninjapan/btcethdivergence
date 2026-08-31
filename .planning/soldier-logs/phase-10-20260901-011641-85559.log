@@ -1,0 +1,17 @@
+I have all the evidence I need. Let me verify a couple final claims before writing the report.
+All claims verified. Writing the report now.
+**Phase 10 Plan Check complete** — report written to `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+Verified against real source (not the plan's word): all 10 `Math.floor(ms/1000)` sites across 6 files confirmed by grep; line numbers accurate; `timestamp.ts:27` sanctioned exception confirmed; 44 `it()` blocks in `timestamp.test.ts`; strict typecheck + typecheck:scripts valid; `BinanceKlineTuple.openTime` is `number` so the binance.ts conversion type-checks.
+
+**1 blocker, 4 warnings, 6 info.**
+
+- **B1 (blocker):** 10-02 creates `public/js/timestamp.js` as a faithful mirror of `src/lib/timestamp.ts` — which implements `fromMillis` via `Math.floor(millis/1000)` at line 27 — while asserting frontend grep gates of "returns empty" / "11 matches". Both cannot hold; SC3 (zero `Math.floor` in production) fails as written. Fix: sanction a second exception + correct gates, or specify a `Math.floor`-free formulation (with explicit negative guard, since `Math.trunc` alone differs from `Math.floor` for negatives).
+- **W1:** backend grep gate `rg ... src --type ts` also hits `timestamp.test.ts:55-56` — needs `-g '!*.test.*'`.
+- **W2:** `npx tsx scripts/backfill-fetcher.mts --dry-run` doesn't exist (script has no such flag); use `scripts/backfill-fetcher.test.mts` instead.
+- **W3:** chart-range.js exclusion narrows literal SC2 ("all frontend time operations") — align ROADMAP wording.
+- **W4:** inventory count misstated (10 expressions / 6 files, not "8 sites / 5 files").
+
+Positives since last check: SC5 now tasked via new Plan 10-03, negative-input guard specified, typecheck steps present, D1/D2 comply with locked constraints.
+
+**1 blocker(s) found — plan needs revision before execution.**

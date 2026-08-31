@@ -1,0 +1,19 @@
+Now let me verify the plan's claims against the actual source. Starting with structure and the timestamp class.
+Timestamp class confirmed (112 lines, `Math.floor` at line 27). Now let me grep for all conversion sites to verify the inventory.
+Inventory verified — all 10 sites match the plan. Now checking the actual route logic, frontend module structure, and test files for load-bearing claims.
+All frontend files confirmed as ESM modules. Now checking the tests that could break from the behavior change, and verifying the 44/44 test claim.
+44/44 tests confirmed, and no klines test asserts behavior for negative ranges. Now checking scripts/ (part of production code per SC3), admin.ts:42, and the existing plan-check for context.
+All line numbers verified so far. Now checking the scripts' typecheck config, backfill dry-run flag, types.ts, and vitest setup — remaining load-bearing claims.
+Key finding: the script grep for `--dry-run` returned nothing. Let me verify the backfill script's CLI and the vitest config.
+The backfill script has no `--dry-run` arg parsing — let me confirm by reading its entry-point section, and check the LEARNING.md convention in prior phases.
+Let me do a final sweep for any conversion sites the plan might have missed (inline HTML scripts, other dirs), and check the frontend `records.js:25`/`datetime.js:46` sec→ms sites.
+All claims verified. The 10-site inventory is complete and accurate, the 4 prior blockers are resolved, and no inline-HTML conversion sites were missed. Writing the check report.
+Report written to `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+**Summary**: Re-verified Phase 10 after the plan revision. All load-bearing claims were fact-checked against source: the 10-site conversion inventory is complete and line-accurate (db.ts 51/89/124, binance.ts:17, klines.ts 21-22, charts.js 95-96, datetime.js:42, records.js:124), `timestamp.ts` is 112 lines with 44/44 `it()` tests, strict TS is enabled, all frontend files are ESM, and no conversion sites exist in `scripts/` or inline HTML. The 4 prior blockers are resolved (D1 Option B keeps `Kline.open_time: number`; D2 Option A complies with the no-build-step constraint).
+
+**0 blockers, 4 warnings, 5 info.** Warnings are execution-time corrections, not plan blockers: (W1) SC2's wording ("all frontend conversions") is broader than scope — three sec→ms sites (records.js:25, datetime.js:46, charts.js:179) stay raw arithmetic; (W2) frontend `Math.trunc` vs backend `Math.floor` diverges for millis ∈ (-1000,0) despite the "TDD-equivalent" claim — add a negative guard; (W3) `--dry-run` doesn't exist in backfill-fetcher.mts — the verification command would hit the live API; (W4) 10-02 doesn't run the existing frontend suite (datetime.test.ts) or add a test for the new klines 400 guard. Info items cover SC3's sanctioned-exception wording, missing LEARNING.md, and guarding `endMs` too.
+
+No success criterion is unachievable. Fix W1/W2 in the plan before executing; W3/W4 are verification-list edits.
+
+Plans verified. Ready to execute.

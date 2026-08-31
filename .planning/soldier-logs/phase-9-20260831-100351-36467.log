@@ -1,0 +1,16 @@
+All load-bearing facts verified. I now have enough to write an independent, adversarial check report. The facts confirmed: `workers_dev: false` is committed (wrangler.jsonc:17), both launchd runner scripts and the CI workflow hard-code the workers.dev URL for `/api/admin/*`, and the plan has no task to re-wire them or configure an Access Service Token.
+Plan-check written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md`.
+
+## Summary
+
+Verified `09-PLAN.md` v1.0 (tasks 09-01, 09-02) goal-backward against ROADMAP Phase 9, CONTEXT.md (D-09-01/02/03), PROJECT.md, and the actual source tree.
+
+**Coverage**: Both requirements covered (INFRA-06 → 09-01, INFRA-04 → 09-02); all 3 success criteria trace to concrete tasks; facts verified on disk — nav hrefs match pages, `/api/records` (records.ts:14), `/api/klines` (klines.ts:8), wrangler route + `workers_dev: false` (wrangler.jsonc:17-23), `npm run test -- <file>` valid (package.json:12).
+
+**Blocker (1)**: Executing the plan severs the app's only automated data path. Both launchd runners (`backfill-runner.sh:3`, `backfill-runner-eth.sh:3`) and the CI workflow hard-code the workers.dev URL for `/api/admin/*`; `workers_dev: false` kills that host on next deploy, and Access returns 401 to those non-interactive calls absent a Service Token policy. The plan's "No Code Changes Required" never re-wires them — regressing Phase 3 SC3 (daily cron) at launch.
+
+**Warnings (4)**: W1 wrong status expectation for `/api/*` curl checks (401, not 302); W2 no explicit deploy step so nav changes may never reach the live site; W3 proposed `#2c3e50` navy nav clashes with existing `--panel`/`--border` theme plus `<header>` replacement orphans the `+ 新增` button; W4 no automated check all three pages include the nav.
+
+**Info (5)**: SC3 manual-only, DNS state external, `workers_dev:false` out-of-plan, double-specified active-page implementation, `public/js` outside typecheck.
+
+1 blocker(s) found — plan needs revision before execution.

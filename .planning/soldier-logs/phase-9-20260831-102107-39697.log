@@ -1,0 +1,14 @@
+Let me look at the existing plan-check (to overwrite) and then verify the source tree claims.
+Now let me verify the source-tree claims the plan makes.
+All claims verified against source. Writing the check report.
+Plan check complete — report written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md`.
+
+Verified against ROADMAP (INFRA-04, INFRA-06; SC1–SC3), PROJECT.md, CONTEXT.md (D-09-01/02/03), and the live source tree (page filenames, nav hrefs, wrangler route + `workers_dev:false`, both runner scripts hard-coding the workers.dev URL, fetcher endpoints/headers, `records.ts:14`, `klines.ts:8`, package.json scripts).
+
+**Result: 1 blocker, 8 warnings, 7 info.**
+
+- The revision correctly resolves the prior B1: cron re-wiring (Service Token for `/api/admin/*`, launchd runners re-pointed, live-sync checkpoint) is now concrete.
+- **B1 remains on the phase's central promise**: SC2/INFRA-04 require *every* `/api/*` route blocked, but the plan explicitly leaves `/api/records` and `/api/klines` "currently public — decide … or remain open" (09-PLAN.md:321). Those are the exact endpoints Records/Charts read; the app is not "fully gated."
+- New warnings: TDD Test 1 is vacuous (RED and GREEN both 401), Service Token can't share the `Authorization: Bearer` header with `INGEST_TOKEN` (needs `CF-Access-Client-Id/Secret`), CI `WORKER_URL` secret isn't re-pointed, no `typecheck:scripts` after editing the fetcher, plus carried W1–W4 (wrong API status expectations, no deploy step, theme clash, no cross-page nav assertion).
+
+1 blocker(s) found — plan needs revision before execution.

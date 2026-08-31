@@ -1,0 +1,19 @@
+Let me verify some Cloudflare Access behavior claims that the plan relies on, since they're load-bearing.
+I have enough to complete the verification. The current plan (working tree) has already resolved the two blockers the previous check found — data endpoints are now gated by Policy 1, matching D-09-04 and SC2. Let me write the report.
+Plan check complete. Report written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md`.
+
+**Result: 0 blockers, 9 warnings, 10 info — verified against current source.**
+
+The previous check's two blockers are resolved in the working-tree plan: Policy 1 now gates `/api/records*` and `/api/klines*` by owner email OTP (matching locked D-09-04 and ROADMAP SC2 — the prior check had misread D-09-04 as "data public"), Policy 2 gates `/api/admin/*` via Service Token, Route Coverage lists every route gated, and API checkpoints assert 401. All three success criteria have covering tasks; D-09-01..04 honored; scope is 2 tasks.
+
+Verified load-bearing claims on disk: nav hrefs match real pages, wrangler route + `workers_dev:false`, both launchd runners point at the now-dead workers.dev URL, fetcher's two admin fetches, `#new-record` in `<header>`, CSS vars, vitest/tsconfig setup.
+
+Key warnings to fold in during execution:
+- **W1** — TDD sub-task is ordered before Access exists; Test 1 RED can't reproduce → false signal could skip the cron re-wire.
+- **W4** — path-scoped policies omit `/css/*`, `/js/*`, `/api/health`; set Policy 1 to gate the whole domain and add a post-login asset check.
+- **W3/W5** — CI `env:` block unwired; Access headers must go on both fetcher fetches.
+- **W2** — use `npm run typecheck:scripts`, not the CLI file path.
+- **W6** — curl 302/401 expectations are unreliable for non-browser clients per 2026 Cloudflare docs.
+- **W7** — 09-01 live checks must precede Access; **W8** — preserve `#new-record`; **W9** — log the fallback's SC2 trade-off.
+
+Plans verified. Ready to execute.

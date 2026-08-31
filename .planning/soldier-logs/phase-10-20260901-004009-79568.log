@@ -1,0 +1,14 @@
+Let me verify the "44/44 tests passing" claim and check for a phase CONTEXT.md and research files.
+All verification done. Now writing the check report.
+Plan check complete. Report written to `.planning/phases/10-timestamp-domain/10-PLAN-CHECK.md`.
+
+**Summary**: Reviewed PLAN.md for Phase 10 against ROADMAP, PROJECT.md, and actual source. Verified 44/44 Timestamp tests pass and all cited line numbers are accurate — but the plan has 4 blockers.
+
+- **B1**: Conversion inventory incomplete — `binance.ts:17`, `datetime.js:42`, and `charts.js:96` hold production `Math.floor(ms/1000)` that the plan never touches, so SC3 (zero occurrences) fails as written.
+- **B2**: Frontend mechanism unresolved — "import from src or bundle differently" is an open question; both options contradict locked decisions (no build step vs single source of truth).
+- **B3**: `Kline.open_time: number → Timestamp` ripples into 5+ untasked files (binance.ts, kline-insert.ts, admin.ts cursor, charts.js toCandle, binance.test.ts:52) and breaks typecheck/API contract; the plan's "backward-compatible" claim is false.
+- **B4**: "Update admin.ts if needed" hedges in-scope work contradicting SC1.
+
+Warnings: no `typecheck` step despite strict TS, false admin.ts claim, no concrete zero-conversion grep, vague verification.
+
+4 blocker(s) found — plan needs revision before execution.

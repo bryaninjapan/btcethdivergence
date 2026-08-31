@@ -1,0 +1,19 @@
+No RESEARCH file for phase 9. Let me verify the actual source tree — the plan's load-bearing claims.
+The custom domain `btcethdivergence.bryanlab.cc/*` IS now configured in wrangler.jsonc (added 09:43, after the old check). Let me verify the plan's claims about the HTML pages and API routes.
+Now let me verify the API routes the plan's curl commands hit, and read the requirement definitions.
+The API routes the curl commands hit are real. Now checking tsconfig/vitest config, and the phase-9 soldier logs to ground the plan's deployment claims.
+All facts verified. The plan was already revised after the prior check (B1/W2–W4/I5 fixed), but I've found a new gap: the workers.dev host is live and ungated. Writing the fresh check report.
+Plan check complete. Report written to `.planning/phases/09-access-launch/9-PLAN-CHECK.md`.
+
+## Summary
+
+Verified current `09-PLAN.md` v1.0 (revised after the prior check's B1/W2–W4/I5 findings — those are now resolved: domain pinned to locked `btcethdivergence.bryanlab.cc` (present in `wrangler.jsonc:25`), Self-hosted type per D-09-03, owner email locked per D-09-01, `wrangler.toml` removed, vitest + curl verification added). File paths, API routes (`/api/records`, `/api/klines`), and nav hrefs all verified real.
+
+One new BLOCKER found:
+- **B1**: `wrangler.jsonc` has no `workers_dev: false`, so the app is still live and reachable at `btcethdivergence.gn01968711.workers.dev` (confirmed healthy in `.continue-here.md:90`). Access apps are hostname-scoped, so gating only the custom domain leaves the entire app — UI and all `/api/*` — open unauthenticated on the workers.dev URL. This breaks SC2, INFRA-04, and the locked D-09-02 scope ("All public URLs").
+
+Also: **W1** — the curl block expects 302 for `/api/*`, but Access returns 401 for non-browser/API requests. Three INFO items (manual-only SC3 evidence, unverifiable DNS-propagation claim, no static assertion that all three pages include the nav).
+
+Scope is small (2 tasks), dependencies acyclic, no hedging on in-scope work. The phase direction is correct; the plan just needs the workers.dev host closed off.
+
+1 blocker(s) found — plan needs revision before execution.
