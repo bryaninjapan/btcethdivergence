@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { Timestamp } from '../lib/timestamp';
-import { queryKlines } from '../lib/db';
-import { DatabaseError, ValidationError } from '../lib/errors';
+import { ValidationError } from '../lib/errors';
+import { klinesService } from '../services/klines.service';
 import type { ApiResponse, Env, Kline } from '../types';
 
 const klines = new Hono<{ Bindings: Env }>();
@@ -30,16 +30,12 @@ klines.get('/api/klines', async (c) => {
   const startSec = Timestamp.fromMillis(startMs).toSeconds();
   const endSec = Timestamp.fromMillis(endMs).toSeconds();
 
-  try {
-    const rows = await queryKlines(c.env.DB, symbol, startSec, endSec);
-    const response: ApiResponse<Kline[]> = {
-      ok: true,
-      data: rows,
-    };
-    return c.json(response);
-  } catch (error) {
-    throw new DatabaseError('Database query failed', { originalError: String(error) });
-  }
+  const rows = await klinesService.queryKlines(c.env.DB, symbol, startSec, endSec);
+  const response: ApiResponse<Kline[]> = {
+    ok: true,
+    data: rows,
+  };
+  return c.json(response);
 });
 
 export default klines;
