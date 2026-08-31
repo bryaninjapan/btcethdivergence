@@ -1,42 +1,17 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { ApiError, api, describeApiError } from './api.js';
 
-// Mock fetch for testing
 const originalFetch = global.fetch;
 
-// Re-export the actual api function from api.js for testing
-// Note: In a real browser env, you'd import { api } from './api.js'
-// For this test, we'll recreate it with proper error handling
-async function api(path: string, options: Record<string, unknown> = {}) {
-  const res = await fetch(path, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
+beforeEach(() => {
+  global.fetch = originalFetch;
+});
 
-  let body;
-  try {
-    body = await res.json();
-  } catch (e) {
-    // Handle non-JSON responses (e.g., HTML error pages)
-    throw new Error(res.statusText || 'Request failed');
-  }
-
-  if (!res.ok || body.ok !== true) {
-    throw new Error(body.error || 'Request failed');
-  }
-
-  return body.data;
-}
+afterEach(() => {
+  global.fetch = originalFetch;
+});
 
 describe('api() fetch wrapper', () => {
-  beforeEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
   it('valid JSON response {ok:true} → returns body.data', async () => {
     global.fetch = async () =>
       new Response(JSON.stringify({ ok: true, data: { id: 5, name: 'test' } }), {
@@ -48,17 +23,20 @@ describe('api() fetch wrapper', () => {
     expect(result).toEqual({ id: 5, name: 'test' });
   });
 
-  it('JSON response {ok:false} → throws error with body.error message', async () => {
+  it('JSON response {ok:false} → throws ApiError with structured error code/message', async () => {
     global.fetch = async () =>
-      new Response(JSON.stringify({ ok: false, error: 'Validation failed' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      new Response(
+        JSON.stringify({ ok: false, error: { code: 'VALIDATION_ERROR', message: 'Validation failed' } }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
 
-    await expect(api('/api/test')).rejects.toThrow('Validation failed');
+    const err = await api('/api/test').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe('VALIDATION_ERROR');
+    expect((err as ApiError).message).toBe('Validation failed');
   });
 
-  it('non-JSON response (HTML) → throws meaningful error (REGRESSION: MEDIUM issue)', async () => {
+  it('non-JSON response (HTML) → throws ApiError without cryptic JSON message', async () => {
     global.fetch = async () =>
       new Response('<html><body>Internal Server Error</body></html>', {
         status: 500,
@@ -66,12 +44,13 @@ describe('api() fetch wrapper', () => {
         headers: { 'Content-Type': 'text/html' },
       });
 
-    // Should NOT throw "Unexpected token '<' in JSON"
-    // Should throw something meaningful like "Internal Server Error"
-    await expect(api('/api/test')).rejects.toThrow(/Internal Server Error|Request failed/);
+    const err = await api('/api/test').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe('INTERNAL_ERROR');
+    expect((err as ApiError).message).toBe('Internal Server Error');
   });
 
-  it('404 HTML response → throws error without cryptic JSON message', async () => {
+  it('404 HTML response → throws ApiError with a meaningful message', async () => {
     global.fetch = async () =>
       new Response('<html>Not Found</html>', {
         status: 404,
@@ -79,7 +58,10 @@ describe('api() fetch wrapper', () => {
         headers: { 'Content-Type': 'text/html' },
       });
 
-    await expect(api('/api/test')).rejects.toThrow(/Not Found|Request failed/);
+    const err = await api('/api/test').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe('INTERNAL_ERROR');
+    expect((err as ApiError).message).toBe('Not Found');
   });
 
   it('includes credentials: include in fetch options for Cloudflare Access cookies', async () => {
@@ -94,5 +76,42 @@ describe('api() fetch wrapper', () => {
 
     await api('/api/klines');
     expect(capturedOptions?.credentials).toBe('include');
+  });
+
+  it('forwards extra options (method, body) to fetch', async () => {
+    let capturedOptions: any = null;
+    global.fetch = async (url: string, options?: RequestInit) => {
+      capturedOptions = options;
+      return new Response(JSON.stringify({ ok: true, data: {} }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    };
+
+    await api('/api/records', { method: 'POST', body: '{}' });
+    expect(capturedOptions.method).toBe('POST');
+    expect(capturedOptions.body).toBe('{}');
+  });
+});
+
+describe('describeApiError()', () => {
+  it('maps SERVICE_ERROR to a friendly message', () => {
+    const error = new ApiError('SERVICE_ERROR', 'raw');
+    expect(describeApiError(error)).toBe('Service temporarily unavailable. Please try again.');
+  });
+
+  it('maps DATABASE_ERROR to a friendly message', () => {
+    const error = new ApiError('DATABASE_ERROR', 'raw');
+    expect(describeApiError(error)).toBe('Database error. Please try again.');
+  });
+
+  it('returns the original message for VALIDATION_ERROR', () => {
+    const error = new ApiError('VALIDATION_ERROR', 'start_time must be before end_time');
+    expect(describeApiError(error)).toBe('start_time must be before end_time');
+  });
+
+  it('falls back for non-ApiError input', () => {
+    expect(describeApiError(new Error('boom'), 'fallback')).toBe('boom');
+    expect(describeApiError(undefined, 'fallback')).toBe('fallback');
   });
 });
