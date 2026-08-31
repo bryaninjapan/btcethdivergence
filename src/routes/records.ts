@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
-import { createRecord, deleteRecord, listRecords, updateRecord } from '../lib/db';
-import { DatabaseError, NotFoundError, ValidationError } from '../lib/errors';
+import { NotFoundError, ValidationError } from '../lib/errors';
+import { recordsService } from '../services/records.service';
 import {
   createRecordSchema,
   listRecordsQuerySchema,
   updateRecordSchema,
+  validatePositiveInteger,
   validationMessage,
 } from '../lib/validate';
 import type { ApiResponse, Env } from '../types';
@@ -18,16 +19,12 @@ records.get('/api/records', async (c) => {
     throw new ValidationError('query', validationMessage(parsed.error));
   }
 
-  try {
-    const rows = await listRecords(c.env.DB, parsed.data);
-    const response: ApiResponse<DivergenceRecord[]> = {
-      ok: true,
-      data: rows,
-    };
-    return c.json(response);
-  } catch (error) {
-    throw new DatabaseError('Failed to list records', { originalError: String(error) });
-  }
+  const rows = await recordsService.listRecords(c.env.DB, parsed.data);
+  const response: ApiResponse<DivergenceRecord[]> = {
+    ok: true,
+    data: rows,
+  };
+  return c.json(response);
 });
 
 records.post('/api/records', async (c) => {
@@ -43,27 +40,16 @@ records.post('/api/records', async (c) => {
     throw new ValidationError('body', validationMessage(parsed.error));
   }
 
-  try {
-    const row = await createRecord(c.env.DB, parsed.data);
-    const response: ApiResponse<DivergenceRecord> = {
-      ok: true,
-      data: row,
-    };
-    return c.json(response, 201);
-  } catch (error) {
-    throw new DatabaseError('Failed to create record', { originalError: String(error) });
-  }
+  const row = await recordsService.createRecord(c.env.DB, parsed.data);
+  const response: ApiResponse<DivergenceRecord> = {
+    ok: true,
+    data: row,
+  };
+  return c.json(response, 201);
 });
 
 records.put('/api/records/:id', async (c) => {
-  const idStr = c.req.param('id');
-  if (!/^\d+$/.test(idStr)) {
-    throw new ValidationError('id', 'Record ID must be a positive integer');
-  }
-  const id = Number(idStr);
-  if (id <= 0) {
-    throw new ValidationError('id', 'Record ID must be a positive integer');
-  }
+  const id = validatePositiveInteger(c.req.param('id'), 'Record ID');
 
   let body: unknown;
   try {
@@ -77,46 +63,29 @@ records.put('/api/records/:id', async (c) => {
     throw new ValidationError('body', validationMessage(parsed.error));
   }
 
-  try {
-    const row = await updateRecord(c.env.DB, id, parsed.data);
-    if (!row) {
-      throw new NotFoundError('Record');
-    }
-    const response: ApiResponse<DivergenceRecord> = {
-      ok: true,
-      data: row,
-    };
-    return c.json(response);
-  } catch (error) {
-    if (error instanceof ValidationError || error instanceof NotFoundError) throw error;
-    throw new DatabaseError('Failed to update record', { originalError: String(error) });
+  const row = await recordsService.updateRecord(c.env.DB, id, parsed.data);
+  if (!row) {
+    throw new NotFoundError('Record');
   }
+  const response: ApiResponse<DivergenceRecord> = {
+    ok: true,
+    data: row,
+  };
+  return c.json(response);
 });
 
 records.delete('/api/records/:id', async (c) => {
-  const idStr = c.req.param('id');
-  if (!/^\d+$/.test(idStr)) {
-    throw new ValidationError('id', 'Record ID must be a positive integer');
-  }
-  const id = Number(idStr);
-  if (id <= 0) {
-    throw new ValidationError('id', 'Record ID must be a positive integer');
-  }
+  const id = validatePositiveInteger(c.req.param('id'), 'Record ID');
 
-  try {
-    const deleted = await deleteRecord(c.env.DB, id);
-    if (!deleted) {
-      throw new NotFoundError('Record');
-    }
-    const response: ApiResponse<{ id: number }> = {
-      ok: true,
-      data: { id },
-    };
-    return c.json(response);
-  } catch (error) {
-    if (error instanceof ValidationError || error instanceof NotFoundError) throw error;
-    throw new DatabaseError('Failed to delete record', { originalError: String(error) });
+  const deleted = await recordsService.deleteRecord(c.env.DB, id);
+  if (!deleted) {
+    throw new NotFoundError('Record');
   }
+  const response: ApiResponse<{ id: number }> = {
+    ok: true,
+    data: { id },
+  };
+  return c.json(response);
 });
 
 export default records;
