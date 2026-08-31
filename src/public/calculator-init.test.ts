@@ -10,7 +10,7 @@ import { JSDOM } from 'jsdom';
 
 describe('Calculator UI Integration', () => {
   let dom: JSDOM;
-  let document: Document;
+  let document: any;
   let window: any;
 
   beforeEach(async () => {
@@ -171,11 +171,11 @@ describe('Calculator UI Integration', () => {
   });
 
   it('updates results when inputs are complete', () => {
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
-    const leverage = document.getElementById('leverage') as HTMLSelectElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
+    const leverage = document.getElementById('leverage') as any;
 
     // Fill form
     margin.value = '1000';
@@ -193,10 +193,10 @@ describe('Calculator UI Integration', () => {
   });
 
   it('clears results when form becomes incomplete', () => {
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
 
     // Fill form
     margin.value = '1000';
@@ -215,10 +215,10 @@ describe('Calculator UI Integration', () => {
   });
 
   it('hides error when calculation succeeds', () => {
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
 
     margin.value = '1000';
     entry.value = '40000';
@@ -227,7 +227,7 @@ describe('Calculator UI Integration', () => {
 
     (window as any).__calculator.update();
 
-    const error = document.getElementById('calc-error') as HTMLElement;
+    const error = document.getElementById('calc-error') as any;
     expect(error?.hidden).toBe(true);
   });
 
@@ -239,10 +239,10 @@ describe('Calculator UI Integration', () => {
       warnings: { riskRewardTooLow: false, liquidationRisk: false },
     }));
 
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
 
     // Invalid: entry price outside range
     margin.value = '1000';
@@ -252,7 +252,7 @@ describe('Calculator UI Integration', () => {
 
     (window as any).__calculator.update();
 
-    const error = document.getElementById('calc-error') as HTMLElement;
+    const error = document.getElementById('calc-error') as any;
     expect(error?.hidden).toBe(false);
     expect(error?.textContent).toContain('Entry price must be between');
   });
@@ -272,10 +272,10 @@ describe('Calculator UI Integration', () => {
       },
     }));
 
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
 
     margin.value = '1000';
     entry.value = '40000';
@@ -284,7 +284,7 @@ describe('Calculator UI Integration', () => {
 
     (window as any).__calculator.update();
 
-    const warning = document.getElementById('rr-warning') as HTMLElement;
+    const warning = document.getElementById('rr-warning') as any;
     expect(warning?.hidden).toBe(false);
   });
 
@@ -303,10 +303,10 @@ describe('Calculator UI Integration', () => {
       },
     }));
 
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
 
     margin.value = '1000'; // Low margin
     entry.value = '40000';
@@ -315,13 +315,13 @@ describe('Calculator UI Integration', () => {
 
     (window as any).__calculator.update();
 
-    const warning = document.getElementById('liquidation-warning') as HTMLElement;
+    const warning = document.getElementById('liquidation-warning') as any;
     expect(warning?.hidden).toBe(false);
   });
 
   it('respects long/short direction toggle', () => {
-    const longRadio = document.querySelector('input[name="longShort"][value="long"]') as HTMLInputElement;
-    const shortRadio = document.querySelector('input[name="longShort"][value="short"]') as HTMLInputElement;
+    const longRadio = document.querySelector('input[name="longShort"][value="long"]') as any;
+    const shortRadio = document.querySelector('input[name="longShort"][value="short"]') as any;
 
     // Default is long
     expect(longRadio.checked).toBe(true);
@@ -349,10 +349,10 @@ describe('Calculator UI Integration', () => {
       warnings: { riskRewardTooLow: false, liquidationRisk: false },
     }));
 
-    const margin = document.getElementById('margin') as HTMLInputElement;
-    const entry = document.getElementById('entry-price') as HTMLInputElement;
-    const stopLoss = document.getElementById('stop-loss') as HTMLInputElement;
-    const takeProfit = document.getElementById('take-profit') as HTMLInputElement;
+    const margin = document.getElementById('margin') as any;
+    const entry = document.getElementById('entry-price') as any;
+    const stopLoss = document.getElementById('stop-loss') as any;
+    const takeProfit = document.getElementById('take-profit') as any;
 
     margin.value = '10000';
     entry.value = '40000';
