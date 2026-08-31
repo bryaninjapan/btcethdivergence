@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { createRangeSync } from './chart-sync.js';
+import { Timestamp } from './timestamp.js';
 import {
   dayOptions,
   daysInMonth,
@@ -92,8 +93,8 @@ function pickerEpoch(pickerEl) {
 }
 
 function setPickersFromMs(startMs, endMs) {
-  setPickerFromEpoch(document.querySelector('[data-picker="start"]'), Math.floor(startMs / 1000));
-  setPickerFromEpoch(document.querySelector('[data-picker="end"]'), Math.floor(endMs / 1000));
+  setPickerFromEpoch(document.querySelector('[data-picker="start"]'), Timestamp.fromMillis(startMs).toSeconds());
+  setPickerFromEpoch(document.querySelector('[data-picker="end"]'), Timestamp.fromMillis(endMs).toSeconds());
 }
 
 function setLogScale(enabled) {

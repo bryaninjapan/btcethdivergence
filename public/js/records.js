@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { Timestamp } from './timestamp.js';
 import {
   buildUtcEpoch,
   dayOptions,
@@ -121,7 +122,7 @@ function populatePicker(pickerEl) {
   fillSelect(pickerEl.querySelector('[data-part="year"]'), yearOptions());
   fillSelect(pickerEl.querySelector('[data-part="month"]'), monthOptions());
   fillSelect(pickerEl.querySelector('[data-part="hour"]'), hourOptions());
-  const parts = epochToParts(Math.floor(Date.now() / 1000));
+  const parts = epochToParts(Timestamp.now().toSeconds());
   pickerEl.querySelector('[data-part="year"]').value = String(parts.year);
   pickerEl.querySelector('[data-part="month"]').value = String(parts.month);
   pickerEl.querySelector('[data-part="hour"]').value = String(parts.hour);

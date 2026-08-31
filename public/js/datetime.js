@@ -1,3 +1,5 @@
+import { Timestamp } from './timestamp.js';
+
 export const YEAR_RANGE = { min: 2021, max: () => new Date().getUTCFullYear() + 1 };
 
 export function yearOptions() {
@@ -39,7 +41,7 @@ export function hourOptions() {
 }
 
 export function buildUtcEpoch(year, month, day, hour) {
-  return Math.floor(Date.UTC(year, month - 1, day, hour, 0, 0) / 1000);
+  return Timestamp.fromMillis(Date.UTC(year, month - 1, day, hour, 0, 0)).toSeconds();
 }
 
 export function epochToParts(ts) {
