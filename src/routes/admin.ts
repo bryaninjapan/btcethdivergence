@@ -1,13 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { Context, Hono } from 'hono';
-import { BinanceError, fetchKlines } from '../lib/binance';
-import { getBackfillCursor, insertKlinesBatch, setBackfillCursor } from '../lib/db';
-import {
-  AuthenticationError,
-  DatabaseError,
-  ExternalServiceError,
-  ValidationError,
-} from '../lib/errors';
+import { AuthenticationError, ValidationError } from '../lib/errors';
+import { adminService } from '../services/admin.service';
 import { ingestSchema, validationMessage } from '../lib/validate';
 import type { ApiResponse, Env } from '../types';
 
@@ -33,21 +27,6 @@ function requireAuth(c: Context<{ Bindings: Env }>, env: Env): void {
   }
 }
 
-async function attempt(host: string, symbol: string, startTime: number) {
-  try {
-    const result = await fetchKlines(host, symbol, startTime, 1);
-    return { endpoint: host, status: 200, count: result.klines.length, weight: result.weight };
-  } catch (error) {
-    // Convert BinanceError to ExternalServiceError
-    const binanceErr =
-      error instanceof BinanceError ? error : new BinanceError(0, String(error));
-    throw new ExternalServiceError('Binance API', `${binanceErr.message} (status: ${binanceErr.status})`, {
-      endpoint: host,
-      status: binanceErr.status,
-    });
-  }
-}
-
 admin.get('/api/admin/binance-spike', async (c) => {
   requireAuth(c, c.env);
 
@@ -57,43 +36,13 @@ admin.get('/api/admin/binance-spike', async (c) => {
   }
 
   const startTime = Date.now() - 2 * 60 * 60 * 1000;
+  const data = await adminService.probeBinanceReachability(symbol, startTime);
 
-  try {
-    const success = await attempt('https://api.binance.com', symbol, startTime);
-    const response: ApiResponse<typeof success> = {
-      ok: true,
-      data: success,
-    };
-    return c.json(response);
-  } catch (firstError) {
-    // Try fallback endpoint
-    try {
-      const fallback = await attempt('https://data-api.binance.vision', symbol, startTime);
-      const response: ApiResponse<typeof fallback> = {
-        ok: true,
-        data: fallback,
-      };
-      return c.json(response);
-    } catch (fallbackError) {
-      // Both endpoints failed
-      const firstMsg =
-        firstError instanceof ExternalServiceError
-          ? firstError.message
-          : String(firstError);
-      const fallbackMsg =
-        fallbackError instanceof ExternalServiceError
-          ? fallbackError.message
-          : String(fallbackError);
-      throw new ExternalServiceError(
-        'Binance API',
-        `Both endpoints failed: api.binance.com failed, data-api.binance.vision also failed`,
-        {
-          primaryError: firstMsg,
-          fallbackError: fallbackMsg,
-        },
-      );
-    }
-  }
+  const response: ApiResponse<typeof data> = {
+    ok: true,
+    data,
+  };
+  return c.json(response);
 });
 
 admin.post('/api/admin/ingest', async (c) => {
@@ -111,40 +60,27 @@ admin.post('/api/admin/ingest', async (c) => {
     throw new ValidationError('body', validationMessage(parsed.error));
   }
 
-  try {
-    const { symbol, klines } = parsed.data;
-    const res = await insertKlinesBatch(c.env.DB, symbol, klines);
-    const cursor = klines[klines.length - 1].open_time;
-    await setBackfillCursor(c.env.DB, symbol, cursor);
+  const { symbol, klines } = parsed.data;
+  const res = await adminService.processIngest(c.env.DB, symbol, klines);
 
-    const response: ApiResponse<{ inserted: number; skipped: number; cursor: number }> = {
-      ok: true,
-      data: { inserted: res.inserted, skipped: res.skipped, cursor },
-    };
-    return c.json(response);
-  } catch (error) {
-    if (error instanceof ValidationError || error instanceof AuthenticationError) {
-      throw error;
-    }
-    throw new DatabaseError('Ingest failed', { originalError: String(error) });
-  }
+  const response: ApiResponse<{ inserted: number; skipped: number; cursor: number }> = {
+    ok: true,
+    data: { inserted: res.inserted, skipped: res.skipped, cursor: res.newCursor },
+  };
+  return c.json(response);
 });
 
 admin.get('/api/admin/backfill-cursor', async (c) => {
   requireAuth(c, c.env);
 
   const symbol = c.req.query('symbol') ?? 'BTCUSDT';
+  const cursor = await adminService.getBackfillCursor(c.env.DB, symbol);
 
-  try {
-    const cursor = await getBackfillCursor(c.env.DB, symbol);
-    const response: ApiResponse<{ symbol: string; cursor: number | null; default: number }> = {
-      ok: true,
-      data: { symbol, cursor, default: 1609459200 },
-    };
-    return c.json(response);
-  } catch (error) {
-    throw new DatabaseError('Failed to get backfill cursor', { originalError: String(error) });
-  }
+  const response: ApiResponse<{ symbol: string; cursor: number | null; default: number }> = {
+    ok: true,
+    data: { symbol, cursor, default: 1609459200 },
+  };
+  return c.json(response);
 });
 
 export default admin;
