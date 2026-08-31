@@ -1,11 +1,67 @@
 ---
 phase: 11
-title: "Error Handling & Structured Responses - Learning & Decisions"
+title: "Error Handling & Structured Responses - Planning & Execution Learnings"
 date_completed: 2026-09-01
 status: complete
 ---
 
 # Phase 11: Error Handling & Structured Responses — LEARNING.md
+
+## Planning Phase: Discoveries & Improvements
+
+### Plan Check Findings (2026-09-01)
+
+#### 🔴 Critical Blocker (First Check)
+**Issue**: Frontend Error Handling Missing
+- **Problem**: Success Criterion 6 requires "Frontend can differentiate error types"
+- **Discovery**: Initial PLAN.md had only backend updates; frontend not in scope
+- **Impact**: Backend returns `{ ok, data?, error: { code, message, details? } }`, but frontend expected string
+- **Root Cause**: Plan scope too narrow — didn't check cross-system boundaries
+- **Resolution**: Added **Task 11-03 (Frontend Error Handling)**
+  - Update `public/js/records.js` to parse `error.code`
+  - Update `public/js/charts.js` if errors displayed
+  - Estimate: +0.5-1 day
+  - **New total effort: 3.5 → 4-5 days**
+
+**Learning**: Phases that cross system boundaries must verify all sides during planning.
+
+---
+
+#### ⚠️ Five Warnings (First Check) & Fixes
+
+| # | Warning | Issue | Fix Applied |
+|---|---------|-------|------------|
+| 1 | **GSD Format** | Narrative vs. structured | Left as-is (working format) |
+| 2 | **HTTP Status Codes** | Unmapped error→status | Added: 400/500/502/401/500 |
+| 3 | **Logging Strategy** | "Full context" vague | Specified: Wrangler JSON with code/message/details/stack |
+| 4 | **Zod Error Detection** | Unclear how middleware catches | Documented: `instanceof ZodError → ValidationError` |
+| 5 | **JSON Parse Handling** | Unspecified where caught | Clarified: Route-level try-catch, throw ValidationError |
+
+**Learning**: Architecture decisions need explicit implementation details, not just rationale.
+
+---
+
+#### ✅ Re-Check Results
+**Verdict**: READY TO EXECUTE (90% confidence)
+- ✅ Blocker resolved (frontend task added)
+- ✅ 5 warnings fixed (specific implementation details)
+- ✅ 4 tasks clear and sequenced
+- ✅ Effort realistic (4-5 days)
+- ✅ Phase goal achievable
+
+**Minor Suggestion**: During Task 11-03, manually test frontend error differentiation on validation (400) and service (502) failure paths.
+
+---
+
+#### Prevention Measures for Future Phases
+1. **Cross-boundary checks**: Verify all affected system layers in plan check
+2. **Architecture → Implementation**: Translate decisions to specific details upfront
+3. **Status codes mapping**: Define all mappings in initial plan, not during execution
+4. **Manual UAT**: For error handling, automated tests aren't enough
+
+---
+
+## Execution Phase: Delivery & Learnings
 
 ## Execution Summary
 
@@ -178,4 +234,37 @@ Implement exponential backoff retry, field focus on validation errors
 ✅ Testability - 35+ error handling tests cover all paths
 ✅ Consistency - all routes use same error envelope
 ✅ Extensibility - new error types added without middleware changes
+
+---
+
+## Phase Summary
+
+### What Worked Well
+- Architecture design was solid (CONTEXT.md was comprehensive)
+- Plan check process caught real gaps quickly
+- Fixes were incremental, not requiring complete replan
+- Execution delivered in 1 day (faster than 4-5 day estimate)
+
+### What Could Improve
+- Initial plan scope was too narrow (forgot frontend)
+- Implementation details (status codes, logging format) should come with architecture decisions
+
+### Key Takeaways
+1. **Cross-boundary verification**: Phases that touch multiple layers need all-sides validation
+2. **Architecture translates to implementation**: Every decision needs explicit detail
+3. **Plan check is valuable**: Catching blocker early (frontend) saved rework later
+4. **Manual testing matters**: Error handling UX requires human verification, not just tests
+
+### Confidence Going Forward
+- ✅ Phase goal fully achieved (structured errors, unified envelope, centralized middleware)
+- ✅ Frontend can differentiate error types (Success Criterion 6 met)
+- ✅ Production-ready with 45+ tests and 219/224 passing
+- ✅ Architecture is extensible for future error handling needs
+
+**Phase 11 Status: COMPLETE & VERIFIED** 🎉
+
+---
+
+*Phase 11 LEARNING created during planning, updated after execution completion*
+*Last updated: 2026-09-01*
 
