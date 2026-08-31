@@ -122,7 +122,12 @@ function tableOf(sql: string): TableName | null {
   const into = /INTO\s+(\w+)/i.exec(sql)?.[1];
   if (into) return into as TableName;
   const from = /FROM\s+(\w+)/i.exec(sql)?.[1];
-  return (from ?? null) as TableName | null;
+  if (from) return from as TableName;
+  const update = /^UPDATE\s+(\w+)/i.exec(sql)?.[1];
+  if (update) return update as TableName;
+  const del = /^DELETE\s+FROM\s+(\w+)/i.exec(sql)?.[1];
+  if (del) return del as TableName;
+  return null;
 }
 
 /**
@@ -271,7 +276,22 @@ export function createMockD1Database(): MockD1Database {
       cols.forEach((col, j) => {
         row[col] = params[j];
       });
-      if ('id' in cols && row.id === undefined) {
+      // backfill_state upsert: ON CONFLICT(symbol) DO UPDATE ... — update the
+      // existing row in place instead of inserting a duplicate.
+      if (/ON\s+CONFLICT\s*\(\s*symbol\s*\)/i.test(sql) && table === 'backfill_state') {
+        const existing = rows.find((r) => r.symbol === row.symbol);
+        if (existing) {
+          cols.forEach((col) => {
+            if (col !== 'symbol') existing[col] = row[col];
+          });
+          return 1;
+        }
+        rows.push(row);
+        return 1;
+      }
+      // divergence_records rows get an auto-increment id when the INSERT
+      // omits it (RETURNING * includes the assigned id).
+      if (table === 'divergence_records' && !('id' in row)) {
         row.id = nextId(rows);
       }
       if ('created_at' in cols && row.created_at === undefined) {
@@ -339,6 +359,17 @@ export function createMockD1Database(): MockD1Database {
       },
       first: async <T>(colName?: string) => {
         throwIfFailed('first');
+        // INSERT ... RETURNING *: apply the mutation, then serve the
+        // just-inserted row (D1's .first() on a RETURNING INSERT).
+        if (/^INSERT/i.test(sql.trim())) {
+          const changes = mutate(sql, params, tables);
+          if (changes === 0) return null;
+          const table = tableOf(sql);
+          const rows = table ? tables[table] : [];
+          const row = rows[rows.length - 1];
+          if (colName !== undefined) return (row[colName] as T) ?? null;
+          return row as T;
+        }
         const rows = selectRows(sql, params, tables);
         const firstRow = rows[0];
         if (!firstRow) return null;
@@ -393,7 +424,9 @@ export function createMockD1Database(): MockD1Database {
       return tables[table];
     },
     setRows(table, rows) {
-      tables[table] = rows as Row[];
+      // Clone rows so mutations (UPDATE/DELETE) never leak into the caller's
+      // fixtures or shared across tests.
+      tables[table] = rows.map((r) => ({ ...(r as Row) }));
     },
   };
 }
