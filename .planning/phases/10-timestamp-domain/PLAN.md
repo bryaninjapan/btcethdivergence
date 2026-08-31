@@ -70,7 +70,7 @@ Currently, timestamp conversions are scattered:
 - [ ] Backend: `npm run typecheck:scripts` passes (scripts type checking)
 - [ ] Backend grep: `rg -n "Math\.floor" src --type ts` returns only timestamp.ts:27 (sanctioned exception)
 - [ ] Frontend grep: `rg -n "Math\.floor" public/js --type js` returns empty
-- [ ] Backfill dry-run: `npx tsx scripts/backfill-fetcher.mts --dry-run` completes without error
+- [ ] Binance conversion verification: `npm test -- src/binance.test.ts` passes (exercises parseKline conversion without --dry-run, which does not exist)
 - [ ] Code review: `gsd-code-review`, no HIGH issues
 
 ✅ **Documentation**:
@@ -147,19 +147,23 @@ Currently, timestamp conversions are scattered:
 
 **Tasks**:
 - [ ] Create `public/js/timestamp.js` with full API (fromSeconds, fromMillis, toSeconds, toMillis, arithmetic methods, plus, minus, etc.) matching src/lib/timestamp.ts interface
-  - **Important**: Use `Math.trunc(millis / 1000)` in `fromMillis()` instead of `Math.floor()` (TDD verified: mathematically equivalent, eliminates Math.floor pattern)
-- [ ] Add parity tests in `public/js/timestamp.test.js` verifying key operations (fromMillis + toSeconds, now + toSeconds, fromParts + toParts) match src/lib/timestamp.ts behavior
+  - **Important**: Use `Math.trunc(millis / 1000)` in `fromMillis()` instead of `Math.floor()` (TDD verified: mathematically equivalent for non-negative inputs)
+  - **Critical (W2 fix)**: Add explicit guard at top of `fromMillis()`: `if (millis < 0) throw new TimestampError("Negative milliseconds not allowed")` — ensures parity with backend behavior for all inputs, including edge case (-1000 < ms < 0)
+- [ ] Add parity tests in `public/js/timestamp.test.js` verifying:
+  - Key operations (fromMillis + toSeconds, now + toSeconds, fromParts + toParts) match src/lib/timestamp.ts behavior
+  - **Negative input rejection**: `fromMillis(-500)` throws TimestampError (W2 fix verification)
 - [ ] Update charts.js: Import Timestamp, replace lines 95-96 conversions with `Timestamp.fromMillis(ms).toSeconds()`
 - [ ] Update datetime.js: Import Timestamp, replace line 42 conversion with `Timestamp.fromMillis(Date.UTC(...)).toSeconds()`
 - [ ] Update records.js: Import Timestamp, replace line 124 with `Timestamp.now().toSeconds()`
 - [ ] Manual UAT charts page: Load records, render chart, verify time picker syncs correctly with Timestamp arithmetic
 - [ ] Manual UAT records page: Create/edit/delete records, verify timestamps calculate and display correctly
-- [ ] Run parity tests: `npm test public/js/timestamp.test.js` (verify both implementations behave identically)
+- [ ] Run parity tests: `npm test public/js/timestamp.test.js` (verify both implementations behave identically, including negative rejection)
+- [ ] Run existing frontend test suite: `npm test public/js/` (verify no regressions in datetime.js or other tests)
 - [ ] Verify grep (backend): `rg -n "Math\.floor" src --type ts -g '!*.test.*'` returns only timestamp.ts:27 (sanctioned exception)
 - [ ] Verify grep (frontend): `rg -n "Math\.floor" public/js --type js` returns empty (all replaced with Timestamp)
-- [ ] Commit: "feat: Use Timestamp API throughout frontend (charts, datetime, records); add duplicate Timestamp class with Math.trunc"
+- [ ] Commit: "feat: Use Timestamp API throughout frontend (charts, datetime, records); add duplicate Timestamp class with Math.trunc + negative guard"
 
-**Success**: All 4 frontend conversions use Timestamp API; parity tests pass; zero Math.floor in frontend; charts + records UI fully functional.
+**Success**: All 4 frontend conversions use Timestamp API; parity tests pass (including negative rejection); zero Math.floor in frontend; all existing tests still pass; charts + records UI fully functional.
 
 ---
 
@@ -208,11 +212,19 @@ Currently, timestamp conversions are scattered:
 
 **Result**: Phase 10 targets 10 production sites + 1 sanctioned exception (timestamp.ts:27)
 
-### W1: Grep Verification Pattern (Resolved)
+### W1: SC2 Scope Clarification (Resolved)
 
-**Decision**: Option 1 — Broad pattern with explicit exclusions
+**Issue**: ROADMAP SC2 ("All frontend time operations use Timestamp API") is broader than Phase 10's actual scope (which targets only `Math.floor(ms/1000)` patterns per SC3).
 
-**Pattern** (corrected for W1 fix):
+**Decision**: Phase 10 explicitly excludes sec→ms conversions that don't use `Math.floor`:
+- `records.js:25` (`new Date(ts * 1000)`) — not a consolidation target
+- `datetime.js:46` (`new Date(ts * 1000)`) — not a consolidation target  
+- `charts.js:179` (`startSec * 1000`) — not a consolidation target
+- `chart-range.js` (all `* 1000` conversions) — excluded per W5 Option B
+
+These sites are **not converted** in Phase 10 and remain as single-purpose arithmetic (not confusion-prone per SC goal).
+
+**Verification** (corrected for W1 fix):
 ```bash
 # Backend: verify only sanctioned exception remains
 rg -n "Math\.floor" src --type ts -g '!*.test.*'
@@ -227,7 +239,7 @@ rg -n "Math\.floor" public/js --type js
 - Backend after 10-01: 1 match (`timestamp.ts:27` sanctioned exception)
 - Frontend after 10-02: 0 matches (all converted to Timestamp or Math.trunc)
 - Total production Math.floor sites: **1 sanctioned exception** (backend Timestamp.fromMillis internal)
-- Excludes: test files (`.test.ts/.test.js`), chart-range.js (`* 1000` pattern)
+- Excludes: test files (`.test.ts/.test.js`), non-Math.floor arithmetic
 
 **Why Option 1**:
 - ✓ Single pattern catches all `Math.floor(ms/1000)` forms (Date.now, Date.UTC, simple division)
