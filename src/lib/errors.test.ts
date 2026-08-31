@@ -5,6 +5,7 @@ import {
   DatabaseError,
   ErrorCode,
   ExternalServiceError,
+  NotFoundError,
   ValidationError,
   isAppError,
 } from './errors';
@@ -32,11 +33,13 @@ describe('Error Type Hierarchy', () => {
       const dbError = new DatabaseError('connection failed');
       const serviceError = new ExternalServiceError('Binance', 'timeout');
       const authError = new AuthenticationError('invalid token');
+      const notFoundError = new NotFoundError('User');
 
       expect(validationError.statusCode()).toBe(400);
       expect(dbError.statusCode()).toBe(500);
       expect(serviceError.statusCode()).toBe(502);
       expect(authError.statusCode()).toBe(401);
+      expect(notFoundError.statusCode()).toBe(404);
     });
 
     it('toResponse() returns client-safe error details', () => {

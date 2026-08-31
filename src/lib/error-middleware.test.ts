@@ -102,13 +102,14 @@ describe('Error Middleware', () => {
 
   describe('ZodError handling', () => {
     it('converts ZodError to ValidationError', async () => {
-      app.get('/test', () => {
+      app.get('/test', (c) => {
         const schema = z.object({
           id: z.number().int().positive(),
           email: z.string().email(),
         });
         const invalid = { id: 'not-a-number', email: 'invalid' };
         schema.parse(invalid); // Will throw ZodError
+        return c.text('unreachable');
       });
 
       const res = await app.request(new Request('http://localhost/test'));

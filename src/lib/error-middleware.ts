@@ -15,20 +15,10 @@ import {
   isAppError,
 } from './errors';
 import { validationMessage } from './validate';
-import type { Env } from '../types';
+import type { ApiResponse, Env } from '../types';
 
-/**
- * Structured API response envelope for all responses (success and failure).
- */
-export interface ApiResponse<T = any> {
-  ok: boolean;
-  data?: T;
-  error?: {
-    code: ErrorCode;
-    message: string;
-    details?: Record<string, unknown>;
-  };
-}
+// Re-export ApiResponse for use in tests
+export type { ApiResponse } from '../types';
 
 /**
  * Centralized error handler middleware for Hono.
@@ -69,7 +59,7 @@ export async function errorMiddleware(
   logError(appError, c.req);
 
   // Return sanitized response to client
-  const statusCode = appError.statusCode() as 400 | 401 | 500 | 502;
+  const statusCode = appError.statusCode() as 400 | 401 | 404 | 500 | 502;
   const response: ApiResponse<never> = {
     ok: false,
     error: appError.toResponse(),
