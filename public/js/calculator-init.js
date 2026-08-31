@@ -59,12 +59,14 @@ function formatRatio(value) {
 }
 
 function render(result) {
-  el('position-size').textContent = formatQuantity(result.positionSize);
-  el('sl-amount').textContent = formatAmount(result.stopLossAmount);
-  el('tp-amount').textContent = formatAmount(result.takeProfitAmount);
-  el('rr-ratio').textContent = formatRatio(result.riskRewardRatio);
-  el('loss-rate').textContent = formatPercent(result.lossRatePercent);
-  el('gain-rate').textContent = formatPercent(result.gainRatePercent);
+  const dash = (fmt, value) => (result.isValid ? fmt(value) : '—');
+
+  el('position-size').textContent = dash(formatQuantity, result.positionSize);
+  el('sl-amount').textContent = dash(formatAmount, result.stopLossAmount);
+  el('tp-amount').textContent = dash(formatAmount, result.takeProfitAmount);
+  el('rr-ratio').textContent = dash(formatRatio, result.riskRewardRatio);
+  el('loss-rate').textContent = dash(formatPercent, result.lossRatePercent);
+  el('gain-rate').textContent = dash(formatPercent, result.gainRatePercent);
 
   const errorEl = el('calc-error');
   errorEl.hidden = result.isValid;

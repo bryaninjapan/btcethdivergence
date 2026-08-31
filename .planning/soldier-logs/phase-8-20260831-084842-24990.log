@@ -1,0 +1,38 @@
+Now let me examine the existing codebase structure and conventions.
+Let me check the remaining test files, configs, and baseline test state.
+Baseline is green (87 tests pass, typecheck clean, HEAD `f905d95`). Let me set up the task list and start executing.
+**Task 08-01** — creating `public/calculator.html` (structure only, no scripts per plan) and calculator CSS.
+Now verify 08-01: serve via the Worker and curl the page.
+The 307 is Wrangler's clean-URL redirect (`/calculator.html` → `/calculator`). Let me curl the canonical path.
+Page serves. Let me verify all required elements are present, then kill the dev server.
+All form inputs and result elements present. Committing task 08-01.
+**Task 08-02** — core calculation engine, init wiring, tests, and HTML script tag.
+Now wire the init script into the HTML (per plan 08-02) and run the test suite.
+All 96 tests pass (9 new). Let me cross-check the init script's element IDs against the HTML and commit.
+**Task 08-03** — comprehensive validation with actionable error messages, expanded tests, coverage wiring.
+Now append tests 10-21 to the test suite, including the SC5 client-side structural check.
+Now add the `test:coverage` script (plan check I-5) and run the full suite.
+Coverage passes all ≥95% thresholds. The two uncovered branches are the SL/TP > 0 checks (lines 77-78). Let me cover those too for completeness.
+100% coverage on all metrics. Now apply the W-1 fix to the plan's manual checkpoint (correct expected values), then runtime-verify the E2E scenarios via the pure module.
+All E2E scenarios match expected values. Running Section A security/quality scans on the new files, then verifying assets serve.
+No secrets, no DEV flags, all assets serve. Final test run and commit for 08-03.
+Phase 8 complete — 3/3 tasks executed, verified, committed atomically.
+
+**Built**: `public/calculator.html` (Long/Short toggle + margin/entry/SL/TP inputs + 1x–125x leverage dropdown + results grid + warning blocks), `public/css/style.css` calculator styles, `public/js/calculator.js` (pure, dependency-free `calculatePosition` engine), `public/js/calculator-init.js` (real-time wiring, placeholders, formatting, warning show/hide), `public/js/calculator.test.ts` (21 tests), `package.json` `test:coverage` script.
+
+**Verification**: `npm run test` → 109 passed (was 87); `npm run test:coverage` → calculator.js 100% coverage (thresholds ≥95%); `npm run typecheck` clean; `curl /calculator` → 200 via Worker. All 5 success criteria covered; SC5 (fully client-side) is enforced by a structural test asserting no `fetch(`/`api.js` in calculator files.
+
+**Security/cleanup**: none needed — no secrets, DEV flags, dead code, or auth paths introduced.
+
+**Plan-check fixes applied**: W-1 (corrected E2E checkpoint 4 values), I-2 (coin-quantity position size with sub-cent precision), I-3 (automated SC5 test), I-5 (coverage command). Minor logged deviations: added `#calc-error` display element, used `#liquidation-warning` per 08-03 (resolved plan's `#sl-warning` inconsistency), Chinese UI copy for consistency.
+
+**No checkpoints blocked** — no human input required.
+
+**Commit range** (`git log --oneline f905d95..HEAD`):
+```
+6a41f23 feat(phase-8): scaffold leverage calculator page and styles (task 08-01)
+0051afe feat(phase-8): add pure calculation engine and real-time form wiring (task 08-02)
+a7c63f8 feat(phase-8): harden validation with actionable errors, expand tests, wire coverage gate (task 08-03)
+```
+
+SUMMARY written to `.planning/phases/08-leverage-calculator/8-SUMMARY.md`.

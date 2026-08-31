@@ -1,0 +1,19 @@
+I'll start by reading the required files in order.
+The phase dir already contains a prior `8-PLAN-CHECK.md`. I'll do my own independent verification and overwrite it. Let me examine the source tree to fact-check the plan's load-bearing claims.
+Now let me verify the load-bearing source claims the plan makes.
+Now let me check the build/test tooling and remaining claims.
+All source claims verified. Let me do a final consistency check on the plan's internal math and test-count arithmetic before writing the report.
+Confirmed — the plan's E2E checkpoint 4 has wrong expected values and the scenario doesn't demonstrate the transition it claims. Now writing the verification report.
+## Summary
+
+Verified `.planning/phases/08-leverage-calculator/08-PLAN.md` (08-01/02/03) against ROADMAP.md Phase 8, REQUIREMENTS.md, PROJECT.md, and the source tree. The plan text is the 08:41 revision and already resolves the three defects a prior check flagged (module import specifier `./calculator.js`, consistent 3-task count, uniform ≥95% coverage target).
+
+**Requirement coverage**: 7/7 CALC requirements mapped. **SC traceability**: 5/5 covered. **Dependencies**: 08-01→08-02→08-03 acyclic, correct. **Locked decisions**: compliant (pure static HTML/CSS/JS, no build step, no D1 changes, single Worker + Static Assets). **Scope reduction**: none on in-scope work.
+
+**Fact-check**: all load-bearing claims verified against source — `index.html` at `/` with `zh-Hant`, `charts.html` + `style.css` exist, wrangler assets `./public`, tsconfig `include:["src"]`, `chart-sync.test.ts:2` confirms the relative-import convention, `api.js` is the only prod `fetch` module, PITFALLS.md:200 matches the liquidation rule.
+
+**Findings — 0 blockers, 1 warning, 6 info.**
+- **W-1**: E2E checkpoint 4 (R:R < 1.0) expected profits are wrong — 11.9 should be 2.38, 5.95 should be 1.19 — and R:R is already 0.2 < 1.0 at the "initial" TP, so the scenario doesn't demonstrate the claimed off→on transition. Fix: use TP 42500 (R:R=1.0) then TP 42400 (R:R=0.80).
+- Info: optional typecheck inclusion, position-size unit/precision ambiguity, SC5 manual-only (add "no api.js import" constraint), missing stylesheet link in HTML deliverable, coverage target not wired to `vitest --coverage`, 08-03 files list omission.
+
+Report written to `8-PLAN-CHECK.md`. Plans verified. Ready to execute.

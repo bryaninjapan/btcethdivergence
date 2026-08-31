@@ -1,0 +1,11 @@
+All source claims verified. Writing the check report now.
+Plan check written to `.planning/phases/08-leverage-calculator/8-PLAN-CHECK.md`.
+
+**Summary** — Phase 8 (Leverage Calculator), `08-PLAN.md` (08-01→08-04):
+- **Coverage**: all 7 CALC requirements and all 5 success criteria have concrete covering tasks; no zero-coverage gaps.
+- **Dependencies/locked decisions**: acyclic 08-01→08-04 ordering; no contradiction with PROJECT.md (pure static, no build step, independent calculator).
+- **0 blockers. 4 warnings**: W-1 `records.html` doesn't exist (records page is `index.html` served at `/` — verified in `public/`) — plan cites it 3×; W-2 leverage list in design section omits 20x required by CALC-04; W-3 pure-module vs. event-loader wiring location ambiguous; W-4 08-04 is verification-only overlap (4 tasks vs 2–3 target).
+- **4 info**: no typecheck step for new `.ts` test (matches existing repo gap), position-size unit ambiguity, "don't load api.js" is implied not stated, "for now" only touches out-of-scope polish.
+- Manual SC verification (DevTools Network tab for SC5) is inherently manual but reasonable.
+
+Plans verified. Ready to execute.

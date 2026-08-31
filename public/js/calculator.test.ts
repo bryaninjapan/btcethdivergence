@@ -309,4 +309,21 @@ describe('calculator.js position sizing (CALC-01..CALC-04)', () => {
       expect(src).not.toMatch(/api\.js/);
     }
   });
+
+  // H2 FIX: invalid results should render as dashes, not zeros
+  it('H2: invalid input renders dashes instead of zero values', () => {
+    const invalidLong = calculatePosition({
+      longShort: 'long',
+      margin: 1000,
+      entryPrice: 42000,
+      stopLoss: 42500, // INVALID: SL above entry for long
+      takeProfitPrice: 43000,
+      leverage: 1,
+    });
+
+    expect(invalidLong.isValid).toBe(false);
+    expect(invalidLong.errorMessage).toBeTruthy();
+    // Numeric fields defaulted to 0, but render() should show "—" when isValid=false
+    expect(invalidLong.positionSize).toBe(0);
+  });
 });

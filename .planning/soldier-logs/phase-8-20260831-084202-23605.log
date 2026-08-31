@@ -1,0 +1,28 @@
+All context gathered. Verifying the remaining load-bearing claims against source before writing the report.
+
+Key fact-check results:
+- `index.html` (served at `/` per wrangler `assets.directory: ./public`) has `lang="zh-Hant"` and `charts.html` matches — plan's claim at line 163 is correct.
+- Plan line 69 leverage dropdown now includes **20x** (matches CALC-04 exactly) — prior check's omission is resolved.
+- No `records.html` reference remains — plan now says `index.html (served at /)`.
+- `chart-sync.test.ts:2` imports `from './chart-sync.js'` — the `calculator.test.ts` import pattern is consistent.
+- `tsconfig.json` `include: ["src"]` — `public/js/*.test.ts` are not type-checked (matches existing pattern); no vitest config file exists (default include picks up `public/js/*.test.ts`).
+- Plan line 260: "Imports `calculatePosition` from `public/js/calculator.js`" — **not a valid browser module specifier** (`public/` is not on the served path; would resolve to `/js/public/js/calculator.js` → 404).
+- Plan still lists a 4th task 08-04 in "Remaining Tasks" (L481-489) and "Timeline" (L492-499) while declaring "3 Sequential Tasks" (L150) and "Verification Track (Part of 08-02 and 08-03)" — plus coverage targets conflict (100% L249 vs ≥95% L353).
+Plan check complete. Written to `.planning/phases/08-leverage-calculator/8-PLAN-CHECK.md`.
+
+**Summary:**
+
+Verified the current `08-PLAN.md` v1.0 (revised 08:41, after a prior check) against all 7 CALC requirements and all 5 success criteria, fact-checking every load-bearing source claim:
+
+- **Requirement coverage**: 7/7 mapped (CALC-01→07), zero uncovered. Dropdown now matches CALC-04 exactly (11 values incl. 20x).
+- **Success criteria**: 5/5 delivered by concrete tasks; E2E checkpoint math independently re-verified correct (long/short, R:R, liquidation scenarios).
+- **Source claims**: all verified — `index.html` served at `/` with `zh-Hant`, `style.css` exists, `chart-sync.test.ts` imports `./chart-sync.js` (import pattern consistent), wrangler assets `./public`, tsconfig `include: ["src"]`.
+- **Locked decisions**: no CONTEXT.md/RESEARCH.md in phase dir; PROJECT.md honored (pure static, no build step, calculator independent/manual input).
+
+**2 warnings, 0 blockers:**
+- **W-1**: line 260 import specifier `public/js/calculator.js` is invalid in a browser module (→ 404, breaks SC2). Fix: `./calculator.js`.
+- **W-2**: task-count contradiction (3 sequential tasks vs 08-04 in Remaining Tasks/Timeline) + coverage target conflict (100% vs ≥95%).
+
+**4 info**: no typecheck step for the new `.ts` test, position-size unit ambiguity, SC5 "no api.js" guarantee implied not stated, no dropdown-content assertion.
+
+**Plans verified. Ready to execute.**
