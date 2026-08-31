@@ -64,7 +64,7 @@ export function calculatePosition(params = {}) {
 }
 
 function normalizeDirection(value) {
-  if (value === 'short' || value === 'Short' || value === 'SHORT' || value === false) return 'short';
+  if (value === 'short' || value === 'Short' || value === 'SHORT') return 'short';
   return 'long';
 }
 

@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:scripts": "tsc --project scripts",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.include='public/js/calculator.js' --coverage.thresholds.lines=95 --coverage.thresholds.functions=95 --coverage.thresholds.statements=95 --coverage.thresholds.branches=95"
+    "test:coverage": "vitest run --coverage --coverage.include='public/js/calculator*.js' --coverage.thresholds.lines=95 --coverage.thresholds.functions=95 --coverage.thresholds.statements=95 --coverage.thresholds.branches=95"
   },
   "dependencies": {
     "hono": "^4.13.5",

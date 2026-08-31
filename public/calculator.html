@@ -10,6 +10,7 @@
     <header>
       <h1>BTC/ETH Divergence Tracker</h1>
       <a href="/">← 記錄表</a>
+      <a href="/charts.html">K線圖</a>
     </header>
 
     <main class="calculator-layout">
@@ -66,7 +67,7 @@
 
       <section class="calculator-panel results">
         <h2>計算結果</h2>
-        <div class="results-grid">
+        <div class="results-grid" aria-live="polite" aria-label="計算結果">
           <div class="result-field">
             <span class="result-label">持倉數量（Position Size）</span>
             <span class="result-value" id="position-size">—</span>
@@ -93,8 +94,8 @@
           </div>
         </div>
         <p id="calc-error" hidden></p>
-        <div id="rr-warning" class="warning" hidden>盈虧比低於 1:1 — 潛在虧損大於潛在獲利，建議放寬止盈或收緊止損。</div>
-        <div id="liquidation-warning" class="warning" hidden>止損金額超過保證金 — 可能在被止損前就被強制平倉，建議放寬止損或降低槓桿。</div>
+        <div id="rr-warning" class="warning" hidden aria-live="polite" aria-label="盈虧比警告">盈虧比低於 1:1 — 潛在虧損大於潛在獲利，建議放寬止盈或收緊止損。</div>
+        <div id="liquidation-warning" class="warning" hidden aria-live="polite" aria-label="清算風險警告">止損金額超過保證金 — 可能在被止損前就被強制平倉，建議放寬止損或降低槓桿。</div>
       </section>
     </main>
     <script type="module" src="/js/calculator-init.js"></script>
