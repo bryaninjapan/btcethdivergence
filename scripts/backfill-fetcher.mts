@@ -48,7 +48,13 @@ export async function fetchCursor(
 ): Promise<number | null> {
   const cursorRes = await fetch(
     `${workerUrl}/api/admin/backfill-cursor?symbol=${encodeURIComponent(symbol)}`,
-    { headers: { Authorization: `Bearer ${ingestToken}` } },
+    {
+      headers: {
+        'Cf-Access-Client-Id': process.env.CF_CLIENT_ID || '',
+        'Cf-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
+        Authorization: `Bearer ${ingestToken}`,
+      },
+    },
   );
   if (!cursorRes.ok) {
     console.error(`Failed to read cursor: HTTP ${cursorRes.status}`);
@@ -92,6 +98,8 @@ async function main(): Promise<void> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Cf-Access-Client-Id': process.env.CF_CLIENT_ID || '',
+      'Cf-Access-Client-Secret': process.env.CF_CLIENT_SECRET || '',
       Authorization: `Bearer ${ingestToken}`,
     },
     body: JSON.stringify({ symbol, klines: result.klines }),

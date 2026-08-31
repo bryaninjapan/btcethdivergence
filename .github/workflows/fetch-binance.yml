@@ -34,6 +34,8 @@ jobs:
         env:
           WORKER_URL: ${{ secrets.WORKER_URL }}
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          CF_CLIENT_ID: ${{ secrets.CF_CLIENT_ID }}
+          CF_CLIENT_SECRET: ${{ secrets.CF_CLIENT_SECRET }}
           SYMBOL: ${{ inputs.symbol }}
           START_TIME_OVERRIDE: ${{ inputs.start_time_override }}
 
