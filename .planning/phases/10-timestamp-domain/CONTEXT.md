@@ -29,41 +29,41 @@ Replace scattered conversions with a strongly-typed `Timestamp` class:
 - `TimeConverter.fromParts()` — UTC year/month/day/hour → Timestamp
 - All arithmetic immutable (no mutation)
 
-## Scope: What Changes
+## Scope: What Changes (Per Decision D1 Option B + D2 Option A)
 
-### Backend Integration (10-01)
-
-**Files to modify**:
-1. `src/types.ts` — Import Timestamp, update `Kline.open_time` type
-2. `src/lib/db.ts` — Replace 3x `Math.floor(Date.now() / 1000)` with `Timestamp.now().toSeconds()`
-3. `src/routes/klines.ts` — Use `Timestamp.fromMillis()` for query params
-4. `src/lib/binance.ts` — Convert `Math.floor(raw[0] / 1000)` to `Timestamp.fromMillis(raw[0])`
-5. `src/routes/admin.ts` — Use Timestamp for time arithmetic (if scope includes backfill cursor)
-
-**Affected downstream** (must update if Kline.open_time type changes):
-- `src/lib/kline-insert.ts` — expects `Kline.open_time` format
-- `src/lib/binance.ts` — produces Kline instances
-- `src/lib/validate.ts` — schema definitions
-- `src/routes/admin.ts` — reads open_time as cursor
-- `src/lib/binance.test.ts` — type assertions
-
-### Frontend Integration (10-02)
+### Backend Integration (10-01) — Boundaries Only
 
 **Files to modify**:
-1. `public/js/charts.js` — Replace `Math.floor(startMs / 1000)`, `Math.floor(endMs / 1000)` at lines 95-96
-2. `public/js/records.js` — Replace `Math.floor(Date.now() / 1000)` at line 124
-3. `public/js/datetime.js` — Central utility holds `buildUtcEpoch()` that returns `Math.floor(Date.UTC(...) / 1000)` (line 42, used by both charts + records)
+1. `src/lib/db.ts` (3 lines: 51, 89, 124) — Replace `Math.floor(Date.now() / 1000)` with `Timestamp.now().toSeconds()`
+2. `src/lib/binance.ts:17` — Replace `Math.floor(raw[0] / 1000)` with `Timestamp.fromMillis(raw[0]).toSeconds()`
+3. `src/routes/klines.ts:21` — Replace `Math.floor(startMs / 1000)` with `Timestamp.fromMillis(startMs).toSeconds()`
+4. `src/routes/klines.ts:22` — Replace `Math.floor(endMs / 1000)` with `Timestamp.fromMillis(endMs).toSeconds()`
+
+**Files NOT modified** (per D1 Option B):
+- ~~`src/types.ts`~~ — `Kline.open_time` stays as `number` (no type change)
+- ~~`src/lib/kline-insert.ts`~~ — No change needed
+- ~~`src/lib/validate.ts`~~ — No change needed
+- ~~`src/routes/admin.ts`~~ — No change needed for backfill cursor
+- ~~`src/lib/binance.test.ts`~~ — No type assertions to update
+
+**Internal storage**: Remains seconds (Unix seconds for efficiency)
+**API contract**: `/api/klines` wire format unchanged (numeric timestamps in seconds)
+
+### Frontend Integration (10-02) — Duplicate Timestamp Class
+
+**Files to create**:
+1. `public/js/timestamp.js` — NEW, plain ESM module mirroring src/lib/timestamp.ts API
+
+**Files to modify**:
+1. `public/js/charts.js:96` — Replace 2x `Math.floor(ms / 1000)` in setPickersFromMs function
+2. `public/js/datetime.js:42` — Replace `Math.floor(Date.UTC(...) / 1000)` in buildUtcEpoch function
+3. `public/js/records.js:124` — Replace `Math.floor(Date.now() / 1000)` when creating new record
 
 **Frontend Constraint** (locked decision from Phase 6):
-- No build step, no bundler
-- Pure static ESM served from Worker
-- Lightweight Charts v5 from CDN
-- Chart rendering uses numeric `time` field (must convert Timestamp.toMillis() for chart library)
-
-**Challenge**: How does frontend import `Timestamp`?
-- Option A: Duplicate `Timestamp` class in `public/js/timestamp.js` + consistency tests
-- Option B: Add bundler (contradicts no-build-step constraint)
-- Option C: Keep conversions in frontend, migrate only backend (partial solution)
+- No build step, no bundler — ✅ Satisfied (duplicate JS, not bundled)
+- Pure static ESM served from Worker — ✅ Public/js stays static
+- Lightweight Charts v5 from CDN — ✅ No change
+- Chart rendering uses numeric `time` field — ✅ Timestamp.toSeconds() provides this
 
 ## Locked Constraints
 
@@ -82,58 +82,57 @@ From earlier phases and PROJECT.md:
 4. **SC4**: Timestamp 44/44 unit tests pass (already true)
 5. **SC5**: Code review approval, no HIGH issues
 
-## Outstanding Decisions
+## Decisions Made
 
-### D1: Kline.open_time Type Boundary
+### D1: Kline.open_time Type Boundary ✅ RESOLVED
+**Decision**: **Option B — Boundaries Only**
 
-**Current state**: `Kline.open_time` is `number` (Unix seconds)
+**Chosen at**: 2026-09-01 during plan revision
 
-**Options**:
-- **Option A** (full): Change to `Timestamp` type throughout (binance.ts producer → kline-insert → D1 storage → charts/admin consumers)
-  - Pro: Type safety end-to-end, prevents future ms/sec bugs
-  - Con: Ripples to 5+ untasked files, requires serialization decision for wire/DB format
-  - Con: `Timestamp` instances don't JSON.stringify as plain numbers
-  
-- **Option B** (boundaries only): Keep `Kline.open_time: number`, convert at request/function entry points
-  - Pro: Minimal ripple (binance.ts input, klines.ts query params, admin.ts cursor, charts.js toCandle)
-  - Con: Type safety only at edges, not at the core domain model
-  - Con: DB/API contracts stay unchanged (lower risk)
+**Rationale**:
+- Binance API returns timestamps in **milliseconds** (raw[0])
+- Database stores **seconds** (existing wire/DB contract)
+- Converting entire domain model to Timestamp type would ripple to 5+ untouched files
+- Boundaries-only approach: Convert at API input/output points only, keep internal storage/types as seconds
+- Minimal risk, minimal ripple: Only 3 backend sites affected (vs. 10+ with full type change)
 
-### D2: Frontend Timestamp Access
+**Implementation**:
+- `src/lib/binance.ts:17`: Convert Binance API ms → sec via `Timestamp.fromMillis(raw[0]).toSeconds()`
+- `src/routes/klines.ts:21-22`: Convert query param ms → sec via `Timestamp.fromMillis(...).toSeconds()`
+- All downstream files (types.ts, kline-insert.ts, etc.) unchanged; `Kline.open_time` stays as `number`
 
-**Current state**: No Timestamp in frontend; all conversions inline
+### D2: Frontend Timestamp Access ✅ RESOLVED
+**Decision**: **Option A — Duplicate public/js/timestamp.js**
 
-**Options**:
-- **Option A** (duplicate): `public/js/timestamp.js` as plain-ESM reimplementation
-  - Pro: No build step, no bundler needed
-  - Pro: Consistency tests can verify parity with `src/lib/timestamp.ts`
-  - Con: Manual sync required; two source-of-truth definitions
-  
-- **Option B** (bundler): Add build step to compile `src/lib/timestamp.ts` for browser
-  - Pro: Single source of truth (import from src)
-  - Con: Violates locked no-build-step constraint (Phase 6, PROJECT.md)
-  - Con: Adds complexity to static asset pipeline
-  
-- **Option C** (hybrid): Keep datetime.js as is, convert only charts.js/records.js locally
-  - Pro: Minimal change
-  - Con: Partial solution, doesn't address datetime.js:42 scattered conversion
+**Chosen at**: 2026-09-01 during plan revision
 
-## Risk Assessment
+**Rationale**:
+- Phase 6 constraint: No build step, no bundler (locked decision)
+- Timestamp class is simple (112 lines) and can be safely duplicated
+- Parity tests will verify frontend and backend implementations stay in sync
+- No bundler complexity, maintains static ESM asset pipeline
 
-**High Risk**:
-- Kline.open_time type change ripples to untouched files (B3 in plan check)
-- Frontend mechanism unresolved, conflicts with locked decisions (B2)
-- Conversion inventory incomplete (B1, 3 sites unaccounted)
+**Implementation**:
+- Create `public/js/timestamp.js` as plain ESM module, mirroring src/lib/timestamp.ts API
+- Add parity tests to verify behavior consistency
+- Update `public/js/charts.js` and `public/js/datetime.js` to import and use duplicated Timestamp class
 
-**Medium Risk**:
-- Code review gate (SC5) not scoped as a task
-- No typecheck step for type-heavy changes
-- Backward-compatibility claim needs verification
+## Risk Assessment (After Decision)
 
-**Low Risk**:
-- Timestamp class already implemented + fully tested
-- Line numbers verified accurate
+**✅ Resolved Risks**:
+- ~~Kline.open_time type change ripples~~ — D1 Option B avoids full type change (only 3 boundary sites)
+- ~~Frontend mechanism unresolved~~ — D2 Option A (duplicate JS) complies with no-build-step constraint
+- ~~Conversion inventory incomplete~~ — All 5 sites identified and enumerated in PLAN.md
+
+**Low Risk** (mitigated):
+- Timestamp class already implemented + fully tested (44/44 passing)
+- All conversion line numbers verified via grep
 - Immutability guaranteed by class design
+- Parity tests will verify frontend/backend consistency
+- TypeScript strict mode will catch type errors (`npm run typecheck`)
+
+**Contingency**:
+- If Timestamp.toSeconds() call pattern becomes error-prone, grep verification catches remaining unconverted sites
 
 ## Recommendation for Plan Revision
 
