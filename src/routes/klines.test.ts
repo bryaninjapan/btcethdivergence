@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import { Hono } from 'hono';
 import klines from './klines';
+import { errorMiddleware } from '../lib/error-middleware';
 import type { Env, Kline } from '../types';
+
+/**
+ * Mount `klines` under a Hono instance with the same error-handling wiring
+ * used in production (src/index.ts registers `app.onError` before
+ * `app.route('/', klines)`). Testing the bare `klines` router in isolation
+ * bypasses that `onError` handler entirely, so thrown AppErrors
+ * (ValidationError, DatabaseError) fall through to Hono's default 500
+ * plain-text response instead of the structured JSON envelope the route
+ * actually produces in production.
+ */
+const app = new Hono<{ Bindings: Env }>();
+app.onError((err, c) => errorMiddleware(err, c));
+app.route('/', klines);
 
 /**
  * Minimal fake D1Database that records every bind() call and returns a
@@ -44,7 +59,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
     const startMs = 1627473600000; // -> 1627473600 s
     const endMs = 1627477200000; // -> 1627477200 s
 
-    const res = await klines.request(
+    const res = await app.request(
       `/api/klines?symbol=BTCUSDT&start=${startMs}&end=${endMs}`,
       {},
       makeEnv(db),
@@ -69,7 +84,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   it('floors fractional millisecond timestamps when converting to seconds', async () => {
     const db = new FakeD1Database([]);
     // 1627473600999 ms -> 1627473600.999 s -> floored to 1627473600 s
-    const res = await klines.request(
+    const res = await app.request(
       '/api/klines?symbol=ETHUSDT&start=1627473600999&end=1627477200500',
       {},
       makeEnv(db),
@@ -83,7 +98,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
 
   it('returns an empty array (not an error) when the ms range maps outside stored data', async () => {
     const db = new FakeD1Database([]); // simulates no matching rows in D1
-    const res = await klines.request(
+    const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=9999999999000&end=9999999999999',
       {},
       makeEnv(db),
@@ -97,21 +112,22 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
 
   it('rejects non-numeric timestamp query params with 400', async () => {
     const db = new FakeD1Database([SAMPLE_ROW]);
-    const res = await klines.request(
+    const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=not-a-number&end=1627477200000',
       {},
       makeEnv(db),
     );
 
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
+    expect(body.error?.code).toBe('VALIDATION_ERROR');
     expect(db.calls).toHaveLength(0);
   });
 
   it('rejects missing required query params with 400', async () => {
     const db = new FakeD1Database([SAMPLE_ROW]);
-    const res = await klines.request('/api/klines?symbol=BTCUSDT', {}, makeEnv(db));
+    const res = await app.request('/api/klines?symbol=BTCUSDT', {}, makeEnv(db));
 
     expect(res.status).toBe(400);
     expect(db.calls).toHaveLength(0);
@@ -119,7 +135,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
 
   it('rejects negative timestamp query params with 400 (Phase 10 behavior change)', async () => {
     const db = new FakeD1Database([SAMPLE_ROW]);
-    const res = await klines.request(
+    const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=-1000&end=1627477200000',
       {},
       makeEnv(db),
@@ -127,9 +143,10 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
 
     expect(res.status).toBe(400);
     expect(db.calls).toHaveLength(0); // Guard prevents DB query
-    const body = (await res.json()) as { ok: boolean; error?: string };
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error).toContain('non-negative');
+    expect(body.error?.code).toBe('VALIDATION_ERROR');
+    expect(body.error?.message).toContain('non-negative');
   });
 
   it('returns 500 with a generic message when the DB query throws', async () => {
@@ -146,15 +163,21 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
         };
       }
     }
-    const res = await klines.request(
+    const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=1627473600000&end=1627477200000',
       {},
       makeEnv(new ThrowingDb() as unknown as FakeD1Database),
     );
 
     expect(res.status).toBe(500);
-    const body = (await res.json()) as { ok: boolean; error: string };
+    const body = (await res.json()) as {
+      ok: boolean;
+      error?: { code: string; message: string; details?: unknown };
+    };
     expect(body.ok).toBe(false);
-    expect(body.error).toBe('Internal server error');
+    expect(body.error?.code).toBe('DATABASE_ERROR');
+    // Generic, sanitized message — must never leak the original driver error.
+    expect(body.error?.message).not.toContain('D1 connection lost');
+    expect(body.error?.details).toBeUndefined();
   });
 });

@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
 
+/**
+ * MANUAL DIAGNOSTIC — excluded from `npm test` via vitest.config.ts.
+ *
+ * This suite makes live fetch() calls against the deployed production
+ * domain to inspect Cloudflare Access edge routing behavior. It is
+ * intentionally not part of the automated regression suite because:
+ *   - it depends on live infrastructure state outside this repo's control
+ *     (Cloudflare Access policy config/propagation), so it is
+ *     non-deterministic in CI;
+ *   - it exercises Cloudflare's edge, not this codebase's logic.
+ *
+ * To run it manually, remove the '**\/klines-diagnosis.test.ts' entry from
+ * `test.exclude` in vitest.config.ts, then `npx vitest run src/routes/klines-diagnosis.test.ts`.
+ */
 describe('Cloudflare Access routing diagnosis', () => {
   it('PUBLIC: /api/klines should return 200 (no auth required)', async () => {
     const res = await fetch('https://btcethdivergence.bryanlab.cc/api/klines?symbol=BTCUSDT&start=1&end=2');

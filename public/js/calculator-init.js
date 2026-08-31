@@ -37,8 +37,6 @@ function trimZeros(value) {
 
 function formatQuantity(value) {
   if (!Number.isFinite(value)) return '—';
-  if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
-  if (value >= 1e4) return `${(value / 1e3).toFixed(2)}K`;
   return trimZeros(value.toPrecision(6));
 }
 

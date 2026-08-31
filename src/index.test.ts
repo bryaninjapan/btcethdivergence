@@ -12,6 +12,7 @@ const mockEnv: Env = {
       }),
     }),
   } as any,
+  INGEST_TOKEN: 'unused',
   ASSETS: {} as any,
 };
 

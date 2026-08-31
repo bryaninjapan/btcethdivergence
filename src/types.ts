@@ -3,6 +3,12 @@ import type { ErrorCode } from './lib/errors';
 export interface Env {
   DB: D1Database;
   INGEST_TOKEN: string;
+  /**
+   * Static assets binding, configured in wrangler.jsonc under `assets.binding`.
+   * Serves files from ./public (e.g. index.html, charts.html, calculator.html).
+   * Optional: not every Env consumer (e.g. route-level tests) needs to provide it.
+   */
+  ASSETS?: Fetcher;
 }
 
 /**
