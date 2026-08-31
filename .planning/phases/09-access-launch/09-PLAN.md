@@ -152,16 +152,21 @@ Add a simple client-side script to highlight the current page's navigation link:
 
 ### Cloudflare Access Integration
 
+**Deployment Host** (locked decision D-09-02 in CONTEXT.md):
+- Domain: `btcethdivergence.bryanlab.cc`
+- CNAME target: `btcethdivergence.gn01968711.workers.dev`
+- Status: Deployed, DNS propagating
+
 **Setup Steps** (outside the codebase, in Cloudflare dashboard):
 
 1. **Create an Access Application**:
    - Application name: "BTC/ETH Divergence Tracker"
-   - Application domain: `btcethdivergence.com` (or whatever the custom domain is)
-   - Application type: SaaS (or self-hosted if deploying on custom domain)
+   - Application domain: `https://btcethdivergence.bryanlab.cc`
+   - Application type: **Self-hosted** (Workers deployment, not SaaS)
 
 2. **Configure Authentication Policy**:
    - Policy name: "Owner Email Only"
-   - Rule: Allow if user's email matches `gn01968711@gmail.com`
+   - Rule: Allow if user's email matches `gn01968711@gmail.com` (D-09-01 in CONTEXT.md)
    - Fallback: Block all other requests
 
 3. **Configure Login Method**:
@@ -169,7 +174,7 @@ Add a simple client-side script to highlight the current page's navigation link:
    - No additional identity providers needed for this single-owner tool
 
 4. **Setup Page Routes**:
-   - Application URL: `https://btcethdivergence.com`
+   - Application URL: `https://btcethdivergence.bryanlab.cc`
    - Covers all paths: `/`, `/charts.html`, `/calculator.html`, `/api/*`
 
 5. **Test Access**:
@@ -186,13 +191,15 @@ Add a simple client-side script to highlight the current page's navigation link:
 
 ### Task 09-01: Unified Navigation Bar Across All Pages
 
-**Objective**: Add a consistent, shared navigation component to all three pages (Records, Charts, Calculator).
+**Objective**: Add a consistent, shared navigation component to all three pages (Records, Charts, Calculator) with automated active-page detection.
 
 **Files Modified**:
-- `public/index.html` (update header)
-- `public/charts.html` (update header)
-- `public/calculator.html` (update header)
+- `public/index.html` (update header, add nav script include)
+- `public/charts.html` (update header, add nav script include)
+- `public/calculator.html` (update header, add nav script include)
 - `public/css/style.css` (add `.top-nav` and `.nav-links` styles)
+- `public/js/nav.js` (new, extracted active-page detection logic)
+- `public/js/nav.test.ts` (new, vitest tests for nav.js)
 
 **Deliverables**:
 
@@ -206,8 +213,10 @@ Add a simple client-side script to highlight the current page's navigation link:
    - Ensure mobile responsiveness (stack vertically on < 768px)
    - Use consistent color scheme matching existing pages
 
-3. **Active Page Indicator**
-   - Add small script snippet in each page to detect current URL and mark the active link
+3. **Active Page Indicator** (extracted to public/js/nav.js)
+   - Extract active-page detection logic to `public/js/nav.js`
+   - Create `public/js/nav.test.ts` with vitest tests
+   - Include script in each page's footer to initialize active-page marking
    - Active state: underline or color highlight (use `.active` class)
 
 **Checkpoints**:
@@ -216,6 +225,7 @@ Add a simple client-side script to highlight the current page's navigation link:
 - Current page's link is visually highlighted
 - Mobile viewport (375px) shows properly stacked navigation
 - No console errors when navigating between pages
+- **Automated**: `npm run test -- public/js/nav.test.ts` passes (active-page logic tested)
 
 ---
 
@@ -224,8 +234,8 @@ Add a simple client-side script to highlight the current page's navigation link:
 **Objective**: Gate the entire app behind Cloudflare Access authentication, allowing only the owner's email.
 
 **Files Modified**:
-- `wrangler.toml` (may need to add Access route definitions, depending on Cloudflare setup)
-- `.planning/phases/09-access-launch/ACCESS-CONFIG.md` (new, documents setup steps)
+- `wrangler.jsonc` (no changes required; routes already configured via D-09-02)
+- `.planning/phases/09-access-launch/ACCESS-CONFIG.md` (new, documents setup steps and verification)
 
 **Deliverables**:
 
@@ -261,6 +271,19 @@ Add a simple client-side script to highlight the current page's navigation link:
 - After login, user can access all three pages and API endpoints
 - Session persists across page navigation (no re-login required)
 - Logout functionality available (standard Cloudflare Access feature)
+- **Automated verification** (post-deploy):
+  ```bash
+  # Unauthenticated requests to main pages should redirect (HTTP 302)
+  curl -I https://btcethdivergence.bryanlab.cc/ 2>&1 | grep -E "HTTP|Location"
+  curl -I https://btcethdivergence.bryanlab.cc/charts.html 2>&1 | grep -E "HTTP|Location"
+  curl -I https://btcethdivergence.bryanlab.cc/calculator.html 2>&1 | grep -E "HTTP|Location"
+  
+  # Unauthenticated requests to API should return 401 or redirect
+  curl -I https://btcethdivergence.bryanlab.cc/api/records 2>&1 | grep -E "HTTP|Location"
+  curl -I https://btcethdivergence.bryanlab.cc/api/klines 2>&1 | grep -E "HTTP|Location"
+  
+  # Expect: HTTP/2 302 with Location: *.cloudflareaccess.com
+  ```
 
 ---
 
