@@ -169,8 +169,8 @@ Plans:
 **Requirements**: CODE-01 (type safety), CODE-02 (maintainability)
 **Success Criteria** (what must be TRUE):
   1. All backend time operations use `Timestamp` API instead of `Math.floor(ms / 1000)`.
-  2. All frontend time operations use `Timestamp` API for conversions.
-  3. Zero `Math.floor(ms / 1000)` remains in production code.
+  2. All frontend `Math.floor(ms/1000)` conversion patterns use `Timestamp` API (sec→ms adapters excluded per W1 decision).
+  3. Zero `Math.floor(ms / 1000)` remains in production code outside `src/lib/timestamp.ts` (SSoT exception).
   4. `Timestamp` class fully tested with 44/44 unit tests passing.
   5. Code review approval with no HIGH issues.
 **Plans**: 10-01 (backend integration), 10-02 (frontend integration)
