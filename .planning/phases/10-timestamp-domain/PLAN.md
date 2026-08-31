@@ -201,6 +201,26 @@ Currently, timestamp conversions are scattered:
 - **Code Review**: 30-45 min (gsd-code-review, fix CRITICAL/HIGH if any)
 - **Total**: ~4-5 hours focused work (roughly 1 full day)
 
+### Plan 10-03: Code Review & Verification (1 hour)
+
+**Goal**: Verify all changes pass code review with no HIGH/CRITICAL issues
+
+**Files under review**:
+- `src/lib/db.ts`, `src/lib/binance.ts`, `src/routes/klines.ts` (backend)
+- `public/js/charts.js`, `public/js/datetime.js`, `public/js/records.js` (frontend)
+- `public/js/timestamp.js` (new file)
+
+**Tasks**:
+- [ ] Run code review: `gsd-code-review`
+- [ ] Fix CRITICAL issues if any (should be none)
+- [ ] Fix HIGH issues if any (should be none)
+- [ ] MEDIUM issues: fix if time permits, document if deferred
+- [ ] Verify backfill script: `npx tsx scripts/backfill-fetcher.mts --dry-run`
+- [ ] Manual UAT: Charts page and records page fully functional
+- [ ] Commit code review results (if any fixes made)
+
+**Success**: Code review clean (no HIGH/CRITICAL), backfill verified, UAT pass.
+
 ---
 
 ## Next Steps After Phase 10
