@@ -180,6 +180,52 @@ Plans:
 - [ ] 10-01: Backend integration (db.ts, klines.ts, types.ts)
 - [ ] 10-02: Frontend integration (charts.js, records.js)
 
+## Quick Tasks & Architecture Improvements
+
+These are lightweight refactoring and code quality improvements executed between phases, tracked in `.planning/quick/`.
+
+### Architecture Review Candidates
+
+**Goal**: Systematically improve code quality, reduce duplication, and establish reusable patterns post-v1.0.
+
+**Execution Order** (user-prioritized):
+
+1. [x] **#2 Time Domain Abstraction** — Completed in Phase 10 ✅
+   - Timestamp class consolidates scattered `Math.floor(ms/1000)` patterns
+   - Type-safe conversion at API boundaries
+
+2. [x] **#5 Shared Enum Definition** — COMPLETED ✅ (2026-09-01)
+   - **Problem**: `divergenceType` enum defined in 2 places (validate.ts lines 3 & 33); TYPE_LABELS hardcoded in records.js
+   - **Solution**: 
+     - Created `src/domains/divergence.ts` — single source of truth for DIVERGENCE_TYPES + TYPE_LABELS
+     - Created `public/js/divergence.js` — frontend mirror constants
+     - Refactored `validate.ts` to import + use DIVERGENCE_TYPES (eliminated duplicate)
+     - Refactored `records.js` to import TYPE_LABELS
+   - **Benefit**: Type updates now affect 2 files instead of 3; no more duplication
+   - **Commit**: `0d7aa23`
+
+3. [ ] **#7 Improved Error Handling & Structured Responses** — Next
+   - Structured error envelopes with codes and context
+   - Consistent error messaging across endpoints
+   - User-friendly error text vs. internal debugging info
+
+4. [ ] **#3 Centralized Validation Framework**
+   - Extract common validation patterns from multiple endpoints
+   - Reduce DRY violations in validation logic
+
+5. [ ] **#1 Parameter Objects & Service Layer**
+   - Large refactoring (depends on #2–#4 completion)
+   - Abstract route handlers into service layer
+   - Group related parameters into objects
+
+6. [ ] **#4 Frontend Data Isolation** (later, non-critical)
+   - Isolate global state in frontend
+   - Reduce implicit dependencies between modules
+
+7. [ ] **#6 SQL Generation Safety** (v2, backfill-only)
+   - Sanitize dynamic SQL generation in backfill operations
+   - Relevant only for admin/internal routes
+
 ## Progress
 
 **Execution Order:**

@@ -60,6 +60,15 @@
 - [ ] **INFRA-05**: `.dev.vars` and `.wrangler/` are in `.gitignore` (no secrets in public repo)
 - [ ] **INFRA-06**: Navigation bar allows switching between Records, Charts, and Calculator pages
 
+### Code Quality & Maintainability
+
+- [x] **CODE-01**: Divergence type definitions are unified across backend (validate.ts) and frontend (records.js) — single source of truth, no duplication ✅
+- [ ] **CODE-02**: Error handling is structured with consistent error codes, messages, and context across all endpoints
+- [ ] **CODE-03**: Validation logic is centralized (DRY principle) — common patterns extracted, reused across endpoints
+- [ ] **CODE-04**: Route handlers follow service layer pattern — business logic separated from HTTP concerns
+- [ ] **CODE-05**: Frontend state management is isolated — no implicit global dependencies between modules
+- [ ] **CODE-06**: SQL generation in admin routes is safe from injection — dynamic queries are parameterized or avoided
+
 ## v2 Requirements
 
 ### Analytics
@@ -130,12 +139,19 @@
 | INFRA-04 | Phase 5 | Pending |
 | INFRA-05 | Phase 1 | Pending |
 | INFRA-06 | Phase 5 | Pending |
+| CODE-01 | Quick Task #5 | ✅ Complete |
+| CODE-02 | Quick Task #7 | Planned |
+| CODE-03 | Quick Task #3 | Planned |
+| CODE-04 | Quick Task #1 | Planned |
+| CODE-05 | Quick Task #4 | Planned |
+| CODE-06 | Quick Task #6 | Planned (v2) |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
+- v1 requirements: 35 feature requirements + 6 code quality requirements = 41 total
+- Mapped to phases/tasks: 41
 - Unmapped: 0 ✓
+- Completed: CODE-01 ✅
 
 ---
 *Requirements defined: 2026-08-30*
-*Last updated: 2026-08-30 after initial definition*
+*Last updated: 2026-09-01 — added Code Quality section; CODE-01 (Shared Enum) completed*
