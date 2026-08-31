@@ -57,7 +57,11 @@ describe('Calculator UI Integration', () => {
     const initCode = fs.readFileSync(initPath, 'utf-8');
 
     // Execute in JSDOM context (simplified for testing)
-    // In real E2E, this would happen naturally in browser
+    // In real E2E, this would happen naturally in browser.
+    // Note: use dom.window.Function with explicit `window`/`document` params so
+    // the code runs against THIS JSDOM instance, not vitest's global scope
+    // (window.eval() runs in the vitest global scope and cannot see the
+    // manually-created JSDOM document).
     const wrappedCode = `
       const RESULT_FIELDS = ['position-size', 'sl-amount', 'tp-amount', 'rr-ratio', 'loss-rate', 'gain-rate'];
       const INPUT_IDS = ['margin', 'entry-price', 'stop-loss', 'take-profit', 'leverage'];
@@ -140,7 +144,7 @@ describe('Calculator UI Integration', () => {
           clearResults();
           return;
         }
-        render(calculatePosition(readForm()));
+        render(window.calculatePosition(readForm()));
       }
 
       const form = el('calculator-form');
@@ -153,7 +157,8 @@ describe('Calculator UI Integration', () => {
     `;
 
     try {
-      window.eval(wrappedCode);
+      // Run the init code scoped to this JSDOM instance's window/document.
+      dom.window.Function('window', 'document', wrappedCode)(dom.window, dom.window.document);
     } catch (e) {
       console.error('Failed to load calculator init in JSDOM:', e);
     }

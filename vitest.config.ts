@@ -8,6 +8,10 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      // Playwright E2E specs are run via `npx playwright test`, not `npm test`.
+      // Excluding them prevents vitest from collecting Playwright's test()
+      // definitions, which collide with vitest's global test runner.
+      '**/e2e/**',
       // Live-network diagnostic script, not a unit/integration test of app
       // code: it makes real fetch() calls against the deployed production
       // domain to inspect Cloudflare Access edge behavior. It is
