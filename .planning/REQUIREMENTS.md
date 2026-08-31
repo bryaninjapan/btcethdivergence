@@ -53,7 +53,10 @@
 - [ ] **INFRA-01**: Project deploys as a single Cloudflare Worker with Static Assets binding (not separate Pages + Workers)
 - [ ] **INFRA-02**: API routes use Hono router with JSON envelope response format (`{ok, data|error}`)
 - [ ] **INFRA-03**: POST/PUT request bodies are validated with Zod schemas at the Worker boundary
-- [ ] **INFRA-04**: Cloudflare Access protects both the static UI and all `/api/*` routes (email OTP, single-email allow policy)
+- [ ] **INFRA-04**: Cloudflare Access protects restricted routes with layered authentication:
+  - UI and records APIs (`/`, `/charts.html`, `/calculator.html`, `/api/records`) → email OTP (single owner email allow-listed)
+  - Public data APIs (`/api/klines`) → no authentication required (Binance public data; caching and serving for chart display)
+  - Admin APIs (`/api/admin/*`) → Cloudflare Access Service Token (revocable, time-limited) + application-level INGEST_TOKEN
 - [ ] **INFRA-05**: `.dev.vars` and `.wrangler/` are in `.gitignore` (no secrets in public repo)
 - [ ] **INFRA-06**: Navigation bar allows switching between Records, Charts, and Calculator pages
 

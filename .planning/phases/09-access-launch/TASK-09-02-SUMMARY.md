@@ -112,11 +112,12 @@ env:
 
 ### Phase 3: Configure Access Policies
 
-**Policy 1 (Owner Email for UI + Data APIs)**:
+**Policy 1 (Owner Email for UI + Records APIs)**:
 - Name: `Owner Email Only`
 - Decision: `Allow`
-- Paths: `/`, `/charts.html`, `/calculator.html`, `/api/records*`, `/api/klines*`
+- Paths: `/`, `/charts.html`, `/calculator.html`, `/api/records*`
 - Require: Email (gn01968711@gmail.com)
+- Note: `/api/klines*` is public (no Access policy needed — Binance public data)
 
 **Policy 2 (Service Token for Admin APIs)**:
 - Name: `Service Token for Admin APIs`

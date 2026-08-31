@@ -203,7 +203,7 @@ Read replicas propagate asynchronously; without pinning a session to the primary
 
 - [ ] **Backfill:** "It backfilled some data" is not the same as "it backfilled all ~43,800 candles per symbol with no gaps" — verify by counting rows and checking for consecutive `open_time` gaps (`open_time` deltas should all equal 3600s), not just eyeballing the chart.
 - [ ] **Cron sync:** Confirm the cron actually fires on schedule in the deployed (not local dev) environment, and specifically confirm it's registered on a Worker, not a Pages project (Pitfall 2) — check the Cloudflare dashboard's Cron Triggers panel, don't just trust `wrangler.toml`.
-- [ ] **Cloudflare Access:** "Site asks for a password" is not the same as "every API route also requires auth" — test `/api/records` and `/api/klines` directly (curl, no cookies) after setup.
+- [ ] **Cloudflare Access:** "Site asks for a password" is not the same as "every API route also requires auth" — test `/api/records` requires auth (curl returns 302), but `/api/klines` should be public (curl returns 200 with data) after setup.
 - [ ] **Chart sync:** "Charts scroll together on the happy path" is not the same as "charts stay in sync when one symbol has a data gap the other doesn't" — test with a deliberately incomplete range.
 - [ ] **Time zone consistency:** "Records save and display correctly" is not the same as "the time saved matches the actual UTC candle you were looking at" — cross-check a manually created record's timestamp against the exact Binance candle boundary.
 - [ ] **Duplicate-safe cron re-runs:** "Cron ran and inserted data" is not the same as "cron can be safely re-run/retried without creating duplicate or corrupted rows" — verify `INSERT OR IGNORE` behavior by manually re-triggering the sync twice in a row.
@@ -228,7 +228,7 @@ Read replicas propagate asynchronously; without pinning a session to the primary
 | Binance rate-limit weight mishandled | Phase 1 | Backfill client reads `X-MBX-USED-WEIGHT-1M` and honors `Retry-After`; paced requests, not a tight loop |
 | D1 read-after-write staleness | Phase 2 | POST/PUT endpoints use `RETURNING` instead of write-then-refetch |
 | Chart time-sync feedback loops / gap handling | Phase 3 | Sync tested against a deliberately gapped dataset, not just a clean continuous range |
-| Access not covering API routes | Phase 5 | Unauthenticated curl against `/api/records` and `/api/klines` is rejected after Access setup |
+| Access not covering API routes | Phase 5 | Unauthenticated curl against `/api/records` is rejected (302 redirect); `/api/klines` is public (200 with data) |
 
 ## Sources
 

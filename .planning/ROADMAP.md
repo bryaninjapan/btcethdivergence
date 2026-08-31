@@ -150,11 +150,12 @@ Plans:
 **Requirements**: INFRA-04, INFRA-06
 **Success Criteria** (what must be TRUE):
   1. User can switch between Records, Charts, and Calculator pages via a shared navigation bar.
-  2. An unauthenticated request to the site or to any `/api/*` route is blocked by Cloudflare Access:
+  2. An unauthenticated request to the site or to any restricted route is blocked by Cloudflare Access:
      - UI routes (`/`, `/charts.html`, `/calculator.html`) redirect to email OTP login challenge
-     - Data API routes (`/api/records`, `/api/klines`) require owner email (email OTP, Policy 1)
+     - Data API routes (`/api/records`) require owner email (email OTP, Policy 1)
+     - Public data API routes (`/api/klines`) are accessible without authentication (Binance public data)
      - Admin API routes (`/api/admin/*`) require Service Token (Policy 2)
-  3. Only the owner's allow-listed email can complete the Access login and reach the UI and data APIs.
+  3. Only the owner's allow-listed email can complete the Access login and reach the UI and records APIs.
 **Plans**: TBD
 **UI hint**: yes
 
