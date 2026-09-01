@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { Timestamp } from '../lib/timestamp';
+import { TemporalConverter } from '../domains/temporal-api';
 import { ValidationError } from '../lib/errors';
 import { klinesService } from '../services/klines.service';
 import type { ApiResponse, Env, Kline } from '../types';
@@ -26,9 +26,9 @@ klines.get('/api/klines', async (c) => {
     throw new ValidationError('query', 'Timestamps must be non-negative');
   }
 
-  // Convert milliseconds to seconds for database query using Timestamp API
-  const startSec = Timestamp.fromMillis(startMs).toSeconds();
-  const endSec = Timestamp.fromMillis(endMs).toSeconds();
+  // Convert milliseconds to seconds for database query using TemporalConverter
+  const startSec = TemporalConverter.msToSec(startMs);
+  const endSec = TemporalConverter.msToSec(endMs);
 
   const rows = await klinesService.queryKlines(c.env.DB, symbol, startSec, endSec);
   const response: ApiResponse<Kline[]> = {

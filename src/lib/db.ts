@@ -1,5 +1,5 @@
 import { buildKlineInsertChunks } from './kline-insert';
-import { Timestamp } from './timestamp';
+import { TemporalConverter } from '../domains/temporal-api';
 import type { DivergenceRecord, Env, Kline } from '../types';
 
 function escapeLikeWildcards(s: string): string {
@@ -49,7 +49,7 @@ export async function createRecord(
   db: D1Database,
   payload: { start_time: number; end_time: number; type: string; msb?: string; notes?: string; tags?: string },
 ): Promise<DivergenceRecord> {
-  const now = Timestamp.now().toSeconds();
+  const now = TemporalConverter.dateToSec(new Date());
   const result = await db
     .prepare(
       'INSERT INTO divergence_records (start_time, end_time, type, msb, notes, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *',
@@ -89,7 +89,7 @@ export async function updateRecord(
     msb: payload.msb ?? existing.msb,
     notes: payload.notes ?? existing.notes,
     tags: payload.tags ?? existing.tags,
-    updated_at: Timestamp.now().toSeconds(),
+    updated_at: TemporalConverter.dateToSec(new Date()),
   };
   await db
     .prepare(
@@ -125,7 +125,7 @@ export async function setBackfillCursor(
   db: D1Database,
   symbol: string,
   cursor: number,
-  now = Timestamp.now().toSeconds(),
+  now = TemporalConverter.dateToSec(new Date()),
 ): Promise<void> {
   await db
     .prepare(
