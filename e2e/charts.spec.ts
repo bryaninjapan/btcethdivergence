@@ -68,8 +68,11 @@ test.describe('Charts E2E', () => {
       }
     });
 
-    // Wait for sync to happen
-    await page.waitForTimeout(100);
+    // Wait for ETH chart to sync by checking its range changed
+    await page.waitForFunction(() => {
+      const ethRange = (window as any).__test_charts?.ethChart?.timeScale()?.getVisibleRange?.();
+      return ethRange && ethRange.to > 0;
+    }, { timeout: 5000 });
 
     // Check that ETH chart has same zoom level
     const ethRangeAfter = await page.evaluate(() => {
