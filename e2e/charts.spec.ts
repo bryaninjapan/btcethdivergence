@@ -111,7 +111,15 @@ test.describe('Charts E2E', () => {
   });
 
   test('should handle time range navigation', async ({ page }) => {
-    // Get current visible time range
+    // Wait for chart to be fully initialized with visible range
+    // This prevents the race condition where getVisibleRange() returns undefined
+    await page.waitForFunction(() => {
+      const w = window as any;
+      const range = w.__test_charts?.btcChart?.timeScale()?.getVisibleRange?.();
+      return !!(range && typeof range.from === 'number' && typeof range.to === 'number');
+    }, { timeout: 5000 });
+
+    // Now get current visible time range (guaranteed to be defined)
     const initialRange = await page.evaluate(() => {
       const timeScale = (window as any).__test_charts?.btcChart?.timeScale();
       return timeScale?.getVisibleRange();
