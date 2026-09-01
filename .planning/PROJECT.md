@@ -43,7 +43,12 @@
 ## Context
 
 - 擁有者有加密貨幣交易經驗，主要觀察 BTC 和 ETH 的價格背離
-- 不同步類型有三種：時間差（time_lag）、結構背離（structural）、完全反向（opposite）
+- 背離類型基於 K-線高低點組合（4 種），加上 Major Structure Break (MSB) 標記：
+  1. **BTC HH + ETH LH**: BTC 創新高，ETH 反彈不力（ETH 弱）
+  2. **BTC LH + ETH HH**: BTC 反彈，ETH 創新高（ETH 強）
+  3. **BTC LL + ETH HL**: BTC 創新低，ETH 支撐（ETH 強）
+  4. **BTC HL + ETH LL**: BTC 支撐，ETH 創新低（BTC 強）
+  - 每個記錄可標記是否有 **Major Structure Break (MSB: yes/no)**
 - 歷史數據需要從 2021 年 1 月開始回溯，手動回看歷史 K 線逐條標記
 - 擁有者已有 Cloudflare 使用經驗（soapwavehealing 專案）
 - 前端 UI 計劃用 Google AI Studio 生成，再手動整合
@@ -72,7 +77,12 @@
 
 ## Current Status
 
-**Milestone**: v1.0 ✅ COMPLETE  
+**Milestone**: v1.0 ✅ COMPLETE (Phases 1-13)
+
+**Next Steps**:
+1. Phase 14: TradingView UI Redesign (user priority: "definitely phase 14")
+2. Phase 15: Technical Debt Cleanup (5 architecture improvements, 5-7 days total)
+   - Quick improvements already done: SQL Safety QueryBuilder (2026-09-02)  
 **Live URL**: https://btcethdivergence.bryanlab.cc  
 **Deployment**: 2026-09-01  
 **Phases**: 9/9 complete (100%)  

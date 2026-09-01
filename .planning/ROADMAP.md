@@ -23,7 +23,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Access & Launch Hardening** - Shared navigation plus Cloudflare Access gating the whole app ✅
 - [x] **Phase 10: Timestamp Domain Abstraction** - Eliminate scattered time conversion logic, centralize via strongly-typed Timestamp class ✅
 - [x] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware ✅
-- [ ] **Phase 12: Service Layer Pattern** - Extract business logic from route handlers, implement service layer for improved testability and reusability
+- [x] **Phase 12: Service Layer Pattern** - Extract business logic from route handlers, implement service layer for improved testability and reusability ✅
+- [x] **Phase 13: Frontend Data Isolation & UI Enhancement** - Refactor frontend state (charts.js, records.js) from globals to isolated modules; apply TradingView-style K-line colors and MSB indicator ✅
+- [ ] **Phase 14: TradingView UI Redesign** - Enhance K-line visualization with TradingView-style UI (user's explicit choice)
+- [ ] **Phase 15: Technical Debt Cleanup** - Implement architecture improvements: Time Domain Abstraction, Shared Enums, Error Handling, Validation Framework, Parameter Objects & Service Layer
 
 ## Phase Details
 
@@ -223,6 +226,30 @@ Plans:
 - [ ] 12-03: Admin service extraction & testing (0.5 day)
 - [ ] 12-04: Test database setup & E2E verification (0.5 day)
 - [ ] 12-05: Code review & documentation (0.5 day)
+
+### Phase 13: Frontend Data Isolation & UI Enhancement
+**Goal**: Refactor frontend state management from global variables to isolated, testable module instances. Apply TradingView-style visual improvements (K-line colors, indicator marks).
+**Depends on**: Phase 12
+**Requirements**: CODE-05 (Frontend Testability), UI-01 (Chart Styling)
+**Success Criteria** (what must be TRUE):
+  1. Zero global variables in `charts.js`, `records.js` modules.
+  2. State encapsulated in factory functions: `createChartState()`, `createRecordsManager()`.
+  3. 350+ unit tests passing with ≥85% code coverage (frontend + backend).
+  4. E2E verification: all user journeys (charts, records, calculator) work correctly.
+  5. K-line colors render in TradingView style (green bullish, red bearish).
+  6. Indicator marks display divergence events on charts with correct colors/positions.
+  7. Code review complete: zero HIGH/CRITICAL issues.
+  8. Documentation updated: README, LEARNING.md, VERIFICATION.md.
+**Plans**: 13-01 (charts state), 13-02 (records state), 13-03 (form abstraction), 13-04 (review + verification), 13b (UI improvements)
+**Status**: Plan check ready
+
+Plans:
+- [ ] 13-01: Charts state refactoring (createChartState) (2 days)
+- [ ] 13-02: Records state refactoring (createRecordsManager) (1.5 days)
+- [ ] 13-03: Form binding abstraction (FormBinder) (1 day)
+- [ ] 13-04: Code review & integration verification (0.5 days)
+- [ ] 13b-01: K-line color styling (0.5 days)
+- [ ] 13b-02: Indicator mark visualization (1 day)
 
 ## Quick Tasks & Architecture Improvements
 
