@@ -6,7 +6,7 @@ import {
   monthOptions,
   yearOptions,
 } from './datetime.js';
-import { recordToRange } from './chart-range.js';
+import { recordToRange } from './managers/ChartManager.js';
 import { DIVERGENCE_TYPES, TYPE_LABELS, MSB_LABELS } from './divergence.js';
 import { createRecordsManager } from './records-state.js';
 import {
