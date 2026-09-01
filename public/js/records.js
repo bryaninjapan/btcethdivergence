@@ -7,7 +7,7 @@ import {
   yearOptions,
 } from './datetime.js';
 import { recordToRange } from './chart-range.js';
-import { TYPE_LABELS, MSB_LABELS } from './divergence.js';
+import { DIVERGENCE_TYPES, TYPE_LABELS, MSB_LABELS } from './divergence.js';
 import { createRecordsManager } from './records-state.js';
 import {
   fillSelect,
@@ -29,6 +29,38 @@ function typeLabel(type) {
 
 function msbLabel(msb) {
   return MSB_LABELS[msb] || msb;
+}
+
+/**
+ * Populate the type filter <select> and the record-dialog type radios at
+ * runtime from the shared DIVERGENCE_TYPES / TYPE_LABELS constants so the
+ * frontend stays in sync with the backend single source of truth without
+ * hardcoding divergence strings in index.html.
+ */
+function populateTypeOptions() {
+  const filter = document.querySelector('#type-filter');
+  for (const type of DIVERGENCE_TYPES) {
+    const option = document.createElement('option');
+    option.value = type;
+    option.textContent = TYPE_LABELS[type] || type;
+    filter.appendChild(option);
+  }
+
+  const options = document.querySelector('#type-options');
+  options.replaceChildren();
+  DIVERGENCE_TYPES.forEach((type, index) => {
+    const label = document.createElement('label');
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'type';
+    radio.value = type;
+    if (index === 0) {
+      radio.checked = true;
+      radio.defaultChecked = true;
+    }
+    label.append(radio, ` ${TYPE_LABELS[type] || type}`);
+    options.appendChild(label);
+  });
 }
 
 function renderTable(records) {
@@ -229,6 +261,7 @@ function wireRowActions() {
 
 document.addEventListener('DOMContentLoaded', () => {
   wireRowActions();
+  populateTypeOptions();
   document.querySelector('#type-filter').addEventListener('change', () => {
     loadRecords().catch(showFilterError);
   });
