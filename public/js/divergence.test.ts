@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { DIVERGENCE_TYPES, TYPE_LABELS } from './divergence.js';
 
 describe('divergence.js shared constants', () => {
-  it('exposes the three supported divergence types', () => {
-    expect(DIVERGENCE_TYPES).toEqual(['time_lag', 'structural', 'opposite']);
+  it('exposes the four supported divergence types (K-line based)', () => {
+    expect(DIVERGENCE_TYPES).toEqual([
+      'btc_hh_eth_lh',
+      'btc_lh_eth_hh',
+      'btc_ll_eth_hl',
+      'btc_hl_eth_ll',
+    ]);
   });
 
   it('labels every divergence type (mirrors backend src/domains/divergence.ts)', () => {
@@ -15,9 +20,10 @@ describe('divergence.js shared constants', () => {
 
   it('labels match the backend single source of truth (src/domains/divergence.ts)', () => {
     expect(TYPE_LABELS).toEqual({
-      time_lag: '時間差',
-      structural: '結構背離',
-      opposite: '完全反向',
+      btc_hh_eth_lh: 'BTC 創新高 / ETH 反彈不力',
+      btc_lh_eth_hh: 'BTC 反彈 / ETH 創新高',
+      btc_ll_eth_hl: 'BTC 創新低 / ETH 支撐',
+      btc_hl_eth_ll: 'BTC 支撐 / ETH 創新低',
     });
   });
 });

@@ -70,16 +70,55 @@ None blocking v1.0 shipment. Deferred to future releases:
 ### What's Next
 
 **v1.0 is SHIPPED and LIVE.** Future work:
-- Phase 14+: User-driven feature requests (e.g., Phase 14 TradingView UI redesign if requested)
-- Technical debt: Architecture improvements available in backlog (Time Domain, Shared Enums, Error Handling v2, Validation v2, Parameter Objects)
+- Phase 14-17: Architecture deepening milestone — consolidate temporal logic, unify types, refactor frontend state machine, elevate service layer
+- Phase 18+: User-driven feature requests (analytics, enhanced charts, etc.)
+
+---
+
+## v2.0 Milestone: Architecture Deepening 🏗️
+
+**Planned**: 2026-09-02  
+**Target Duration**: Phase 14-17 (4 phases, estimated 7 days work + 2-3 days testing)  
+**Velocity**: Based on v1.0 analysis: ~2 days per architecture-focused phase  
+**Focus**: Code quality, maintainability, testability  
+
+### Phase Breakdown
+
+| Phase | Focus | Estimated Time | Dependency | Priority |
+|-------|-------|-----------------|------------|----------|
+| 14 | Temporal logic + divergence unification | 2 days | Phase 13 | High (foundation) |
+| 15 | Chart state machine refactoring | 2-3 days | Phase 14 | High (frontend) |
+| 16 | Records repository deepening | 2 days | Phase 14 | High (backend) |
+| 17 | Calculator validation (optional) | 0.5 days | Phase 16 | Low (future prep) |
+
+### Key Metrics Target
+
+| Metric | v1.0 Baseline | v2.0 Target | Rationale |
+|--------|---------------|-------------|-----------|
+| Code Coverage | 86.12% | ≥88% | Deepen test coverage in refactored modules |
+| Module Depth | Shallow (avg 3-4 level) | Medium (avg 4-5 levels) | Service/repository elevation, state machine unification |
+| Duplication Index | Medium (divergence types, time logic) | Low (< 3% DRY violations) | Consolidate time-domain, unify types |
+| Route Complexity | 25-40 lines/handler | ≤15 lines/handler | Extract logic to service/repository layer |
+| Frontend Global State | Present (multiple modules) | Eliminated (ChartManager) | Encapsulate state in unified manager |
+
+### Quality Gates
+
+Before marking phase complete:
+- [ ] Code review zero HIGH issues
+- [ ] Unit tests ≥80% per module
+- [ ] E2E tests pass (critical workflows)
+- [ ] No performance regressions
+- [ ] TypeScript compilation clean
+- [ ] Documentation updated
 
 ---
 
 ## Session Summary
 
-**Start Date**: 2026-08-30  
-**Completion Date**: 2026-09-02  
-**Total Sessions**: Multiple  
-**Output**: Full-stack production application
+**v1.0 Start Date**: 2026-08-30  
+**v1.0 Completion Date**: 2026-09-02  
+**v2.0 Start Date**: 2026-09-02  
+**Total v1.0 Sessions**: Multiple  
+**Output**: Full-stack production application + architecture improvement roadmap
 
 ---

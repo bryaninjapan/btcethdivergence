@@ -16,7 +16,8 @@ const RECORD_1 = {
   id: 1,
   start_time: 1600000000,
   end_time: 1600003600,
-  type: 'time_lag',
+  type: 'btc_hh_eth_lh',
+  msb: 'yes',
   notes: 'first divergence',
   tags: 'btc',
   created_at: 1,
@@ -27,7 +28,8 @@ const RECORD_2 = {
   id: 2,
   start_time: 1600004000,
   end_time: 1600007600,
-  type: 'structural',
+  type: 'btc_lh_eth_hh',
+  msb: 'no',
   notes: 'second',
   tags: 'eth',
   created_at: 2,
@@ -103,12 +105,12 @@ describe('records.js DOM wiring (real file)', () => {
   it('reloads with a type filter when #type-filter changes', async () => {
     fetchMock.mockClear();
     const select = el('type-filter') as HTMLSelectElement;
-    select.value = 'structural';
+    select.value = 'btc_lh_eth_hh';
     select.dispatchEvent(new Event('change', { bubbles: true }));
 
     await vi.waitFor(() => {
       const url = fetchMock.mock.calls[0][0] as string;
-      expect(url).toContain('type=structural');
+      expect(url).toContain('type=btc_lh_eth_hh');
     });
   });
 
@@ -167,7 +169,7 @@ describe('records.js DOM wiring (real file)', () => {
     await vi.waitFor(() => {
       expect(el('delete-dialog').hasAttribute('open')).toBe(true);
     });
-    expect(el('delete-summary').textContent).toContain('時間差');
+    expect(el('delete-summary').textContent).toContain('BTC 創新高 / ETH 反彈不力');
   });
 
   it('saves a new record via POST and reloads the list', async () => {

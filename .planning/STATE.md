@@ -1,14 +1,14 @@
 ---
 gsd_state_version: '1.0'
-status: complete
-milestone: v1.0
+status: in_progress
+milestone: v2.0
 progress:
-  total_phases: 13
-  completed_phases: 13
-  planned_phases: 0
-  total_requirements: 35
-  completed_requirements: 35
-  percent: 100
+  total_phases: 4
+  completed_phases: 0
+  planned_phases: 4
+  total_requirements: 0
+  completed_requirements: 0
+  percent: 0
 ---
 
 # Project State
@@ -17,16 +17,17 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-09-02)
 
-**Milestone:** v1.0 ✅ COMPLETE
+**Milestone:** v1.0 ✅ COMPLETE | v2.0 🚀 STARTING
 **Core value:** 讓使用者能快速記錄、回顧和分析 BTC 與 ETH 之間的價格背離事件，累積可靠的歷史觀察數據。
 
 ## Current Position
 
-Phase: 13 of 13 (Frontend Data Isolation & UI Enhancement) ✅ COMPLETE
-Status: ✅ **MILESTONE v1.0 COMPLETE** — All 13 phases shipped, 35/35 requirements met, production live.
-Last activity: 2026-09-02 — Phase 13 finalized, SQL Safety quick improvement completed, milestone closed.
+**Active Milestone**: v2.0 Architecture Deepening (Phases 14-17)
+**Current Phase**: Phase 14 (Architecture Foundations: Temporal + Divergence) — PLANNING
+**Status**: 🚀 **STARTING v2.0 MILESTONE** — v1.0 complete, architecture improvement roadmap active
+**Last activity**: 2026-09-02 — Milestone v2.0 planning complete, 4 phases defined, Phase 14 ready to plan
 
-Progress: [████████████] 100% v1.0 SHIPPED
+Progress: [░░░░░░░░░░] 0% v2.0 (4 phases planned)
 
 ## Performance Metrics
 

@@ -47,17 +47,18 @@ export async function queryKlines(
 
 export async function createRecord(
   db: D1Database,
-  payload: { start_time: number; end_time: number; type: string; notes?: string; tags?: string },
+  payload: { start_time: number; end_time: number; type: string; msb?: string; notes?: string; tags?: string },
 ): Promise<DivergenceRecord> {
   const now = Timestamp.now().toSeconds();
   const result = await db
     .prepare(
-      'INSERT INTO divergence_records (start_time, end_time, type, notes, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *',
+      'INSERT INTO divergence_records (start_time, end_time, type, msb, notes, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *',
     )
     .bind(
       payload.start_time,
       payload.end_time,
       payload.type,
+      payload.msb ?? 'no',
       payload.notes ?? '',
       payload.tags ?? '',
       now,
@@ -73,7 +74,7 @@ export async function createRecord(
 export async function updateRecord(
   db: D1Database,
   id: number,
-  payload: Partial<{ start_time: number; end_time: number; type: string; notes?: string; tags?: string }>,
+  payload: Partial<{ start_time: number; end_time: number; type: string; msb?: string; notes?: string; tags?: string }>,
 ): Promise<DivergenceRecord | null> {
   const existing = await db
     .prepare('SELECT * FROM divergence_records WHERE id = ?')
@@ -85,18 +86,20 @@ export async function updateRecord(
   const merged: DivergenceRecord = {
     ...existing,
     ...payload,
+    msb: payload.msb ?? existing.msb,
     notes: payload.notes ?? existing.notes,
     tags: payload.tags ?? existing.tags,
     updated_at: Timestamp.now().toSeconds(),
   };
   await db
     .prepare(
-      'UPDATE divergence_records SET start_time = ?, end_time = ?, type = ?, notes = ?, tags = ?, updated_at = ? WHERE id = ?',
+      'UPDATE divergence_records SET start_time = ?, end_time = ?, type = ?, msb = ?, notes = ?, tags = ?, updated_at = ? WHERE id = ?',
     )
     .bind(
       merged.start_time,
       merged.end_time,
       merged.type,
+      merged.msb,
       merged.notes,
       merged.tags,
       merged.updated_at,

@@ -56,6 +56,7 @@ export interface DivergenceRecord {
   start_time: number;
   end_time: number;
   type: string;
+  msb: string;
   notes: string;
   tags: string;
   created_at: number;

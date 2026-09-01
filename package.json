@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "typecheck:scripts": "tsc --project scripts",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.include='src/**/*.ts' --coverage.include='public/js/**/*.js' --coverage.thresholds.lines=80"
+    "test:coverage": "vitest run --coverage --coverage.include='src/**/*.ts' --coverage.include='public/js/**/*.js' --coverage.thresholds.lines=85",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "hono": "^4.13.5",

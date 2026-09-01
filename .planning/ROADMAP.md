@@ -25,6 +25,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware ✅
 - [x] **Phase 12: Service Layer Pattern** - Extract business logic from route handlers, implement service layer for improved testability and reusability ✅
 - [x] **Phase 13: Frontend Data Isolation & UI Enhancement** - Refactor frontend state (charts.js, records.js) from globals to isolated modules; apply TradingView-style K-line colors and MSB indicator ✅
+- [ ] **Phase 14: Architecture Foundations (Temporal + Divergence)** - Consolidate time-domain logic into centralized temporal-api module; unify divergence type definitions across backend and frontend
+- [ ] **Phase 15: Frontend State Refactoring (Chart State Machine)** - Merge chart-state.js, chart-range.js, chart-sync.js into unified ChartManager state machine
+- [ ] **Phase 16: Backend Service Deepening (Records Repository)** - Elevate shallow service wrappers into rich RecordsRepository interface with query methods (listWithStats, findByTimeRange, etc.)
+- [ ] **Phase 17: Future-Proofing (Calculator Validation, Optional)** - Extract calculator validation rules into schema-driven module, prepare for future API endpoints
 
 ## Phase Details
 
@@ -303,13 +307,82 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Worker Foundation & Binance Spike | 0/TBD | Not started | - |
-| 2. Kline Backfill Engine | 0/TBD | Not started | - |
-| 3. Historical Load & Cron Sync | 0/TBD | Not started | - |
-| 4. Records Core CRUD | 0/2 | Not started | - |
-| 5. Records Filtering & Time-Entry UX | 0/TBD | Not started | - |
-| 6. Dual Chart Rendering & Time Sync | 0/TBD | Not started | - |
-| 7. Chart Navigation & Record Deep Link | 0/TBD | Not started | - |
-| 8. Leverage Calculator | 0/TBD | Not started | - |
-| 9. Access & Launch Hardening | 0/TBD | Not started | - |
-| 10. Timestamp Domain Abstraction | 0/2 | Ready | - |
+| 14. Architecture Foundations (Temporal + Divergence) | 0/2 | Ready to plan | - |
+| 15. Frontend State Refactoring (Chart State Machine) | 0/3 | Ready to plan | - |
+| 16. Backend Service Deepening (Records Repository) | 0/2 | Ready to plan | - |
+| 17. Future-Proofing (Calculator Validation, Optional) | 0/1 | Ready to plan | - |
+
+---
+
+### Phase 14: Architecture Foundations (Temporal + Divergence)
+**Goal**: Consolidate scattered time-domain logic into a reusable temporal-api module; unify divergence type definitions across backend and frontend.
+**Depends on**: Phase 13
+**Requirements**: CODE-01 (Unified Types), CODE-03 (DRY Validation)
+**Success Criteria** (what must be TRUE):
+  1. New `src/domains/temporal-api.ts` exports `TemporalConverter` class with methods: `msToSec(ms)`, `secToMs(sec)`, `dateToSec(date)`, `secToDate(sec)`, batch conversion utilities.
+  2. All time conversions in 8+ backend modules (db.ts, klines.ts, validate.ts, records.ts, admin.ts, etc.) use `TemporalConverter` instead of scattered `Math.floor(ms/1000)`.
+  3. Divergence type definitions unified: `src/domains/divergence.ts` single source of truth for DIVERGENCE_TYPES + TYPE_LABELS.
+  4. Frontend imports divergence types from new `public/js/api/divergence-types.json` (or .js mirror).
+  5. Zero time conversion logic duplication across backend modules.
+  6. 30+ unit tests verifying temporal boundaries and batch operations.
+  7. Code review complete: zero HIGH issues.
+**Plans**: 14-01 (temporal-api module + backend integration), 14-02 (divergence unification + frontend integration)
+
+Plans:
+- [ ] 14-01: Temporal-api module and backend time conversion consolidation
+- [ ] 14-02: Divergence type unification and frontend integration
+
+### Phase 15: Frontend State Refactoring (Chart State Machine)
+**Goal**: Merge four scattered chart modules (chart-state.js, chart-range.js, chart-sync.js, charts.js) into a single unified ChartManager state machine for better testability, maintainability, and clarity.
+**Depends on**: Phase 14
+**Requirements**: CODE-05 (Frontend Testability), CODE-04 (Service Layer Pattern)
+**Success Criteria** (what must be TRUE):
+  1. New `public/js/managers/ChartManager.ts` (or .js) encapsulates all chart state: visible range, log/linear mode, sync lock state, data cache.
+  2. ChartManager exports: `initCharts()`, `setVisibleRange()`, `toggleLogScale()`, `syncRanges()`, with strict re-entrancy guards.
+  3. chart-state.js, chart-range.js, chart-sync.js files removed; their logic consolidated into ChartManager.
+  4. charts.js refactored to use ChartManager exclusively (≤5 direct Lightweight Charts API calls).
+  5. State transitions machine-testable: all chart interactions produce predictable state changes (no race conditions, no missed events).
+  6. 40+ unit tests verifying state transitions, range sync, and re-entrancy guards.
+  7. E2E tests pass: zoom/pan/sync workflow works correctly.
+  8. Code review complete: zero HIGH issues.
+**Plans**: 15-01 (ChartManager core + state machine), 15-02 (charts.js refactoring), 15-03 (tests + E2E verification)
+
+Plans:
+- [ ] 15-01: ChartManager state machine implementation
+- [ ] 15-02: Refactor charts.js to use ChartManager
+- [ ] 15-03: Unit tests + E2E verification
+
+### Phase 16: Backend Service Deepening (Records Repository)
+**Goal**: Elevate the thin service layer into a rich RecordsRepository with advanced query methods, improving testability and reducing query logic scattered across route handlers.
+**Depends on**: Phase 14
+**Requirements**: CODE-04 (Service Layer Pattern), CODE-03 (DRY Validation)
+**Success Criteria** (what must be TRUE):
+  1. New `src/services/RecordsRepository.ts` exports: `findAll()`, `findById(id)`, `listWithStats()`, `findByTimeRange(start, end)`, `findByType(type)`, `create()`, `update()`, `delete()`.
+  2. All query logic moved from route handlers into RecordsRepository methods (parameterized SQL, no dynamic injection).
+  3. RecordsRepository accepts D1 database instance and temporal-api for time operations.
+  4. Route handlers simplified: ≤10 lines per endpoint, pure HTTP concerns (validation, response formatting).
+  5. 25+ unit tests using Mock D1 verify query correctness, edge cases, and call sequences.
+  6. Integration tests pass: all routes continue to work correctly.
+  7. Code coverage ≥85% for repository layer.
+  8. Code review complete: zero HIGH issues.
+**Plans**: 16-01 (RecordsRepository interface + implementation), 16-02 (route handler refactoring + testing)
+
+Plans:
+- [ ] 16-01: RecordsRepository implementation with advanced queries
+- [ ] 16-02: Route handler refactoring and integration testing
+
+### Phase 17: Future-Proofing (Calculator Validation, Optional)
+**Goal**: Extract calculator validation rules into a schema-driven, reusable module. Prepares for future calculator API endpoints while keeping client-side calculator unchanged.
+**Depends on**: Phase 16
+**Requirements**: CODE-03 (DRY Validation), CODE-04 (Service Layer Pattern)
+**Success Criteria** (what must be TRUE):
+  1. New `src/domains/calculator-rules.ts` exports Zod schemas: `CalculatorInputs`, `CalculatorOutputs` for validation and type safety.
+  2. Client-side calculator logic unchanged (still runs in browser).
+  3. Server-side calculator API ready for Phase 17+: `/api/calculator/validate` and `/api/calculator/compute` endpoints (stubs created, tests written, ready for implementation).
+  4. Schemas shared: frontend and backend import from same `calculator-rules.ts`.
+  5. 15+ unit tests verifying validation rules, edge cases (margin vs. SL, liquidation thresholds).
+  6. Code review complete: zero HIGH issues.
+**Plans**: 17-01 (Calculator validation schemas + API stubs)
+
+Plans:
+- [ ] 17-01: Calculator validation schemas and future API preparation

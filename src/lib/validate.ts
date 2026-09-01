@@ -23,11 +23,13 @@ export function validatePositiveInteger(value: unknown, fieldName = 'id'): numbe
 }
 
 const divergenceType = z.enum(DIVERGENCE_TYPES);
+const msbStatus = z.enum(['yes', 'no']);
 
 const baseFields = {
   start_time: z.number().int(),
   end_time: z.number().int(),
   type: divergenceType,
+  msb: msbStatus.default('no'),
   notes: z.string().max(1000),
   tags: z.string().max(200),
 };

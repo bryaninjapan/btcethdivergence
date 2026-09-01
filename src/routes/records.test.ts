@@ -108,7 +108,8 @@ const EXISTING_RECORD: DivergenceRecord = {
   id: 1,
   start_time: 1600000000,
   end_time: 1600003600,
-  type: 'time_lag',
+  type: 'btc_hh_eth_lh',
+  msb: 'yes',
   notes: 'existing',
   tags: 'tag',
   created_at: 0,
@@ -128,7 +129,7 @@ describe('records CRUD route contract', () => {
         body: JSON.stringify({
           start_time: 1600000000,
           end_time: 1600003600,
-          type: 'time_lag',
+          type: 'btc_hh_eth_lh',
           notes: 'n',
           tags: 't',
         }),
@@ -144,7 +145,7 @@ describe('records CRUD route contract', () => {
     // Verify bound params include the exact values (LOW issue L5 regression)
     expect(db.calls.some((params) => params.includes(1600000000))).toBe(true);
     expect(db.calls.some((params) => params.includes(1600003600))).toBe(true);
-    expect(db.calls.some((params) => params.includes('time_lag'))).toBe(true);
+    expect(db.calls.some((params) => params.includes('btc_hh_eth_lh'))).toBe(true);
   });
 
   it('POST with start_time >= end_time → 400 with SC5 message, no DB write', async () => {
@@ -158,7 +159,7 @@ describe('records CRUD route contract', () => {
         body: JSON.stringify({
           start_time: 1600003600,
           end_time: 1600000000,
-          type: 'time_lag',
+          type: 'btc_hh_eth_lh',
         }),
       },
       makeEnv(db),
@@ -191,7 +192,7 @@ describe('records CRUD route contract', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error?.message).toMatch(/time_lag|structural|opposite/);
+    expect(body.error?.message).toMatch(/btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll/);
     expect(db.prepares).toHaveLength(0);
   });
 
@@ -224,7 +225,7 @@ describe('records CRUD route contract', () => {
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'structural' }), // omit notes and tags
+        body: JSON.stringify({ type: 'btc_lh_eth_hh' }), // omit notes and tags
       },
       makeEnv(db),
     );
@@ -235,7 +236,7 @@ describe('records CRUD route contract', () => {
     // REGRESSION TEST: notes and tags should NOT be cleared
     expect(body.data.notes).toBe('existing notes');
     expect(body.data.tags).toBe('existing tags');
-    expect(body.data.type).toBe('structural');
+    expect(body.data.type).toBe('btc_lh_eth_hh');
   });
 
   it('PUT with reversed times → 400 with SC5 message, no DB write', async () => {
@@ -304,7 +305,7 @@ describe('records CRUD route contract', () => {
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'structural' }),
+        body: JSON.stringify({ type: 'btc_lh_eth_hh' }),
       },
       makeEnv(db),
     );
@@ -375,17 +376,17 @@ describe('records CRUD route contract', () => {
 });
 
 describe('records filter contract (REC-05, REC-06)', () => {
-  it('GET /api/records?type=structural → filters by type, no tags LIKE', async () => {
+  it('GET /api/records?type=btc_lh_eth_hh → filters by type, no tags LIKE', async () => {
     const db = new FakeD1Database();
     db.rows = [{ ...EXISTING_RECORD }];
 
-    const res = await callRecordsRoute('/api/records?type=structural', {}, makeEnv(db));
+    const res = await callRecordsRoute('/api/records?type=btc_lh_eth_hh', {}, makeEnv(db));
 
     expect(res.status).toBe(200);
     expect(db.prepares[0]).toContain('WHERE type = ?');
     expect(db.prepares[0]).toContain('ORDER BY start_time DESC');
     expect(db.prepares[0]).not.toContain('tags LIKE');
-    expect(db.calls[0]).toContain('structural');
+    expect(db.calls[0]).toContain('btc_lh_eth_hh');
   });
 
   it('GET /api/records?tag=btc → tags LIKE partial match with %btc% bound', async () => {
@@ -399,12 +400,12 @@ describe('records filter contract (REC-05, REC-06)', () => {
     expect(db.calls[0]).toContain('%btc%');
   });
 
-  it('GET /api/records?type=structural&tag=btc → both conditions ANDed with both params bound', async () => {
+  it('GET /api/records?type=btc_lh_eth_hh&tag=btc → both conditions ANDed with both params bound', async () => {
     const db = new FakeD1Database();
     db.rows = [{ ...EXISTING_RECORD }];
 
     const res = await callRecordsRoute(
-      '/api/records?type=structural&tag=btc',
+      '/api/records?type=btc_lh_eth_hh&tag=btc',
       {},
       makeEnv(db),
     );
@@ -413,7 +414,7 @@ describe('records filter contract (REC-05, REC-06)', () => {
     expect(db.prepares[0]).toContain('type = ?');
     expect(db.prepares[0]).toContain('tags LIKE ?');
     expect(db.prepares[0]).toContain('AND');
-    expect(db.calls[0]).toContain('structural');
+    expect(db.calls[0]).toContain('btc_lh_eth_hh');
     expect(db.calls[0]).toContain('%btc%');
   });
 
@@ -425,7 +426,7 @@ describe('records filter contract (REC-05, REC-06)', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
     expect(body.ok).toBe(false);
-    expect(body.error?.message).toMatch(/time_lag|structural|opposite/);
+    expect(body.error?.message).toMatch(/btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll/);
     expect(db.prepares).toHaveLength(0);
   });
 
