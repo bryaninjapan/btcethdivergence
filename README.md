@@ -128,8 +128,7 @@ npm run build
 - **Roadmap**: [.planning/ROADMAP.md](.planning/ROADMAP.md) — 各 phase 計劃
 - **Requirements**: [.planning/REQUIREMENTS.md](.planning/REQUIREMENTS.md) — 35 項要求
 - **Phases**: [.planning/phases/](.planning/phases/) — 各 phase 細節
-- **Time Conversions**: [docs/TIMESTAMP-GUIDE.md](docs/TIMESTAMP-GUIDE.md) — TemporalConverter 時間轉換指南
-- **Timestamp Guide**: [docs/TIMESTAMP-GUIDE.md](docs/TIMESTAMP-GUIDE.md) — 時間轉換 API 參考與陷阱
+- **Time Conversions**: [docs/TIMESTAMP-GUIDE.md](docs/TIMESTAMP-GUIDE.md) — TemporalConverter 時間轉換 API 參考與陷阱
 
 ---
 
