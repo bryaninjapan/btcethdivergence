@@ -101,6 +101,14 @@ export class ChartManager {
     this._loader = options.load || null;
     this._toCandle = options.toCandle || null;
 
+    // Validate required scale modes
+    if (!Number.isFinite(this._priceScaleMode.linear)) {
+      throw new TypeError('priceScaleMode must include linear mode (numeric value)');
+    }
+    if (!Number.isFinite(this._priceScaleMode.logarithmic)) {
+      throw new TypeError('priceScaleMode must include logarithmic mode (numeric value)');
+    }
+
     this._scaleMode = ScaleMode.LINEAR;
     this._syncState = SyncState.IDLE;
     this._managerState = ManagerState.INIT;
@@ -195,7 +203,8 @@ export class ChartManager {
       for (const id of this.chartIds()) {
         if (id === sourceId) continue;
         const chart = this._charts[id];
-        if (chart) chart.timeScale().setVisibleLogicalRange({ from: range.from, to: range.to });
+        const ts = chart && chart.timeScale();
+        if (ts) ts.setVisibleLogicalRange({ from: range.from, to: range.to });
       }
       this._emit('rangechange', {
         range: { from: range.from, to: range.to },
@@ -229,7 +238,8 @@ export class ChartManager {
       for (const id of this.chartIds()) {
         if (id === sourceId) continue;
         const target = this._charts[id];
-        if (target) target.timeScale().setVisibleLogicalRange({ from: resolved.from, to: resolved.to });
+        const ts = target && target.timeScale();
+        if (ts) ts.setVisibleLogicalRange({ from: resolved.from, to: resolved.to });
       }
       this._emit('rangechange', {
         range: { from: resolved.from, to: resolved.to },
@@ -265,11 +275,22 @@ export class ChartManager {
   unsubscribe(sourceId) {
     const handler = this._subscriptions.get(sourceId);
     if (!handler) return;
+
     const chart = this._charts[sourceId];
-    const ts = chart && chart.timeScale();
-    if (ts && typeof ts.unsubscribeVisibleLogicalRangeChange === 'function') {
-      ts.unsubscribeVisibleLogicalRangeChange(handler);
+    if (!chart) {
+      console.warn(`unsubscribe: no chart for ${sourceId}`);
+      this._subscriptions.delete(sourceId);
+      return;
     }
+
+    const ts = chart.timeScale();
+    if (!ts || typeof ts.unsubscribeVisibleLogicalRangeChange !== 'function') {
+      console.warn(`unsubscribe: chart ${sourceId} has no unsubscribable timeScale`);
+      this._subscriptions.delete(sourceId);
+      return;
+    }
+
+    ts.unsubscribeVisibleLogicalRangeChange(handler);
     this._subscriptions.delete(sourceId);
   }
 
