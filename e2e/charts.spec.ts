@@ -42,6 +42,13 @@ test.describe('Charts E2E', () => {
   });
 
   test('should sync zoom level across charts', async ({ page }) => {
+    // Wait for data to be loaded so the chart exposes a visible range
+    await page.waitForFunction(() => {
+      const w = window as any;
+      const range = w.__test_charts?.btcChart?.timeScale()?.getVisibleRange?.();
+      return !!(range && range.from && range.to);
+    });
+
     // Get initial zoom level from BTC chart
     const initialZoom = await page.evaluate(() => {
       const timeScale = (window as any).__test_charts?.btcChart?.timeScale();
