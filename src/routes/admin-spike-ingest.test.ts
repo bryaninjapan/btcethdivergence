@@ -39,7 +39,8 @@ afterEach(() => {
 
 describe('GET /api/admin/binance-spike — route contract', () => {
   it('returns the primary probe result with a valid token', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => okResponse([SAMPLE_KLINE_TUPLE], '80')));
+    const fetchMock = vi.fn(async (input: string | URL) => okResponse([SAMPLE_KLINE_TUPLE], '80'));
+    vi.stubGlobal('fetch', fetchMock);
 
     const app = createApp();
     const res = await app.request(
@@ -53,6 +54,15 @@ describe('GET /api/admin/binance-spike — route contract', () => {
     expect(body.ok).toBe(true);
     expect(body.data.endpoint).toBe('https://api.binance.com');
     expect(body.data.count).toBe(1);
+
+    // Regression (Phase 14 W3): the Binance probe startTime must remain in
+    // MILLISECONDS (Binance API contract). A seconds-valued startTime would be
+    // ~1.7e9 instead of ~1.7e12 and silently fetch 1970 data.
+    const spikeUrl = String(fetchMock.mock.calls[0][0]);
+    const startTimeParam = Number(new URL(spikeUrl).searchParams.get('startTime'));
+    const expectedStart = Date.now() - 2 * 60 * 60 * 1000;
+    expect(startTimeParam).toBeGreaterThanOrEqual(1e12);
+    expect(Math.abs(startTimeParam - expectedStart)).toBeLessThan(60 * 1000);
   });
 
   it('rejects an invalid symbol with 400', async () => {
