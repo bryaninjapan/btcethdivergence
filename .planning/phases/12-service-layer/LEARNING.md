@@ -201,7 +201,7 @@ Only calculator spec; phase changes backend only.
 
 | # | Resolution |
 |---|-----------|
-| W1 | **Option A** — services own error translation. `recordsService`/`klinesService`/`adminService` catch raw D1 errors and rethrow `DatabaseError`. Preserves the DATABASE_ERROR contract (klines.test.ts asserts it) and gives records/klines services real substance (W5). |
+| W1 | **Option A** — services own error translation. `recordsService`/`klinesService`/`adminService` catch raw D1 errors and rethrow `DatabaseError`. Preserves the DATABASE_ERROR contract (klines.test.ts asserts it) and gives records/klines services real substance (W5). **Refinement:** When service A calls service B (e.g., `processIngest` → `setBackfillCursor`), use instanceof guard to avoid double-wrapping: `if (error instanceof DatabaseError) throw error; else throw new DatabaseError(...)`. This preserves the original error context and avoids masking the root cause. |
 | W2 | Spike route kept as `GET /api/admin/binance-spike?symbol=` (default BTCUSDT) with `startTime = Date.now() - 2h`; `probeBinanceReachability(symbol, startTime)` is read-only, no cursor derivation. |
 | W3 | Mock `batch()` accepts prepared-statement objects (as `insertKlinesBatch` passes them) and executes each via the shared `mutate()` engine; 12-00 tests call `db.batch([db.prepare(sql).bind(...)])` exactly like db.ts. |
 | W4 | Mock implements WHERE equality (type/symbol/id), escape-aware `tags LIKE ? ESCAPE '\\'`, and `open_time BETWEEN`; `first()` serves seeded/merged rows; `createMockD1WithData` clones fixtures. |
