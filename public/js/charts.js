@@ -166,6 +166,16 @@ async function init() {
   });
 }
 
+// Test hook: expose chart state for e2e testing
+if (typeof window !== 'undefined') {
+  window.__test_charts = {
+    get btcChart() { return chartState.get('btcChart'); },
+    get ethChart() { return chartState.get('ethChart'); },
+    get btcSeries() { return chartState.get('btcSeries'); },
+    get ethSeries() { return chartState.get('ethSeries'); },
+  };
+}
+
 init().catch((error) => {
   console.error('Charts initialization failed:', error);
   const errorEl = document.getElementById('chart-error');
