@@ -7,7 +7,8 @@ const RECORD: DivergenceRecord = {
   id: 1,
   start_time: 1600000000,
   end_time: 1600003600,
-  type: 'time_lag',
+  type: 'btc_hh_eth_lh',
+  msb: 'btc_hh_eth_lh',
   notes: 'first',
   tags: 'btc',
   created_at: 1,
@@ -19,19 +20,19 @@ describe('createMockD1Database — prepare().bind()', () => {
     const db = createMockD1Database();
     db.setRows('divergence_records', [
       RECORD,
-      { ...RECORD, id: 2, type: 'structural', tags: 'eth' },
-      { ...RECORD, id: 3, type: 'time_lag', tags: 'both' },
+      { ...RECORD, id: 2, type: 'btc_hl_eth_ll', tags: 'eth' },
+      { ...RECORD, id: 3, type: 'btc_hh_eth_lh', tags: 'both' },
     ]);
 
     const res = await db
       .prepare(
         'SELECT * FROM divergence_records WHERE type = ? ORDER BY start_time DESC',
       )
-      .bind('time_lag')
+      .bind('btc_hh_eth_lh')
       .all<DivergenceRecord>();
 
     expect(res.results).toHaveLength(2);
-    expect(res.results?.every((r) => r.type === 'time_lag')).toBe(true);
+    expect(res.results?.every((r) => r.type === 'btc_hh_eth_lh')).toBe(true);
   });
 
   it('all() applies tags LIKE ? ESCAPE ? with escape-aware wildcard matching', async () => {
@@ -65,7 +66,7 @@ describe('createMockD1Database — prepare().bind()', () => {
       .prepare(
         'SELECT * FROM divergence_records WHERE type = ? AND tags LIKE ? ESCAPE ? ORDER BY start_time DESC',
       )
-      .bind('time_lag', '%btc%', '\\')
+      .bind('btc_hh_eth_lh', '%btc%', '\\')
       .all<DivergenceRecord>();
 
     expect(res.results).toHaveLength(1);
@@ -115,7 +116,7 @@ describe('createMockD1Database — prepare().bind()', () => {
       .prepare(
         'INSERT INTO divergence_records (start_time, end_time, type, notes, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       )
-      .bind(1600000000, 1600003600, 'time_lag', '', '', 1, 1)
+      .bind(1600000000, 1600003600, 'btc_hh_eth_lh', '', '', 1, 1)
       .run();
 
     expect(res.meta.changes).toBe(1);

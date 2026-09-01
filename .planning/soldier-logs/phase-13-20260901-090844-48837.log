@@ -1,0 +1,14 @@
+Now let me read the two plan files and the PROJECT.md.
+No CONTEXT.md or RESEARCH file in phase 13 dir. Let me examine the actual source tree — frontend modules, HTML, wrangler config, and package.json.
+Key findings so far. Now let me check the test setup, wrangler static-assets config, HTML script loading, and whether any factory functions already exist.
+I have all the evidence I need. Writing the plan-check report.
+Report written to `.planning/phases/13-frontend-data-isolation/13-PLAN-CHECK.md`.
+
+**Summary** — Phase 13 plan check: **1 blocker, 8 warnings, 5 info.**
+
+- **Blocker B-1**: All three new modules are created in `src/public/`, but wrangler serves static assets only from `./public` (ASSETS binding). `charts.js`/`records.js` are browser ES modules — they cannot import from `src/public/`, so the pages 404 and SC #1/#2/#4 fail. Repo precedent (calculator-init) keeps source in `public/js/`, tests in `src/public/`. Fix: create modules in `public/js/`.
+- **Warnings**: SC #1 global sweep misses `sync`/`unsub*`/`activeController`/`window.__charts` leak; SC #3 has no command enforcing 85% (package.json gates at 80); 13b-01 colors already implemented (`charts.js:46-50` uses the exact `#26a69a`/`#ef5350`); 13b-02 uses nonexistent `bearish`/`bullish` types (real enum: `time_lag|structural|opposite`) and undefined pane/duration geometry; E2E is manual-only while Playwright + `e2e/` exist (calculator spec only); no `npm run typecheck` step; 13-03 cites nonexistent `buildUtcDate()` (real: `buildUtcEpoch`); 13-01 T3 vague.
+- **Info**: baseline is 326 not 327; 5-day vs 4-day timeline; premature ✅ marks; FormBinder purity contradiction; 13b missing from PLAN.md overall SCs.
+- **Clean**: requirement coverage (CODE-05, UI-01), dependency ordering, scope sizing (3–4 tasks), locked-decision compliance, and all 8 SCs traceable.
+
+1 blocker(s) found — plan needs revision before execution.

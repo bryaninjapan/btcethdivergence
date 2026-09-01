@@ -39,8 +39,7 @@ describe('Calculator UI — calculator-init.js DOM wiring (real file)', () => {
     if (!bodyMatch) throw new Error('calculator.html has no <body>');
     document.body.innerHTML = bodyMatch[1];
 
-    // calculator-init.js is plain JS (no declarations, allowJs off).
-    // @ts-expect-error — untyped side-effect module imported for its wiring
+    // calculator-init.js is plain JS; allowJs is enabled so import is now typed
     await import('../../public/js/calculator-init.js');
 
     form = document.getElementById('calculator-form') as any;

@@ -30,7 +30,7 @@ Build centralized time-domain abstraction module (`TemporalConverter`) and conso
 | SC# | Criterion | Status |
 |-----|-----------|--------|
 | SC1 | `src/domains/temporal-api.ts` exports `TemporalConverter` (5 named methods + batch utils) | ⚠️ New |
-| SC2 | 8+ backend modules use `TemporalConverter` (incl. validate.ts, services) | ⚠️ New |
+| SC2 | All backend time conversions use `TemporalConverter` (4 active modules: db, binance, klines, admin) | ⚠️ New |
 | SC3 | `src/domains/divergence.ts` single source of truth | ✅ Existing |
 | SC4 | Frontend imports from centralized divergence module | ✅ Existing |
 | SC5 | Zero time-conversion duplication in backend | ✅ Existing |
@@ -51,22 +51,28 @@ Build centralized time-domain abstraction module (`TemporalConverter`) and conso
 
 **Subtasks**:
 
-#### 14-01-01: Create TemporalConverter Module (4 hours)
-- [ ] Create `src/domains/temporal-api.ts`
-- [ ] Implement TemporalConverter class with:
-  - `msToSec(ms: number): number` — milliseconds → seconds
-  - `secToMs(sec: number): number` — seconds → milliseconds
-  - `dateToSec(date: Date): number` — Date → seconds
-  - `secToDate(sec: number): Date` — seconds → Date
-  - `convertBatch(millis: number[]): number[]` — batch ms → sec conversion
-- [ ] Add comprehensive JSDoc for each method
-- [ ] Run `npm run typecheck` to verify syntax
-- [ ] Expected output: `src/domains/temporal-api.ts` (~100 lines, fully typed)
+#### 14-01-01: Verify & Commit Existing TemporalConverter Implementation (2 hours)
+**W1 — Existing Implementation Found**: `src/domains/temporal-api.ts` already exists (untracked, created 2026-09-02 01:53), fully implemented with all 5 named methods + batch utilities and complete JSDoc.
+- [ ] Review existing `src/domains/temporal-api.ts` against SC1 requirements
+- [ ] Verify all 5 methods implemented: `msToSec`, `secToMs`, `dateToSec`, `secToDate`, `convertBatch`
+- [ ] Verify comprehensive JSDoc is present for all methods
+- [ ] Run `npm run typecheck` to verify syntax (should pass)
+- [ ] Commit untracked file to git: `git add src/domains/temporal-api.ts && git commit`
+- [ ] Expected output: File committed, ready for use by downstream tasks
 
-#### 14-01-02: Write TemporalConverter Unit Tests (4 hours)
+#### 14-01-02: Verify & Commit Existing TemporalConverter Unit Tests (2 hours)
+**W1 — Existing Tests Found**: `src/domains/temporal-api.test.ts` already exists (untracked), fully implemented with 36 passing test cases covering all boundary and batch scenarios.
+- [ ] Review existing `src/domains/temporal-api.test.ts` against SC6 boundary case requirements (list below)
+- [ ] Verify test file covers 30+ boundary and batch cases
+- [ ] Verify all test suites pass: `npx vitest run src/domains/temporal-api.test.ts`
+- [ ] Commit untracked test file to git: `git add src/domains/temporal-api.test.ts && git commit`
+- [ ] Verify coverage ≥ 90% for temporal-api.ts: `npm run test:coverage -- src/domains/temporal-api.ts`
+- [ ] Expected output: 36+ tests passing, file committed
+
+**Existing Boundary Cases Verified** (summary, full list below)
 Write tests covering all 30+ boundary cases in `src/domains/temporal-api.test.ts`:
 
-**Boundary cases (20+)**:
+**Existing Boundary Cases (36 tests cover all of the following)**:
 - [ ] Epoch: `msToSec(0)` → 0, `secToMs(0)` → 0
 - [ ] Epoch boundaries: `msToSec(999)` → 0, `msToSec(1000)` → 1
 - [ ] Year 2038 boundary: `msToSec(2147483647000)` → 2147483647 (max 32-bit signed int)
@@ -135,11 +141,14 @@ Migrate actual time-conversion sites (binance.ts:18, klines.ts:30–31, db.ts:52
    - [ ] Migrate to TemporalConverter if found (likely no-op)
    - [ ] Test: admin service tests pass
 
-#### 14-01-04: Fix Remaining Timezone/Edge Cases (2 hours)
+#### 14-01-04: Fix Remaining Timezone/Edge Cases (1 hour) — **W3 Fix**
 - [ ] Audit `src/lib/binance.ts:parseKline` — verify UTC consistency (no local time leakage)
 - [ ] Audit `src/lib/db.ts` — verify BETWEEN comparisons use same units (all seconds)
 - [ ] Audit `src/routes/klines.ts` — verify query parameter conversion doesn't assume local timezone
-- [ ] Fix `src/routes/admin.ts:38` — replace `Date.now() - 2*60*60*1000` pattern
+- [ ] **`src/routes/admin.ts:38` — NO CHANGE**: `Date.now() - 2*60*60*1000` is Binance probe `startTime` in MILLISECONDS; this is correct and should remain as-is (not converted to seconds)
+  - This value is passed directly to Binance API which expects milliseconds
+  - Do NOT apply `TemporalConverter.msToSec()` here — would corrupt the timestamp
+  - Add regression assertion in spike-test that `startTime` is in milliseconds
 - [ ] Test: no timezone-related test failures
 
 #### 14-01-05: Run Comprehensive Tests (2 hours)
@@ -181,12 +190,14 @@ Migrate actual time-conversion sites (binance.ts:18, klines.ts:30–31, db.ts:52
 - [ ] Expected: `public/js/records.js:import { TYPE_LABELS } from './divergence.js'`
 - [ ] No hardcoded definitions
 
-#### 14-02-03: Hardcoded String Search & Refactor (2 hours)
+#### 14-02-03: Hardcoded String Search & Refactor (2 hours) — **B3 Fix**
 - [ ] Command (lowercase): `rg "btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll" src/ public/ --type ts --type js`
 - [ ] Check `public/index.html` lines 27–30 & 80–83 for hardcoded option values
 - [ ] For each match: refactor to use the typed `DivergenceType` constant or imported `DIVERGENCE_TYPES` array
 - [ ] Example fix: `if (type === 'btc_hh_eth_lh')` → reference a named constant like `const types = ['btc_hh_eth_lh', 'btc_lh_eth_hh', …]` imported from divergence module (NOT array index, which breaks on reorder)
-- [ ] `public/index.html`: either generate `<option>` values from `public/js/divergence.js` at runtime or add hardcoded values to the sync test
+- [ ] **`public/index.html` MUST generate `<option>` values from `public/js/divergence.js` at runtime** — NO hardcoded escape hatch (W3: removed "or add hardcoded values to sync test")
+  - Use JavaScript in `records.js` to populate filter `<select>` and dialog radio options from `DIVERGENCE_TYPES` at page load
+  - This ensures frontend and backend definitions stay in sync without manual duplication
 - [ ] Test: all tests pass after refactor
 
 #### 14-02-04: Type Sync Automated Test (1 hour)
@@ -234,6 +245,38 @@ Migrate actual time-conversion sites (binance.ts:18, klines.ts:30–31, db.ts:52
 
 ---
 
+### Task 14-03: Code Review (0.5 days) — **B1 Fix**
+
+**Objective**: Satisfy SC7 requirement — verify zero HIGH/CRITICAL severity issues in Phase 14 changes.
+
+**Subtasks**:
+
+#### 14-03-01: Review Phase 14 Diffs (2 hours)
+- [ ] Run `git log --oneline phase-14..HEAD` to list all commits from this phase
+- [ ] Run `git diff phase-14-start..HEAD -- src/domains/ src/lib/ src/routes/ src/services/` to view all changes
+- [ ] Use gsd-code-review agent or manual review to audit:
+  - **Correctness**: Time-domain conversions are consistent (no ms/sec mixing), math is accurate
+  - **Type Safety**: All `DivergenceType` usages use constants, not string literals
+  - **Error Handling**: TemporalConverter throws TimestampError for negative inputs; callers handle appropriately
+  - **Performance**: No O(n²) loops in batch conversions; TemporalConverter stays < 500ms for 100K ops
+  - **Security**: No hardcoded secrets, API credentials, or sensitive data in code
+  - **Test Coverage**: All modified functions have corresponding unit tests
+  - **JSDoc**: All public methods have complete documentation
+- [ ] Document any issues found in PHASE-14-REVIEW.md (empty if no issues)
+- [ ] Severity levels: CRITICAL (breaks functionality), HIGH (correctness issue), MEDIUM (style/performance), LOW (documentation)
+- [ ] Target: zero CRITICAL/HIGH issues; accept MEDIUM/LOW with documented rationale
+
+#### 14-03-02: Verify TypeScript & Linter (30 min)
+- [ ] Run `npm run typecheck` — must pass with exit code 0
+- [ ] Run `npx eslint src/domains/ src/lib/ src/routes/` (if configured) — zero errors in changed files
+- [ ] Verify no `console.log` or `debugger` statements in production code
+
+**Expected Deliverables**:
+- PHASE-14-REVIEW.md with review checklist and sign-off (zero HIGH/CRITICAL or documented acceptance)
+- All review findings addressed or documented
+
+---
+
 ## Success Checklist
 
 **SC1 — TemporalConverter Module**:
@@ -243,16 +286,20 @@ Migrate actual time-conversion sites (binance.ts:18, klines.ts:30–31, db.ts:52
 - [ ] Unit tests: 30+ covering boundaries, batch ops, edge cases
 - [ ] All tests pass
 
-**SC2 — 8+ Backend Module Migration**:
-- [ ] ✅ `src/lib/db.ts`
-- [ ] ✅ `src/lib/validate.ts`
-- [ ] ✅ `src/lib/binance.ts`
-- [ ] ✅ `src/routes/klines.ts`
-- [ ] ✅ `src/routes/admin.ts`
-- [ ] ✅ `src/services/klines.service.ts`
-- [ ] ✅ `src/services/records.service.ts`
-- [ ] ✅ `src/services/admin.service.ts`
-- [ ] All modules use TemporalConverter, zero `Math.floor(ms/1000)`
+**SC2 — Backend Time Conversion Migration (W2 — Actual Count: 4 Active Modules)**:
+Time conversions exist only in 4 backend modules (verified by grep):
+- [ ] ✅ `src/lib/db.ts` — creates/updated_at timestamps
+- [ ] ✅ `src/lib/binance.ts` — Binance kline parsing
+- [ ] ✅ `src/routes/klines.ts` — query parameter conversion
+- [ ] ✅ `src/routes/admin.ts` — spike-test Binance query
+
+Audit-only (zero conversions expected):
+- [ ] ✅ `src/lib/validate.ts` — no time conversions (comparisons only)
+- [ ] ✅ `src/services/klines.service.ts` — no conversions
+- [ ] ✅ `src/services/records.service.ts` — no conversions
+- [ ] ✅ `src/services/admin.service.ts` — no conversions
+
+- [ ] All 4 active modules use TemporalConverter, zero `Math.floor(ms/1000)` outside TemporalConverter class
 - [ ] All tests pass post-migration
 
 **SC3-SC5 (Divergence)**:
@@ -269,15 +316,16 @@ Migrate actual time-conversion sites (binance.ts:18, klines.ts:30–31, db.ts:52
 - [ ] 36 existing Timestamp tests still pass
 - [ ] Total: 365+ tests passing
 
-**SC7 — Code Review**:
-- [ ] Zero HIGH/CRITICAL issues
-- [ ] TypeScript compilation clean
-- [ ] JSDoc complete for new APIs
-- [ ] Architecture documentation clear
+**SC7 — Code Review** (Task 14-03):
+- [ ] PHASE-14-REVIEW.md created with sign-off
+- [ ] Zero HIGH/CRITICAL issues found or documented acceptance
+- [ ] TypeScript compilation clean (npm run typecheck passes)
+- [ ] JSDoc complete for new APIs (temporal-api.ts, divergence.ts)
+- [ ] Architecture documentation clear (docs/TIMESTAMP-GUIDE.md)
 
 ---
 
-## Verification Commands (W1 — Explicit Verification)
+## Verification Commands (W4 — Comprehensive End-to-End Verification)
 
 Run these before marking phase complete:
 
@@ -302,9 +350,15 @@ rg "btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll" src/ public/ --type
 # Also check public/index.html for hardcoded option values
 rg "btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll" public/index.html || echo "None found"
 
+# All imports centralized (negative assertion: no scattered conversions)
+rg "Timestamp\.fromMillis|Math\.floor\(ms / 1000\)" src/ --type ts | grep -v "domains/temporal-api" || echo "Zero scattered conversions, good"
+
 # All imports centralized
 rg "DIVERGENCE_TYPES" src/ | grep -v "import"  || echo "Only imports, good"
 rg "DIVERGENCE_TYPES" public/ | grep -v "import" || echo "Only imports, good"
+
+# Code review pass
+test -f PHASE-14-REVIEW.md && echo "Review complete" || echo "Review file missing"
 ```
 
 ---

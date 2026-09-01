@@ -101,6 +101,7 @@ describe('createRecordsManager factory', () => {
 
     expect(snapshot.recordsCache).toHaveLength(1);
     expect(() => {
+      // @ts-expect-error Testing that frozen state is immutable
       snapshot.recordsCache = [];
     }).toThrow();
   });

@@ -89,6 +89,7 @@ describe('createChartState factory', () => {
 
     expect(snapshot.lastZoomLevel).toBe(2);
     expect(() => {
+      // @ts-expect-error Testing that frozen state is immutable
       snapshot.lastZoomLevel = 3;
     }).toThrow();
   });

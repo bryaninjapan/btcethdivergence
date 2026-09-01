@@ -1,0 +1,14 @@
+Now let me read PROJECT.md and verify the load-bearing claims against the actual source tree.
+Let me verify the HTML module loading, Playwright config, and phase 12's test baseline.
+All claims verified against source. I have everything needed. Note: a prior `13-PLAN-CHECK.md` exists — I independently re-verified every claim and found one factual error in it (the divergence enum values it cited were wrong). Writing my corrected report now.
+Plan check complete. Report written to `.planning/phases/13-frontend-data-isolation/13-PLAN-CHECK.md`.
+
+**Summary** (independently verified against source, not the prior check's word):
+
+- **1 BLOCKER — B-1**: All three new modules are placed in `src/public/`, but `wrangler.jsonc:7` serves only `./public` and pages load modules from `/js/...` (`charts.html:58-60`, `index.html:116-118`). `src/public/` is test-only territory today (`calculator-init.test.ts` imports the real file from `public/js/`). The refactor would 404 at runtime, breaking SC #1/#2/#4, and implies a phantom build step violating the locked "no build step" constraint.
+
+- **9 WARNINGS**: W-1 global sweep incomplete (`window.__charts` at charts.js:165; plan invents `lastZoomLevel`/`syncToken` which don't exist, omits `sync`/`unsubBtc`/`unsubEth`/`activeController`); W-2 85% coverage gate unenforced (threshold is 80); W-3 13b-01 colors already implemented (charts.js:45-51); W-4 13b-02 uses nonexistent `bearish`/`bullish` types — actual enum is `btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll` (the prior check wrongly cited `time_lag|structural|opposite` — corrected); W-5 E2E ignores Playwright; W-6 no typecheck; W-7 `buildUtcDate()` doesn't exist (it's `buildUtcEpoch`, already shared); W-8 13-01 T3 vague (chart-sync is already an isolated factory); W-9 references nonexistent `/records.html` and `chart.html`.
+
+- **6 INFO**: test-baseline 326/327 discrepancy, timeline mismatches, premature ✅ marks, FormBinder purity contradiction, docs/13b not folded into PLAN.md, meaningless "0 lines removed" metric.
+
+Verdict: **1 blocker(s) found — plan needs revision before execution.**

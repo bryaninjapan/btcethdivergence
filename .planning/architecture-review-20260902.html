@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC/ETH Divergence Tracker — Architecture Friction Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .mermaid { display: flex; justify-content: center; background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .candidate-card { border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; transition: all 0.2s; }
+        .candidate-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .badge-strong { background: #10b981; color: white; }
+        .badge-worth { background: #3b82f6; color: white; }
+        .badge-speculative { background: #f59e0b; color: white; }
+        .before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .diagram-box { background: #f3f4f6; border: 2px dashed #9ca3af; border-radius: 8px; padding: 20px; font-size: 13px; }
+        .svg-diagram { background: white; border: 1px solid #d1d5db; border-radius: 8px; }
+        .arrow { display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .module { background: #dbeafe; border: 2px solid #0284c7; border-radius: 6px; padding: 10px; margin: 5px; font-weight: 600; font-size: 12px; text-align: center; }
+        .module-deep { background: #dcfce7; border: 2px solid #16a34a; }
+        .interface { background: #fce7f3; border: 2px solid #db2777; border-radius: 4px; padding: 8px; margin: 4px; font-size: 11px; font-family: monospace; }
+        .coupling-high { opacity: 0.5; stroke: #ef4444; stroke-width: 2; }
+        .coupling-low { opacity: 0.8; stroke: #10b981; stroke-width: 2; }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <!-- Header -->
+        <div class="mb-12">
+            <h1 class="text-4xl font-bold mb-4">BTC/ETH Divergence Tracker</h1>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Architecture Friction Review</h2>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <p class="text-sm text-gray-700"><strong>Scope:</strong> v1.0 codebase (Cloudflare Worker + D1 + Frontend)</p>
+                <p class="text-sm text-gray-700"><strong>Focus:</strong> Module depth, coupling, seams, locality, leverage</p>
+                <p class="text-sm text-gray-700"><strong>Date:</strong> 2026-09-02 | <strong>Status:</strong> Post-Launch Review</p>
+            </div>
+        </div>
+
+        <!-- Top Recommendation -->
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-500 rounded-12 p-8 mb-12">
+            <h2 class="text-2xl font-bold text-green-900 mb-4">🎯 Top Recommendation</h2>
+            <div class="space-y-4">
+                <p class="text-gray-800"><strong>Start with: Candidate #1 — Timestamp Conversion Leakage</strong></p>
+                <p class="text-gray-700">This is the highest-leverage intervention. Why:</p>
+                <ul class="list-disc list-inside text-gray-700 space-y-2 ml-2">
+                    <li><strong>Affects 8+ backend modules</strong> — timestamp conversions repeat across routes, services, lib</li>
+                    <li><strong>Seam problem</strong> — milliseconds ↔ seconds boundary is leaking; should be enforced in one layer</li>
+                    <li><strong>Frontend duplication</strong> — Timestamp logic copied to frontend, maintenance burden</li>
+                    <li><strong>Low risk</strong> — encapsulating conversions behind a policy layer improves locality without API changes</li>
+                </ul>
+                <p class="text-gray-700 mt-4"><strong>Expected benefit:</strong> Centralized temporal boundaries, reduced cross-module coupling, shared domain models.</p>
+            </div>
+        </div>
+
+        <!-- Candidates -->
+        <div class="space-y-12">
+
+            <!-- Candidate 1 -->
+            <div class="candidate-card">
+                <div class="bg-gray-50 border-b px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xl font-bold">Candidate #1: Timestamp Conversion Leakage (Seam Problem)</h3>
+                        <span class="px-3 py-1 rounded-full text-white text-sm font-semibold badge-strong">Strong</span>
+                    </div>
+                    <p class="text-gray-600 text-sm">Consolidate scattered timestamp conversions into a single temporal-api policy layer.</p>
+                </div>
+                <div class="px-6 py-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Files & Modules Involved</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li>• src/lib/timestamp.ts (core wrapper)</li>
+                                <li>• src/lib/db.ts:52 (listRecords)</li>
+                                <li>• src/lib/binance.ts:18 (fetch)</li>
+                                <li>• src/routes/klines.ts:30-31</li>
+                                <li>• src/services/admin.service.ts:129</li>
+                                <li>• src/lib/kline-insert.ts (backfill)</li>
+                                <li>• public/js/timestamp.js (frontend mirror)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Key Friction Points</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li><strong>Seam leak:</strong> Milliseconds ↔ seconds conversions scattered across 8+ modules</li>
+                                <li><strong>Repeated calls:</strong> Every consumer calls .toSeconds(), .toMillis(), .fromMillis()</li>
+                                <li><strong>Frontend duplication:</strong> Timestamp.js copied from backend, no synchronization</li>
+                                <li><strong>Locality problem:</strong> Understanding temporal boundaries requires reading multiple files</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Current Architecture (Shallow Interface)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Routes accept milliseconds (browser Date.now()), services and database work in seconds. Conversion logic is scattered:
+                        <code class="bg-gray-100 px-1 rounded">Timestamp.fromMillis(ms).toSeconds()</code> appears
+                        in klines.ts, admin.service.ts, and kline-insert.ts independently. Frontend has its own Timestamp implementation,
+                        requiring parallel maintenance. Each conversion site is a <strong>seam</strong> where temporal semantics could be violated.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Proposed Solution (Deepen Module)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Create <code class="bg-gray-100 px-1 rounded">src/lib/temporal-api.ts</code> — a single <strong>policy layer</strong> enforcing temporal boundaries:
+                    </p>
+                    <div class="bg-gray-900 text-gray-100 p-4 rounded text-xs font-mono space-y-1 overflow-x-auto mb-4">
+                        <p>// src/lib/temporal-api.ts</p>
+                        <p><span class="text-blue-400">export const</span> TemporalAPI = {</p>
+                        <p class="ml-4">// Routes enter here (browser milliseconds)</p>
+                        <p class="ml-4"><span class="text-yellow-400">fromBrowserTime</span>(ms: <span class="text-green-400">number</span>): <span class="text-green-400">number</span> {</p>
+                        <p class="ml-8"><span class="text-blue-400">return</span> Math.floor(ms / <span class="text-purple-400">1000</span>)</p>
+                        <p class="ml-4">},</p>
+                        <p class="ml-4">// Convert to browser time for API response</p>
+                        <p class="ml-4"><span class="text-yellow-400">toBrowserTime</span>(sec: <span class="text-green-400">number</span>): <span class="text-green-400">number</span> {</p>
+                        <p class="ml-8"><span class="text-blue-400">return</span> sec * <span class="text-purple-400">1000</span></p>
+                        <p class="ml-4">},</p>
+                        <p class="ml-4">// Internal DB queries use seconds (implicit contract)</p>
+                        <p>}</p>
+                    </div>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Routes call <code class="bg-gray-100 px-1 rounded">TemporalAPI.fromBrowserTime(startMs)</code> once at entry. Services and db.ts work exclusively in seconds (number type, no wrapper).
+                        Remove Timestamp type from internal modules — use semantically commented numbers instead. Move Timestamp to a boundary adapter used only at HTTP entry/exit.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Benefits</h4>
+                    <ul class="text-sm text-gray-700 space-y-2 ml-4">
+                        <li><strong>Centralized seam enforcement:</strong> Temporal boundary has one policy, not 8+ scattered conversions.</li>
+                        <li><strong>Improved locality:</strong> Understanding "how time flows" requires reading one module, not tracing through routes + services + db.</li>
+                        <li><strong>Reduced leverage friction:</strong> Adding timezone support or date-range queries no longer requires cascading changes.</li>
+                        <li><strong>Frontend coherence:</strong> Share divergence types and temporal constants via API schema, not hardcoded .js files.</li>
+                        <li><strong>Testing explosion:</strong> Temporal-api tests verify conversions happen exactly once per request path.</li>
+                    </ul>
+
+                    <h4 class="font-semibold text-gray-900 mb-3 mt-6">Before / After Diagram</h4>
+                    <div class="before-after">
+                        <div class="diagram-box">
+                            <h5 class="font-semibold text-gray-900 text-center mb-3">BEFORE (Leaky Seam)</h5>
+                            <svg viewBox="0 0 300 350" class="svg-diagram">
+                                <!-- Route -->
+                                <rect x="20" y="10" width="260" height="50" fill="#dbeafe" stroke="#0284c7" stroke-width="2" rx="6"/>
+                                <text x="150" y="40" text-anchor="middle" font-weight="bold" font-size="13">POST /api/records (milliseconds)</text>
+
+                                <!-- Conversions scattered -->
+                                <text x="30" y="90" font-size="11" fill="#666">Conversions (8+ places):</text>
+                                <g>
+                                    <rect x="20" y="100" width="130" height="40" fill="#fee2e2" stroke="#ef4444" stroke-width="1" rx="4"/>
+                                    <text x="85" y="115" text-anchor="middle" font-size="10">Timestamp.fromMillis(ms)</text>
+                                    <text x="85" y="130" text-anchor="middle" font-size="10">.toSeconds()</text>
+                                </g>
+                                <g>
+                                    <rect x="160" y="100" width="130" height="40" fill="#fee2e2" stroke="#ef4444" stroke-width="1" rx="4"/>
+                                    <text x="225" y="115" text-anchor="middle" font-size="10">Timestamp.fromMillis(ms)</text>
+                                    <text x="225" y="130" text-anchor="middle" font-size="10">.toSeconds() [again]</text>
+                                </g>
+
+                                <!-- Services -->
+                                <text x="30" y="170" font-size="11" fill="#666">Services/DB (still scatter):</text>
+                                <rect x="20" y="180" width="260" height="60" fill="#f3f4f6" stroke="#9ca3af" stroke-width="2" stroke-dasharray="4" rx="6"/>
+                                <text x="30" y="200" font-size="11" font-weight="bold">Services + DB.ts work in seconds</text>
+                                <text x="30" y="220" font-size="10" fill="#666">But Timestamp type still spreads through module signatures</text>
+
+                                <!-- Frontend -->
+                                <text x="30" y="270" font-size="11" fill="#666">Frontend (parallel copy):</text>
+                                <rect x="20" y="280" width="260" height="50" fill="#fee2e2" stroke="#ef4444" stroke-width="2" rx="6"/>
+                                <text x="150" y="305" text-anchor="middle" font-size="11">Timestamp.js (independent, duplicate logic)</text>
+
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                        <polygon points="0,0 10,5 0,10" fill="#9ca3af"/>
+                                    </marker>
+                                </defs>
+                            </svg>
+                            <p class="text-center text-xs text-gray-600 mt-2">Conversions scattered, seam leaks, no single policy</p>
+                        </div>
+
+                        <div class="diagram-box">
+                            <h5 class="font-semibold text-gray-900 text-center mb-3">AFTER (Single Policy Layer)</h5>
+                            <svg viewBox="0 0 300 350" class="svg-diagram">
+                                <!-- Route -->
+                                <rect x="20" y="10" width="260" height="50" fill="#dbeafe" stroke="#0284c7" stroke-width="2" rx="6"/>
+                                <text x="150" y="40" text-anchor="middle" font-weight="bold" font-size="13">POST /api/records (milliseconds)</text>
+
+                                <!-- One conversion at entry -->
+                                <text x="30" y="90" font-size="11" fill="#666">Temporal-API (single policy):</text>
+                                <rect x="30" y="100" width="240" height="40" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+                                <text x="40" y="120" font-size="11" font-weight="bold">TemporalAPI.fromBrowserTime(ms)</text>
+                                <text x="40" y="135" font-size="10" fill="#059669">(conversion happens ONCE)</text>
+
+                                <!-- Arrow down -->
+                                <path d="M 150 150 L 150 180" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead-green)"/>
+
+                                <!-- Services/DB -->
+                                <text x="30" y="200" font-size="11" fill="#666">Services + DB.ts (clean):</text>
+                                <rect x="20" y="210" width="260" height="60" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+                                <text x="30" y="230" font-size="11" font-weight="bold">All code works exclusively in seconds (number)</text>
+                                <text x="30" y="250" font-size="10" fill="#059669">No Timestamp type spreading, clear temporal semantics</text>
+
+                                <!-- Arrow down -->
+                                <path d="M 150 280 L 150 310" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead-green)"/>
+
+                                <!-- Response -->
+                                <rect x="20" y="310" width="260" height="30" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+                                <text x="150" y="331" text-anchor="middle" font-size="11">Response: TemporalAPI.toBrowserTime(sec) at exit</text>
+
+                                <defs>
+                                    <marker id="arrowhead-green" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                        <polygon points="0,0 10,5 0,10" fill="#10b981"/>
+                                    </marker>
+                                </defs>
+                            </svg>
+                            <p class="text-center text-xs text-gray-600 mt-2">Single conversion point, clean boundary, testable policy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidate 2 -->
+            <div class="candidate-card">
+                <div class="bg-gray-50 border-b px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xl font-bold">Candidate #2: Divergence Domain Duplication (Poor Locality)</h3>
+                        <span class="px-3 py-1 rounded-full text-white text-sm font-semibold badge-strong">Strong</span>
+                    </div>
+                    <p class="text-gray-600 text-sm">Unify divergence type definitions across backend and frontend; single source of truth.</p>
+                </div>
+                <div class="px-6 py-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Files & Modules Involved</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li>• Backend: src/domains/divergence.ts (lines 3–14)</li>
+                                <li>• Frontend: public/js/divergence.js (lines 3–21) [identical copy]</li>
+                                <li>• src/lib/validate.ts (imports from domains)</li>
+                                <li>• public/js/records.js (imports from divergence.js)</li>
+                                <li>• public/js/charts.js (uses type labels)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Key Friction Points</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li><strong>1:1 duplication:</strong> DIVERGENCE_TYPES, TYPE_LABELS, MSB_LABELS copied exactly</li>
+                                <li><strong>No shared contract:</strong> Frontend imports ./divergence.js; backend imports ../domains/divergence</li>
+                                <li><strong>Seam leak:</strong> Business knowledge (domain model) bleeds across API without schema</li>
+                                <li><strong>Maintenance burden:</strong> Adding a type requires syncing 2 files</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Current Architecture (Scattered Concept)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Backend defines <strong>DIVERGENCE_TYPES</strong> in <code class="bg-gray-100 px-1 rounded">src/domains/divergence.ts</code>.
+                        Frontend has an identical copy in <code class="bg-gray-100 px-1 rounded">public/js/divergence.js</code>.
+                        When a new divergence type is added, changes must propagate to both files. There is no API schema contract ensuring synchronization.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Proposed Solution (Deepen Locality)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        <strong>Option A (API-First):</strong> Fetch type metadata from backend:
+                    </p>
+                    <div class="bg-gray-900 text-gray-100 p-4 rounded text-xs font-mono space-y-1 overflow-x-auto mb-4">
+                        <p>// GET /api/schema/divergence-types</p>
+                        <p>{ types: ["btc_hh_eth_lh", "btc_lh_eth_hh", ...], labels: {...}, msb: ... }</p>
+                        <p></p>
+                        <p>// Frontend bootstraps from API response, not hardcoded .js</p>
+                    </div>
+                    <p class="text-gray-700 text-sm mb-4">
+                        <strong>Option B (Build-Time Generation):</strong> Generate <code class="bg-gray-100 px-1 rounded">public/js/divergence.js</code> from backend <code class="bg-gray-100 px-1 rounded">src/domains/divergence.ts</code> during build.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Benefits</h4>
+                    <ul class="text-sm text-gray-700 space-y-2 ml-4">
+                        <li><strong>Single source of truth:</strong> Types defined once, consumed everywhere.</li>
+                        <li><strong>Improved locality:</strong> Understanding divergence types requires reading one module.</li>
+                        <li><strong>Reduced leverage friction:</strong> Adding a type is a one-file change.</li>
+                        <li><strong>Type-safe API contract:</strong> Validation schemas on backend match frontend UI.</li>
+                        <li><strong>Testable schema:</strong> E2E test: frontend loads types from API, UI renders them correctly.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Candidate 3 -->
+            <div class="candidate-card">
+                <div class="bg-gray-50 border-b px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xl font-bold">Candidate #3: Chart State Fragmentation (Scattered Concerns)</h3>
+                        <span class="px-3 py-1 rounded-full text-white text-sm font-semibold badge-worth">Worth Exploring</span>
+                    </div>
+                    <p class="text-gray-600 text-sm">Merge chart-state, chart-range, and chart-sync into a unified state machine module.</p>
+                </div>
+                <div class="px-6 py-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Files & Modules Involved</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li>• public/js/chart-state.js (factory, 83 lines)</li>
+                                <li>• public/js/chart-range.js (time window logic)</li>
+                                <li>• public/js/chart-sync.js (subscription handler)</li>
+                                <li>• public/js/charts.js (orchestrator, lines 14–18, 73–140)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Key Friction Points</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li><strong>Scattered state concern:</strong> Understanding "chart state" requires reading 4 files</li>
+                                <li><strong>Shallow interface:</strong> Factory wraps properties, not logic; boilerplate adds little value</li>
+                                <li><strong>No state machine:</strong> Mutations scattered; no explicit state transitions</li>
+                                <li><strong>Poor locality:</strong> Modifying "synced zoom" requires touching 3 files</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Current Architecture (Shallow State)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Chart state is split across three modules: factory pattern in <strong>chart-state.js</strong>, time calculations in <strong>chart-range.js</strong>,
+                        and subscription handling in <strong>chart-sync.js</strong>. Understanding the full lifecycle requires bouncing between them.
+                        The interface is just wrappers around object properties — minimal business logic.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Proposed Solution (Deepen with State Machine)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Merge into single <code class="bg-gray-100 px-1 rounded">public/js/chart-manager.ts</code> (TypeScript) with explicit state machine:
+                    </p>
+                    <div class="bg-gray-900 text-gray-100 p-4 rounded text-xs font-mono space-y-1 overflow-x-auto mb-4">
+                        <p><span class="text-blue-400">type</span> ChartState = <span class="text-purple-400">"LOADING"</span> | <span class="text-purple-400">"LOADED"</span> | <span class="text-purple-400">"SYNCED_TO_RANGE"</span> | <span class="text-purple-400">"ERROR"</span></p>
+                        <p></p>
+                        <p><span class="text-blue-400">export class</span> ChartManager {</p>
+                        <p class="ml-4"><span class="text-yellow-400">load</span>(symbol: <span class="text-green-400">string</span>, range: Range) → <span class="text-purple-400">"LOADING"</span></p>
+                        <p class="ml-4"><span class="text-yellow-400">onDataReady</span>() → <span class="text-purple-400">"LOADED"</span></p>
+                        <p class="ml-4"><span class="text-yellow-400">syncToRange</span>(otherChart: ChartManager) → <span class="text-purple-400">"SYNCED_TO_RANGE"</span></p>
+                        <p>}</p>
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Benefits</h4>
+                    <ul class="text-sm text-gray-700 space-y-2 ml-4">
+                        <li><strong>Improved locality:</strong> All chart-related logic in one module; understand state lifecycle in one file.</li>
+                        <li><strong>Reduced leverage friction:</strong> Modifying sync behavior means editing one module, not three.</li>
+                        <li><strong>State machine clarity:</strong> Explicit transitions (LOADING → LOADED → SYNCED) prevent invalid states.</li>
+                        <li><strong>Testing explosion:</strong> Unit tests for state transitions; mock Lightweight Charts subscriptions once.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Candidate 4 -->
+            <div class="candidate-card">
+                <div class="bg-gray-50 border-b px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xl font-bold">Candidate #4: Shallow Records Service Wrapper (Minimal Leverage)</h3>
+                        <span class="px-3 py-1 rounded-full text-white text-sm font-semibold badge-worth">Worth Exploring</span>
+                    </div>
+                    <p class="text-gray-600 text-sm">Raise service interface from thin wrapper to rich query repository with business logic.</p>
+                </div>
+                <div class="px-6 py-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Files & Modules Involved</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li>• src/lib/db.ts:9–31 (listRecords, createRecord, etc.)</li>
+                                <li>• src/services/records.service.ts:64–73 (wrapper)</li>
+                                <li>• src/routes/records.ts:16–28 (HTTP handler)</li>
+                                <li>• src/lib/test-db.ts (test fixtures)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Key Friction Points</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li><strong>Shallow interface:</strong> Service adds only try/catch → DatabaseError</li>
+                                <li><strong>No business logic:</strong> Each CRUD is 2–10 lines: bind, execute, return</li>
+                                <li><strong>Scattered validation:</strong> Zod validates before service is called; little value added</li>
+                                <li><strong>Test duplication:</strong> Must mock both db.ts and records.service.ts separately</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Current Architecture (Thin Wrapper)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        <code class="bg-gray-100 px-1 rounded">records.service.ts</code> wraps <code class="bg-gray-100 px-1 rounded">db.ts</code> functions: route calls service, service calls db, returns result or throws DatabaseError.
+                        No validation (already done in Zod). No caching. No filtering logic. The interface complexity ≈ implementation complexity — textbook shallow module.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Proposed Solution (Raise Interface)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Elevate service from thin wrapper → rich <strong>query repository</strong> with business semantics:
+                    </p>
+                    <div class="bg-gray-900 text-gray-100 p-4 rounded text-xs font-mono space-y-1 overflow-x-auto mb-4">
+                        <p><span class="text-blue-400">export class</span> RecordsRepository {</p>
+                        <p class="ml-4"><span class="text-yellow-400">listWithStats</span>(filters) →</p>
+                        <p class="ml-8">{ records: [], totalCount, tagCloud, typeDistribution }</p>
+                        <p class="ml-4"><span class="text-yellow-400">findByTimeRange</span>(startTime, endTime) → []</p>
+                        <p class="ml-4"><span class="text-yellow-400">upsertWithMerge</span>(id, payload) → merged record</p>
+                        <p>}</p>
+                    </div>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Move error handling to middleware (centralized, reusable). Consolidate SQL building into QueryBuilder subclass per entity.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Benefits</h4>
+                    <ul class="text-sm text-gray-700 space-y-2 ml-4">
+                        <li><strong>Reduced test count:</strong> No need to mock db.ts + service separately; test routes directly.</li>
+                        <li><strong>Richer interface:</strong> Repository methods express business intent (listWithStats, upsertWithMerge).</li>
+                        <li><strong>Improved locality:</strong> Related queries grouped; schema changes handled in one place.</li>
+                        <li><strong>Leverage:</strong> Adding new filter (e.g., "by creator") requires one repository method, not multi-file changes.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Candidate 5 -->
+            <div class="candidate-card">
+                <div class="bg-gray-50 border-b px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xl font-bold">Candidate #5: Calculator Validation Duplication (Future Debt)</h3>
+                        <span class="px-3 py-1 rounded-full text-white text-sm font-semibold badge-speculative">Speculative</span>
+                    </div>
+                    <p class="text-gray-600 text-sm">Extract calculator rules to backend; prepare for API endpoint without duplication.</p>
+                </div>
+                <div class="px-6 py-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Files & Modules Involved</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li>• public/js/calculator-init.js:71–87 (manual validation, Chinese strings)</li>
+                                <li>• src/lib/validate.ts (has schemas for records, not calculator)</li>
+                                <li>• No backend calculator endpoint yet</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Key Friction Points</h4>
+                            <ul class="text-sm text-gray-700 space-y-1">
+                                <li><strong>Client-only logic:</strong> Validation hardcoded in calculator-init.js, not shared</li>
+                                <li><strong>Error strings in Chinese:</strong> Not i18n-ready; localizable error codes missing</li>
+                                <li><strong>Future duplication risk:</strong> If /api/calculator added, rules will duplicate again</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Current Architecture (Speculative Debt)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Calculator validation is entirely client-side, hardcoded in Chinese. If an API endpoint is added later,
+                        validation rules will be rewritten for the backend, causing drift.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Proposed Solution (Prepare for Growth)</h4>
+                    <p class="text-gray-700 text-sm mb-4">
+                        Extract rules to <code class="bg-gray-100 px-1 rounded">src/domains/calculator.ts</code> (Zod schema + types).
+                        Frontend keeps independent client-side validation (fast feedback). When /api/calculator is added, reuse the backend schema.
+                    </p>
+
+                    <h4 class="font-semibold text-gray-900 mb-3">Benefits</h4>
+                    <ul class="text-sm text-gray-700 space-y-2 ml-4">
+                        <li><strong>Future-proof:</strong> Adding API endpoint won't cause duplication.</li>
+                        <li><strong>Auditability:</strong> Validation rules documented in one module, easier to audit for correctness.</li>
+                        <li><strong>i18n-ready:</strong> Error codes instead of hardcoded strings.</li>
+                    </ul>
+
+                    <p class="text-sm text-orange-700 bg-orange-50 border-l-4 border-orange-400 p-3 rounded mt-4">
+                        <strong>Note:</strong> This candidate is speculative — only address if a calculator API is planned. Low priority for v1.0.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Summary Table -->
+        <div class="mt-16 bg-gray-50 border rounded-lg p-8">
+            <h2 class="text-2xl font-bold mb-6">Summary: Module Depth & Friction Analysis</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b-2 border-gray-300">
+                            <th class="text-left py-3 px-4 font-semibold">#</th>
+                            <th class="text-left py-3 px-4 font-semibold">Candidate</th>
+                            <th class="text-left py-3 px-4 font-semibold">Friction Type</th>
+                            <th class="text-left py-3 px-4 font-semibold">Files</th>
+                            <th class="text-left py-3 px-4 font-semibold">Recommendation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-200">
+                            <td class="py-3 px-4">1</td>
+                            <td class="py-3 px-4 font-semibold">Timestamp Leakage</td>
+                            <td class="py-3 px-4">Seam leak (8+ modules)</td>
+                            <td class="py-3 px-4">8+ backend + 1 frontend</td>
+                            <td class="py-3 px-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">START HERE</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-200">
+                            <td class="py-3 px-4">2</td>
+                            <td class="py-3 px-4 font-semibold">Divergence Duplication</td>
+                            <td class="py-3 px-4">Poor locality (1:1 copy)</td>
+                            <td class="py-3 px-4">2 (backend + frontend)</td>
+                            <td class="py-3 px-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">SECOND</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-200">
+                            <td class="py-3 px-4">3</td>
+                            <td class="py-3 px-4 font-semibold">Chart Fragmentation</td>
+                            <td class="py-3 px-4">Scattered state (4 files)</td>
+                            <td class="py-3 px-4">4 (state, range, sync, orchestrator)</td>
+                            <td class="py-3 px-4"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">WORTH EXPLORING</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-200">
+                            <td class="py-3 px-4">4</td>
+                            <td class="py-3 px-4 font-semibold">Records Service Wrapper</td>
+                            <td class="py-3 px-4">Thin interface (try/catch only)</td>
+                            <td class="py-3 px-4">3 (db, service, route)</td>
+                            <td class="py-3 px-4"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">WORTH EXPLORING</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4">5</td>
+                            <td class="py-3 px-4 font-semibold">Calculator Validation</td>
+                            <td class="py-3 px-4">Future duplication risk</td>
+                            <td class="py-3 px-4">1 (client-only, no API yet)</td>
+                            <td class="py-3 px-4"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">SPECULATIVE</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="mt-12 bg-blue-50 border-l-4 border-blue-500 rounded-lg p-8">
+            <h2 class="text-2xl font-bold text-blue-900 mb-4">Next Steps</h2>
+            <p class="text-gray-800 mb-4">
+                <strong>Which of these candidates would you like to explore in depth?</strong>
+            </p>
+            <p class="text-gray-700 mb-6">
+                Pick one and I'll walk through the design tree: constraints, dependencies, the exact shape of the deepened module,
+                test strategy, and rollout plan. Or tell me which friction resonates most.
+            </p>
+            <div class="bg-white border border-blue-200 rounded p-4">
+                <p class="text-sm text-gray-700 font-mono">
+                    "Which candidate would you like to explore?"
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-12 text-center text-gray-600 text-sm">
+            <p>Architecture Review | v1.0 Completed | 2026-09-02</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,112 +1,96 @@
 # Phase 14 Plan Check — Goal-Backward Verification Report
 
-**Checker**: gsd-plan-checker (goal-backward, adversarial)
+**Checker**: gsd-plan-checker
 **Date**: 2026-09-02
 **Phase**: 14 — Architecture Foundations (Temporal + Divergence)
-**Plan(s) verified**: `PLAN.md` (14-01 Deep Timestamp Audit + Edge Case Testing; 14-02 Divergence Verification + Documentation)
-**Status**: **ISSUES FOUND — 4 blocker(s), 6 warning(s), 3 info**
-
-Ground truth used: ROADMAP.md Phase 14 section (Goal / Requirements / Success Criteria), PROJECT.md, actual source tree. No RESEARCH.md or CONTEXT.md exists in `phase-14/`.
+**Plan(s) verified**: 14-01 (temporal-api module + backend integration), 14-02 (divergence unification + frontend integration) — `.planning/phases/phase-14/PLAN.md`
+**Status**: **ISSUES FOUND — 3 blocker(s), 4 warning(s), 5 info**
 
 ---
 
 ## 1. Coverage Summary
 
-| Artifact | ROADMAP requires | Plan delivers | Verdict |
+| Requirement (ROADMAP) | Required by | Covered tasks | Coverage status |
 |---|---|---|---|
-| `src/domains/temporal-api.ts` + `TemporalConverter` (`msToSec`, `secToMs`, `dateToSec`, `secToDate`, batch utils) | SC1 | **Never mentioned.** Plan audits the pre-existing `Timestamp` class (`src/lib/timestamp.ts`), a different API (`fromMillis/toSeconds/toDate`) in a different location | 🔴 BLOCKER (B1) |
-| 8+ backend modules use `TemporalConverter` | SC2 | **Never mentioned.** Plan audits 5 backend modules for `Timestamp` correctness only | 🔴 BLOCKER (B2) |
-| `src/domains/divergence.ts` SSoT for `DIVERGENCE_TYPES` + `TYPE_LABELS` | SC3 | Already true in code (`validate.ts:2` imports it); 14-02-1 verifies | 🟢 Covered (verify-only) |
-| Frontend imports divergence from `.js` mirror | SC4 | Already true (`records.js:10` imports `./divergence.js`); 14-02-2 verifies | 🟢 Covered (verify-only) |
-| Zero time-conversion duplication across backend | SC5 | 14-01-1..5 audits + 14-01-4 fixes `admin.ts:38` (only remaining raw `Date.now()` in prod) | 🟢 Covered |
-| 30+ unit tests: temporal boundaries + batch ops | SC6 | 14-01-6 specifies **20+** edge-case tests of `Timestamp`, not `TemporalConverter` batch utilities | 🔴 BLOCKER (B3) |
-| Code review: zero HIGH | SC7 | Code Review Checklist + Handoff "zero HIGH/CRITICAL" | 🟢 Covered (weak evidence mechanism) |
-
-Requirements line: **CODE-01 (Unified Types)** — divergence half covered, temporal half (TemporalConverter) has **zero coverage** → BLOCKER (B5, folded into B1/B2). **CODE-03 (DRY Validation)** — covered only via audits, no new shared validation artifact; weak but present → WARNING (W2).
-
----
+| CODE-01 (Unified Types) | SC3, SC4 | 14-02-01, 14-02-02, 14-02-03, 14-02-04 | ✅ Covered |
+| CODE-03 (DRY Validation) | SC2, SC3, SC5 | 14-01-03, 14-02-01, 14-02-03 | ✅ Covered (intent), SC2 numeric target unattainable (W2) |
+| SC1 TemporalConverter module | 14-01-01, 14-01-02 | | ⚠️ Deliverable already exists on disk (W1) |
+| SC7 Code review | — | | ❌ **No covering task (B1)** |
 
 ## 2. Success Criteria Traceability
 
-| # | ROADMAP Success Criterion | Delivering task(s) | Coverage |
+| SC# | Criterion | Delivering task(s) | Verdict |
 |---|---|---|---|
-| 1 | `temporal-api.ts` exports `TemporalConverter` (5 named methods + batch utils) | **None** | 🔴 BLOCKER — no task creates or even names this file/class |
-| 2 | 8+ backend modules (incl. validate.ts, records.ts, admin.ts) use `TemporalConverter` | **None** | 🔴 BLOCKER — no migration task; nothing would call `TemporalConverter` |
-| 3 | `src/domains/divergence.ts` SSoT | 14-02-1 (grep audit) | 🟢 Covered (already true in source; plan verifies) |
-| 4 | Frontend imports from `divergence-types.json` (or `.js` mirror) | 14-02-2 (grep audit), 14-02-4/5 (hardcoded-string cleanup) | 🟢 Covered (already true; `records.js:10`) |
-| 5 | Zero time-conversion duplication in backend | 14-01-1..5, 14-01-4 (`admin.ts:38`) | 🟢 Covered |
-| 6 | 30+ unit tests on boundaries + batch ops | 14-01-6 (**20+** new tests of `Timestamp`) | 🔴 BLOCKER — undershoots 30; targets wrong class; no batch-utility tests |
-| 7 | Code review zero HIGH | Code Review Checklist + Handoff | 🟢 Covered |
-
----
+| SC1 | `src/domains/temporal-api.ts` exports `TemporalConverter` (5 named methods + batch utils) | 14-01-01 (+ 14-01-02 tests) | ✅ Covered, but file already exists (W1) |
+| SC2 | All time conversions in **8+ backend modules** use `TemporalConverter` | 14-01-03 | ⚠️ Only 4 modules contain real conversions; 4 are marked audit-only (W2) |
+| SC3 | `src/domains/divergence.ts` single source of truth | 14-02-01 (verify) | ✅ Covered (already true) |
+| SC4 | Frontend imports from centralized divergence module | 14-02-02, 14-02-03 | ⚠️ Covered but 14-02-03 hedges (B3) |
+| SC5 | Zero time-conversion duplication in backend | 14-01-03, 14-01-04 | ✅ Covered |
+| SC6 | 30+ unit tests: temporal boundaries + batch | 14-01-02, 14-01-05 | ✅ Covered (36 tests already exist) |
+| SC7 | Code review complete: zero HIGH issues | **NONE** | ❌ **BLOCKER — no task (B1)** |
 
 ## 3. Dimension Results
 
-| Dimension | Result | Evidence |
-|---|---|---|
-| 1. Requirement Coverage | 🔴 BLOCKER | CODE-01 temporal half zero-covered (no `temporal-api.ts`); CODE-03 audit-only |
-| 2. Task Completeness | 🟡 WARNING | Files named & actions concrete, but subtasks lack explicit verify commands and per-subtask done criteria |
-| 3. Dependency Correctness | 🟢 PASS | 14-01 → 14-02 acyclic; no task assumes an unbuilt artifact of its own phase |
-| 4. Key Links / Wiring | 🔴 BLOCKER | Divergence already wired; `TemporalConverter` neither created nor wired to any module |
-| 5. Scope Sanity | 🟡 WARNING | 2 plans OK, but 14-01 has 8 subtasks and 14-02 has 9 in a 0.5-day task |
-| 6. Success-Criteria Traceability | 🔴 BLOCKER | SC1/SC2/SC6 uncovered or undershot |
-| 7. Locked Decision Compliance | 🟢 PASS | No PROJECT.md contradiction; `.js` mirror respects the no-build-step frontend constraint |
-| 8. Scope Reduction Detection | 🔴 BLOCKER | Plan explicitly reframes the phase to exclude the named deliverables |
-| 9. Verification Plan Quality | 🟡 WARNING | Test running implied (`npm test` exists), but no `npm run typecheck` command and no grep patterns given |
-| 10. Fact-check load-bearing claims | 🟢 PASS | All 6 cited line-number claims verified accurate (binance.ts:18, db.ts:52/92/128, klines.ts:30-31, admin.ts:38); 44 Timestamp tests (36+8) and 365 total tests confirmed by `vitest run`; `docs/` absent, plan creates it |
-
----
+| # | Dimension | Result | Notes |
+|---|---|---|---|
+| 1 | Requirement Coverage | ✅ PASS | CODE-01/CODE-03 both have covering tasks |
+| 2 | Task Completeness | ⚠️ PARTIAL | 14-01-04 ("Fix admin.ts:38") vague; 14-02-03 hedged; most tasks concrete |
+| 3 | Dependency Correctness | ✅ PASS | Acyclic; tests depend on module created earlier; no forward references |
+| 4 | Key Links / Wiring | ⚠️ PARTIAL | index.html wiring left to "either/or"; divergence sync test wired to verification |
+| 5 | Scope Sanity | ✅ PASS | 2 plans/2 tasks, matches ROADMAP target |
+| 6 | Success-Criteria Traceability | ❌ FAIL | SC7 has no delivering task (B1); SC2 deliverable count unattainable (W2) |
+| 7 | Locked Decision Compliance | ✅ PASS | No contradiction with PROJECT.md; no CONTEXT.md in phase dir |
+| 8 | Scope Reduction Detection | ❌ FAIL | 14-02-03 "or add hardcoded values to the sync test" hedge (B3) |
+| 9 | Verification Plan Quality | ❌ FAIL | `npm run typecheck` baseline already fails with 13 errors (B2) |
+| 10 | Fact-check load-bearing claims | ⚠️ PARTIAL | Line refs verified accurate; "New file" premise stale (W1); typecheck-clean claim false (B2) |
 
 ## 4. Issues
 
 ### Blockers
 
-**B1 — SC1 has zero covering task; the phase's central deliverable is absent from the plan.**
-The ROADMAP ground truth requires a **new** `src/domains/temporal-api.ts` exporting a `TemporalConverter` class with `msToSec(ms)`, `secToMs(sec)`, `dateToSec(date)`, `secToDate(sec)` and batch conversion utilities. The plan never mentions `temporal-api.ts` or `TemporalConverter`. Instead 14-01 audits the **pre-existing** `Timestamp` class at `src/lib/timestamp.ts` (different API: `fromMillis`/`toSeconds`/`toDate`; different path). Verified: `src/domains/` contains only `divergence.ts`; no `temporal-api.ts` anywhere. Even a fully successful execution of this plan leaves SC1 false.
-*fix_hint*: Add a task (rework 14-01) that creates `src/domains/temporal-api.ts` exporting `TemporalConverter` with all five named methods plus `convertBatch`-style batch utilities, with unit tests per method.
+**B1 — SC7 (code review) has no covering task.** No task in 14-01 or 14-02 performs a code review. The Success Checklist (§SC7) and Handoff Criteria list "zero HIGH/CRITICAL issues," but the plan's own verification section contains only test/typecheck/grep commands. A faithful executor cannot satisfy SC7.
+- *fix_hint*: Add task 14-01-06 (or fold into 14-02-07): "Code review of all phase-14 diffs against a defined checklist (HIGH/CRITICAL severity rubric from Phase 11/13 reviews), output a documented review note." Prior phases used an explicit review plan (e.g., 13-04).
 
-**B2 — SC2 has zero covering task; no migration to `TemporalConverter` is planned.**
-SC2 requires all time conversions in **8+ backend modules** (explicitly `db.ts, klines.ts, validate.ts, records.ts, admin.ts, etc.`) to use `TemporalConverter`. The plan audits only 5 backend modules (`binance.ts`, `db.ts`, `klines.ts`, `admin.ts`, `records.ts`) plus 1 frontend file (`charts.js`), and only for *Timestamp correctness*, not conversion to `TemporalConverter`. `validate.ts` (named in the SC) is not in the audit list. Nothing in the plan would make any module call `TemporalConverter`.
-*fix_hint*: Add explicit migration tasks replacing `Timestamp.fromMillis(ms).toSeconds()` → `TemporalConverter.msToSec(ms)`, `Date.now()/1000`-style arithmetic → `TemporalConverter` methods, across ≥8 backend modules; include `validate.ts` and the service layer (`services/klines.service.ts`, `services/records.service.ts`, `services/admin.service.ts`).
+**B2 — Verification gate `npm run typecheck` cannot pass against current baseline.** Verified: `npx tsc --noEmit` exits 1 with **13 errors in 5 tracked files** (`src/lib/test-db.test.ts`, `src/services/records.service.test.ts`, `src/public/chart-state.test.ts`, `src/public/datetime-helpers.test.ts`, `src/public/records-state.test.ts` — TS2741 missing `msb`, TS2322 invalid type strings, TS7016 JS-module-import-without-declaration). The plan gates completion on "zero TypeScript errors" (14-01-05, 14-02-07, Handoff, SC7 checklist) but includes **no task to fix these pre-existing errors**. Worse, the plan's own new task 14-02-04 creates `src/domains/divergence.test.ts` importing `public/js/divergence.js` — the exact TS7016 pattern already failing in 4 files, so the plan **adds** a new typecheck error class unless tsconfig is handled.
+- *fix_hint*: Add a task to fix the 13 existing typecheck errors (add `msb` to fixtures, correct type strings to `DivergenceType` values, add `// @ts-expect-error`/declaration approach or enable `allowJs` scoped appropriately for public/js imports), and add `npm run typecheck` as a mid-plan gate so execution doesn't discover the failure at the final gate. Confirm the divergence sync test approach does not reintroduce TS7016.
 
-**B3 — SC6 undershoots the test target and targets the wrong abstraction.**
-SC6 requires **30+ unit tests verifying temporal boundaries and batch operations**. Plan 14-01-6 specifies "20+ new edge case tests" — below the threshold — and they test the `Timestamp` class, not `TemporalConverter` or its batch utilities (which are never built). Even combined with the 44 existing tests, the *new* boundary/batch coverage does not meet SC6's requirement and covers no batch conversion utility.
-*fix_hint*: Specify ≥30 new tests in 14-01-6 covering temporal boundaries (epoch, 2038, negative, DST) **and** `TemporalConverter` batch utilities (`msToSec`/`secToMs` round-trips, `dateToSec`/`secToDate` UTC boundaries, batch array conversion).
-
-**B4 — Scope reduction via hedging language on in-scope deliverables.**
-Plan Overview states: "Phase 14 has evolved from 'build new modules' to 'deep consolidation and hardening'" and "The Timestamp class and divergence unification are 95-100% complete." This is hedged scope applied directly to two in-scope success criteria (SC1/SC2). The plan substitutes its own success-criteria list for the ROADMAP's. Per check rules, hedging on in-scope work is always a blocker. Note the plan's factual claims about the *current* state are accurate (see Fact-check) — the problem is the *omission* of the required build.
-*fix_hint*: Either (a) execute the real SC1/SC2/SC6 work, or (b) get explicit user sign-off to amend ROADMAP Phase 14 SC1/SC2/SC6 to "verify existing `Timestamp` class" first, then re-plan. The plan as written cannot make the ROADMAP criteria true.
+**B3 — Scope-reduction hedge in 14-02-03.** The index.html task allows "**or add hardcoded values to the sync test**" as an alternative to generating `<option>` values from `public/js/divergence.js`. That branch keeps the hardcoded divergence strings in production HTML — the exact duplication SC4 / the plan's own deliverable "All hardcoded divergence strings refactored" requires removing. Verified the strings are live at `public/index.html:27-30` (filter) and `:80-83` (radios).
+- *fix_hint*: Commit to a single approach: populate both the filter `<select>` and dialog radio options at runtime from `DIVERGENCE_TYPES`/`TYPE_LABELS` imported in `records.js` (drop the "add hardcoded values to the sync test" branch; optionally keep it as an additional cross-check but not as an alternative).
 
 ### Warnings
 
-**W1 — No explicit verify commands in subtasks.** 14-01-8 and 14-02-9 say "verify all 365 tests pass" without the command; no `npm run typecheck` step despite the plan changing typed code (`admin.ts`). Code review checklist mentions "TypeScript compilation clean" but no task runs it.
-*fix_hint*: Add explicit commands: `npm test`, `npm run typecheck`, `npx vitest run src/lib/timestamp.test.ts`, and specific grep patterns for the audits (e.g., `rg "from './divergence" public/js`).
+**W1 — Plan premise is stale: `src/domains/temporal-api.ts` and `src/domains/temporal-api.test.ts` already exist on disk** (untracked, created 2026-09-02 01:53 by an earlier phase-14 run), fully implemented with all 5 named methods + 2 batch utilities, full JSDoc, and 36 passing-style tests. The plan labels SC1/SC6 as "⚠️ New/Expanded" and task 14-01-01 says "Create `src/domains/temporal-api.ts`"; execution would redundantly rewrite existing files, and the 2.5-day estimate is inflated.
+- *fix_hint*: Reframe 14-01-01/14-01-02 as *verify & commit existing untracked implementation* (diff review, confirm method set covers SC1, confirm 30+ tests), then spend the saved time on migration + the B2 typecheck fix. Note the files must be committed for the "zero duplication" SC5 gate to hold.
 
-**W2 — Audit list omits `validate.ts` and the service layer.** ROADMAP SC2 explicitly names `validate.ts`; time logic also lives in `services/*.service.ts`. 14-01 audits neither.
-*fix_hint*: Add 14-01 subtasks for `src/lib/validate.ts` and `src/services/{klines,records,admin}.service.ts`.
+**W2 — SC2's "8+ backend modules" is unattainable as written.** Verified by grep: time conversions exist in only 4 files (`src/lib/db.ts` :52/92/128, `src/lib/binance.ts`:18, `src/routes/klines.ts`:30-31, `src/routes/admin.ts`:38 — ms-only, no conversion); `validate.ts` and all 3 service files have **zero** conversions. The plan itself marks 4/8 modules "audit-only (likely no-op)". After execution at most 4 modules will import `TemporalConverter`, so the "8+" success criterion and the deliverable "8+ backend modules migrated (git diff shows swaps)" cannot be literally met.
+- *fix_hint*: Amend ROADMAP SC2 wording to "all time conversions in every backend module that performs them (currently 3-4 sites across db/binance/klines) use TemporalConverter; remaining modules verified conversion-free," or expand scope to genuinely touch 8 modules (not recommended). Update the plan's expected-deliverable wording accordingly.
 
-**W3 — Task 14-01-5 audits the wrong file for time filtering.** It says audit "`src/routes/records.ts` — verify time filtering logic", but that route contains no time logic; filtering lives in `db.ts:9-31` (`listRecords` SQL) and `validate.ts:43` (`start_time < end_time` refine).
-*fix_hint*: Repoint 14-01-5 at `src/lib/db.ts` BETWEEN/ordering logic and `src/lib/validate.ts` refine; keep `records.ts` only as a thin-route spot check.
+**W3 — Internal contradiction on `admin.ts:38`.** 14-01-03(5) says "do NOT apply `msToSec` … if staying in ms, leave arithmetic as-is," but 14-01-04 says "Fix `src/routes/admin.ts:38` — replace `Date.now() - 2*60*60*1000` pattern." The value is a milliseconds instant consumed directly as Binance `startTime`; "fix" is undefined.
+- *fix_hint*: Delete the 14-01-04 admin.ts item (or replace with a documented no-op note + a regression assertion on the spike-test that startTime is ms), so the two subtasks don't direct contradictory changes.
 
-**W4 — Subtask sprawl.** 8 subtasks in a 1.5-day task and 9 in a 0.5-day task; several ("Audit X — verify timezone handling") are open-ended investigations with no pass/fail definition.
-*fix_hint*: Give each audit a defined assertion (e.g., "parseKline output matches UTC ms→sec of Binance tuple"), or split 14-02.
-
-**W5 — Plan's own Success Criteria section silently replaces the ROADMAP list.** The plan's checkboxes re-derive criteria (e.g., "Zero `Math.floor(ms/1000)` in production") and drop SC1/SC2/SC6 entirely, which is how the blockers slipped in. Even after fixing B1-B3, ROADMAP/plan criteria must match.
-*fix_hint*: Mirror the ROADMAP SC list verbatim in the plan, and only add supplemental criteria.
-
-**W6 — SC7 code-review evidence mechanism is weak.** Only a checklist; no task captures findings or fixes HIGH issues to closure.
-*fix_hint*: Add a review task that logs findings and a "0 HIGH remaining" re-verification after fixes.
+**W4 — Verification does not run the suite that exercises the changed surface end-to-end.** Fine to skip E2E, but SC5 ("zero duplication") relies only on greps; add a negative assertion (e.g., `rg "Timestamp\.fromMillis|Math\.floor\(ms / 1000\)" src/ --type ts | grep -v domains/temporal-api | grep -v lib/timestamp`) to the verification commands so "zero scattered conversions" is machine-proven.
+- *fix_hint*: Add the negative grep above to the Verification Commands block.
 
 ### Info
 
-**I1 — `docs/` does not exist yet.** Plan's `docs/TIMESTAMP-GUIDE.md` will create it; ensure the new dir is committed (no gitignore interference).
-**I2 — Frontend time helpers are duplicated.** `public/js/timestamp.js`, `public/js/datetime-helpers.js`, and backend `src/lib/timestamp.ts` coexist. Out of SC scope, but worth a note in the new TIMESTAMP-GUIDE.
-**I3 — Fact-checking all passed.** Every line-number/prop/count claim in the plan (binance.ts:18, db.ts:52/92/128, klines.ts:30-31, admin.ts:38, 44 Timestamp tests, 365 total tests) matches the current source. The plan's description of the *status quo* is trustworthy; only its scope framing is wrong.
+**I1 — Test-count claim off.** Plan says "all 365+ existing tests"; actual baseline is ~342 (`it`/`test` occurrences: 378 total including the 36 already-present temporal-api tests). Not load-bearing; update references to the real count.
 
----
+**I2 — Per-file ≥90% coverage for temporal-api is not enforced.** `npm run test:coverage` (`vitest run --coverage`) enforces only a global 85%-lines threshold in package.json; nothing enforces 90% for `temporal-api.ts`. The coverage report will show it, but the gate is soft.
+
+**I3 — Performance assertions don't match existing test.** Plan (14-01-02/05) claims "100K conversions < 50ms" / suite "…< 100ms"; the existing test asserts `< 500ms`. Timing asserts are flaky; align plan wording with the implemented threshold or drop the numeric claims.
+
+**I4 — Line-count estimates wrong.** Plan says "~100 lines" (14-01-01) and "~120 lines" (14-01-05); file is 131 lines. Cosmetic.
+
+**I5 — Test-spec looser than implementation.** Plan lists "`convertBatch([1000, -1000])` should **throw or skip**"; implementation throws (consistent with msToSec). Align spec to the decided behavior (throw) so the sync test is deterministic.
 
 ## 5. Recommendation
 
-**REVISE before execution.** The plan is factually accurate about the current codebase and its verification/documentation content is genuinely useful, but it does not build the phase's named deliverables. SC1 (`temporal-api.ts` + `TemporalConverter`), SC2 (8+ modules using it), and SC6 (30+ boundary/batch tests) are unreachable under this plan; even perfect execution leaves 3 of 7 success criteria false. The phase either needs (a) new/expanded 14-01/14-02 tasks to build `TemporalConverter`, migrate ≥8 backend modules (including `validate.ts` and services), and add ≥30 boundary+batch tests, or (b) an explicit ROADMAP amendment signed off by the user redefining the phase as Timestamp-verification-only. Address W1-W3 while replanning (they map directly onto the fix work).
+The plan is directionally correct — line references all check out, real conversion sites are correctly identified, divergence unification is accurately marked as existing, tasks are well-sized and correctly ordered, and verification commands are mostly concrete. But **3 blockers must be resolved before execution**:
 
-4 blocker(s) found — plan needs revision before execution.
+1. Add a code-review task (SC7 otherwise has no deliverable).
+2. Fix the 13 pre-existing `typecheck` errors and confirm the planned `divergence.test.ts` won't reintroduce the TS7016 class — otherwise the plan's own final gate (`npm run typecheck`) fails at completion.
+3. Remove the "or add hardcoded values to the sync test" escape hatch in 14-02-03 so in-scope duplication is actually eliminated.
+
+Also correct the stale "new file" premise (temporal-api.ts + tests already exist, untracked) so execution verifies/commits rather than rewrites, and reconcile SC2's "8+" wording with the 4 real conversion sites.
+
+*Note: PLAN.md was not modified; this report is standalone.*

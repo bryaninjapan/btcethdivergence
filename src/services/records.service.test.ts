@@ -8,7 +8,8 @@ const EXISTING: DivergenceRecord = {
   id: 1,
   start_time: 1600000000,
   end_time: 1600003600,
-  type: 'time_lag',
+  type: 'btc_hh_eth_lh',
+  msb: 'btc_hh_eth_lh',
   notes: 'existing notes',
   tags: 'existing tags',
   created_at: 1,
@@ -22,7 +23,8 @@ describe('recordsService.createRecord', () => {
     const record = await recordsService.createRecord(db as unknown as D1Database, {
       start_time: 1600000000,
       end_time: 1600003600,
-      type: 'structural',
+      type: 'btc_hh_eth_lh',
+      msb: 'no',
       notes: 'hello',
       tags: 'btc,eth',
     });
@@ -30,7 +32,7 @@ describe('recordsService.createRecord', () => {
     expect(record).toMatchObject({
       start_time: 1600000000,
       end_time: 1600003600,
-      type: 'structural',
+      type: 'btc_hh_eth_lh',
       notes: 'hello',
       tags: 'btc,eth',
     });
@@ -45,7 +47,8 @@ describe('recordsService.createRecord', () => {
     const record = await recordsService.createRecord(db as unknown as D1Database, {
       start_time: 1600000000,
       end_time: 1600003600,
-      type: 'opposite',
+      type: 'btc_ll_eth_hl',
+      msb: 'yes',
       notes: longNotes,
       tags: '',
     });
@@ -59,7 +62,8 @@ describe('recordsService.createRecord', () => {
     const record = await recordsService.createRecord(db as unknown as D1Database, {
       start_time: 1600000000,
       end_time: 1600003600,
-      type: 'time_lag',
+      type: 'btc_hh_eth_lh',
+      msb: 'no',
       notes: '',
       tags: 'btc,eth',
     });
@@ -76,7 +80,8 @@ describe('recordsService.createRecord', () => {
       recordsService.createRecord(db as unknown as D1Database, {
         start_time: 1600000000,
         end_time: 1600003600,
-        type: 'time_lag',
+        type: 'btc_hh_eth_lh',
+        msb: 'no',
         notes: '',
         tags: '',
       }),
@@ -103,7 +108,7 @@ describe('recordsService.updateRecord', () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
     const record = await recordsService.updateRecord(db as unknown as D1Database, 999, {
-      type: 'structural',
+      type: 'btc_hl_eth_ll',
     });
 
     expect(record).toBeNull();
@@ -113,10 +118,10 @@ describe('recordsService.updateRecord', () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
     const record = await recordsService.updateRecord(db as unknown as D1Database, 1, {
-      type: 'structural',
+      type: 'btc_hl_eth_ll',
     });
 
-    expect(record?.type).toBe('structural');
+    expect(record?.type).toBe('btc_hl_eth_ll');
     expect(record?.notes).toBe('existing notes');
     expect(record?.tags).toBe('existing tags');
     expect(record?.start_time).toBe(EXISTING.start_time);
@@ -127,7 +132,7 @@ describe('recordsService.updateRecord', () => {
     db.failNext('first');
 
     await expect(
-      recordsService.updateRecord(db as unknown as D1Database, 1, { type: 'structural' }),
+      recordsService.updateRecord(db as unknown as D1Database, 1, { type: 'btc_hl_eth_ll' }),
     ).rejects.toMatchObject({
       code: ErrorCode.DATABASE_ERROR,
       message: expect.stringContaining('Failed to update record'),
@@ -140,8 +145,8 @@ describe('recordsService.listRecords', () => {
     const db = createMockD1WithData({
       divergence_records: [
         EXISTING,
-        { ...EXISTING, id: 2, type: 'structural' },
-        { ...EXISTING, id: 3, type: 'opposite' },
+        { ...EXISTING, id: 2, type: 'btc_hl_eth_ll' },
+        { ...EXISTING, id: 3, type: 'btc_ll_eth_hl' },
       ],
     });
 
@@ -154,17 +159,17 @@ describe('recordsService.listRecords', () => {
     const db = createMockD1WithData({
       divergence_records: [
         EXISTING,
-        { ...EXISTING, id: 2, type: 'structural' },
-        { ...EXISTING, id: 3, type: 'structural' },
+        { ...EXISTING, id: 2, type: 'btc_hl_eth_ll' },
+        { ...EXISTING, id: 3, type: 'btc_hl_eth_ll' },
       ],
     });
 
     const rows = await recordsService.listRecords(db as unknown as D1Database, {
-      type: 'structural',
+      type: 'btc_hl_eth_ll',
     });
 
     expect(rows).toHaveLength(2);
-    expect(rows.every((r) => r.type === 'structural')).toBe(true);
+    expect(rows.every((r) => r.type === 'btc_hl_eth_ll')).toBe(true);
   });
 
   it('filters by tag (partial match)', async () => {
