@@ -25,8 +25,6 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware ✅
 - [x] **Phase 12: Service Layer Pattern** - Extract business logic from route handlers, implement service layer for improved testability and reusability ✅
 - [x] **Phase 13: Frontend Data Isolation & UI Enhancement** - Refactor frontend state (charts.js, records.js) from globals to isolated modules; apply TradingView-style K-line colors and MSB indicator ✅
-- [ ] **Phase 14: TradingView UI Redesign** - Enhance K-line visualization with TradingView-style UI (user's explicit choice)
-- [ ] **Phase 15: Technical Debt Cleanup** - Implement architecture improvements: Time Domain Abstraction, Shared Enums, Error Handling, Validation Framework, Parameter Objects & Service Layer
 
 ## Phase Details
 
