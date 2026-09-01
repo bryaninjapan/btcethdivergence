@@ -10,12 +10,17 @@ import {
   yearOptions,
 } from './datetime.js';
 import { recordToRange } from './chart-range.js';
-import { TYPE_LABELS } from './divergence.js';
+import { TYPE_LABELS, MSB_LABELS } from './divergence.js';
+import { createRecordsManager } from './records-state.js';
+import {
+  fillSelect,
+  rebuildDays,
+  setPickerFromEpoch,
+  pickerEpoch,
+} from './datetime-helpers.js';
 
-let recordsCache = [];
-let editingId = null;
-let deleteId = null;
-let latestRequestToken = 0;
+// Records state factory instance
+const recordsManager = createRecordsManager();
 
 function formatTime(ts) {
   return new Date(ts * 1000).toISOString();
@@ -23,6 +28,10 @@ function formatTime(ts) {
 
 function typeLabel(type) {
   return TYPE_LABELS[type] || type;
+}
+
+function msbLabel(msb) {
+  return MSB_LABELS[msb] || msb;
 }
 
 function renderTable(records) {
@@ -36,6 +45,7 @@ function renderTable(records) {
       formatTime(record.start_time),
       formatTime(record.end_time),
       typeLabel(record.type),
+      msbLabel(record.msb),
       record.notes,
       record.tags,
     ];
@@ -72,7 +82,7 @@ function debounce(fn, ms) {
 }
 
 async function loadRecords() {
-  const requestToken = ++latestRequestToken;
+  const requestToken = recordsManager.nextRequestToken();
   const params = new URLSearchParams();
   const type = document.querySelector('#type-filter').value;
   const tag = document.querySelector('#tag-filter').value.trim();
@@ -80,8 +90,8 @@ async function loadRecords() {
   if (tag) params.set('tag', tag);
   const qs = params.toString();
   const data = await api(qs ? `/api/records?${qs}` : '/api/records');
-  if (requestToken !== latestRequestToken) return;
-  recordsCache = data;
+  if (requestToken !== recordsManager.getLatestRequestToken()) return;
+  recordsManager.setRecords(data);
   renderTable(data);
 }
 
@@ -98,26 +108,6 @@ function showFilterError(error) {
   filterError.hidden = false;
 }
 
-function fillSelect(select, values) {
-  select.replaceChildren();
-  for (const v of values) {
-    const opt = document.createElement('option');
-    opt.value = String(v);
-    opt.textContent = String(v);
-    select.appendChild(opt);
-  }
-}
-
-function rebuildDays(pickerEl) {
-  const yearSel = pickerEl.querySelector('[data-part="year"]');
-  const monthSel = pickerEl.querySelector('[data-part="month"]');
-  const daySel = pickerEl.querySelector('[data-part="day"]');
-  const max = daysInMonth(Number(yearSel.value), Number(monthSel.value));
-  const prev = Number(daySel.value) || 1;
-  fillSelect(daySel, dayOptions(Number(yearSel.value), Number(monthSel.value)));
-  daySel.value = String(Math.min(prev, max));
-}
-
 function populatePicker(pickerEl) {
   fillSelect(pickerEl.querySelector('[data-part="year"]'), yearOptions());
   fillSelect(pickerEl.querySelector('[data-part="month"]'), monthOptions());
@@ -130,27 +120,14 @@ function populatePicker(pickerEl) {
   rebuildDays(pickerEl);
 }
 
-function setPickerFromEpoch(pickerEl, ts) {
-  const parts = epochToParts(ts);
-  pickerEl.querySelector('[data-part="year"]').value = String(parts.year);
-  pickerEl.querySelector('[data-part="month"]').value = String(parts.month);
-  pickerEl.querySelector('[data-part="day"]').value = String(parts.day);
-  pickerEl.querySelector('[data-part="hour"]').value = String(parts.hour);
-  rebuildDays(pickerEl);
-}
-
-function pickerEpoch(pickerEl) {
-  const year = Number(pickerEl.querySelector('[data-part="year"]').value);
-  const month = Number(pickerEl.querySelector('[data-part="month"]').value);
-  const day = Number(pickerEl.querySelector('[data-part="day"]').value);
-  const hour = Number(pickerEl.querySelector('[data-part="hour"]').value);
-  return buildUtcEpoch(year, month, day, hour);
-}
-
 function openForm(record = null) {
   const form = document.forms['record-form'];
   form.reset();
-  editingId = record ? record.id : null;
+  if (record) {
+    recordsManager.startEditing(record.id);
+  } else {
+    recordsManager.stopEditing();
+  }
   document.querySelector('#dialog-title').textContent = record ? '編輯記錄' : '新增記錄';
   const startPicker = document.querySelector('[data-picker="start"]');
   const endPicker = document.querySelector('[data-picker="end"]');
@@ -159,6 +136,8 @@ function openForm(record = null) {
     setPickerFromEpoch(endPicker, record.end_time);
     const typeRadio = form.querySelector(`input[name="type"][value="${record.type}"]`);
     if (typeRadio) typeRadio.checked = true;
+    const msbRadio = form.querySelector(`input[name="msb"][value="${record.msb}"]`);
+    if (msbRadio) msbRadio.checked = true;
     document.querySelector('#notes').value = record.notes;
     document.querySelector('#tags').value = record.tags;
   } else {
@@ -183,15 +162,17 @@ async function submitForm() {
       start_time: start,
       end_time: end,
       type: document.querySelector('input[name="type"]:checked').value,
+      msb: document.querySelector('input[name="msb"]:checked').value,
       notes: document.querySelector('#notes').value,
       tags: document.querySelector('#tags').value,
     };
+    const editingId = recordsManager.getEditingId();
     if (editingId) {
       await api(`/api/records/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
     } else {
       await api('/api/records', { method: 'POST', body: JSON.stringify(payload) });
     }
-    editingId = null;
+    recordsManager.stopEditing();
     document.querySelector('#record-dialog').close();
     await loadRecords();
   } catch (error) {
@@ -203,7 +184,7 @@ async function submitForm() {
 }
 
 function confirmDelete(record) {
-  deleteId = record.id;
+  recordsManager.startDelete(record.id);
   document.querySelector('#delete-summary').textContent =
     `${typeLabel(record.type)} ${formatTime(record.start_time)} → ${formatTime(record.end_time)}`;
   document.querySelector('#delete-error').hidden = true;
@@ -211,11 +192,12 @@ function confirmDelete(record) {
 }
 
 function closeDeleteDialog() {
-  deleteId = null;
+  recordsManager.clearDelete();
   document.querySelector('#delete-dialog').close();
 }
 
 async function confirmDeleteAction() {
+  const deleteId = recordsManager.getDeleteId();
   if (deleteId === null) return;
   const deleteError = document.querySelector('#delete-error');
   try {
@@ -236,7 +218,8 @@ function wireRowActions() {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = Number(btn.closest('tr').dataset.id);
-    const record = recordsCache.find((r) => r.id === id);
+    const records = recordsManager.getRecords();
+    const record = records.find((r) => r.id === id);
     if (!record) return;
     if (btn.dataset.action === 'view-chart') {
       const { startMs, endMs } = recordToRange(record);

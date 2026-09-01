@@ -11,8 +11,18 @@ import {
   epochToParts,
 } from './datetime.js';
 import { nowRange, parseRangeParams } from './chart-range.js';
+import { createChartState } from './chart-state.js';
+import {
+  fillSelect,
+  rebuildDays,
+  setPickerFromEpoch,
+  pickerEpoch,
+} from './datetime-helpers.js';
 
-let btcChart = null, ethChart = null, btcSeries = null, ethSeries = null;
+// Chart state factory instance
+const chartState = createChartState();
+
+// Subscription management (not part of state factory)
 let sync = null, unsubBtc = null, unsubEth = null;
 let activeController = null;
 
@@ -53,45 +63,6 @@ function renderChart(containerId, candles) {
   return { chart, series };
 }
 
-function fillSelect(select, values) {
-  select.replaceChildren();
-  for (const v of values) {
-    const opt = document.createElement('option');
-    opt.value = String(v);
-    opt.textContent = String(v);
-    select.appendChild(opt);
-  }
-}
-
-function rebuildDays(pickerEl) {
-  const y = Number(pickerEl.querySelector('[data-part="year"]').value);
-  const m = Number(pickerEl.querySelector('[data-part="month"]').value);
-  const prev = Number(pickerEl.querySelector('[data-part="day"]').value) || 1;
-  fillSelect(pickerEl.querySelector('[data-part="day"]'), dayOptions(y, m));
-  pickerEl.querySelector('[data-part="day"]').value = String(Math.min(prev, daysInMonth(y, m)));
-}
-
-function setPickerFromEpoch(pickerEl, ts) {
-  const p = epochToParts(ts);
-  fillSelect(pickerEl.querySelector('[data-part="year"]'), yearOptions());
-  fillSelect(pickerEl.querySelector('[data-part="month"]'), monthOptions());
-  fillSelect(pickerEl.querySelector('[data-part="hour"]'), hourOptions());
-  pickerEl.querySelector('[data-part="year"]').value = String(p.year);
-  pickerEl.querySelector('[data-part="month"]').value = String(p.month);
-  pickerEl.querySelector('[data-part="hour"]').value = String(p.hour);
-  rebuildDays(pickerEl);
-  pickerEl.querySelector('[data-part="day"]').value = String(p.day);
-}
-
-function pickerEpoch(pickerEl) {
-  return buildUtcEpoch(
-    Number(pickerEl.querySelector('[data-part="year"]').value),
-    Number(pickerEl.querySelector('[data-part="month"]').value),
-    Number(pickerEl.querySelector('[data-part="day"]').value),
-    Number(pickerEl.querySelector('[data-part="hour"]').value),
-  );
-}
-
 function setPickersFromMs(startMs, endMs) {
   setPickerFromEpoch(document.querySelector('[data-picker="start"]'), Timestamp.fromMillis(startMs).toSeconds());
   setPickerFromEpoch(document.querySelector('[data-picker="end"]'), Timestamp.fromMillis(endMs).toSeconds());
@@ -101,6 +72,8 @@ function setLogScale(enabled) {
   const mode = enabled
     ? LightweightCharts.PriceScaleMode.Logarithmic
     : LightweightCharts.PriceScaleMode.Normal;
+  const btcChart = chartState.get('btcChart');
+  const ethChart = chartState.get('ethChart');
   for (const chart of [btcChart, ethChart]) {
     if (chart) chart.priceScale('right').applyOptions({ mode });
   }
@@ -125,9 +98,13 @@ async function loadRange(startMs, endMs) {
 
     if (loadingEl) loadingEl.hidden = true;
 
+    const btcSeries = chartState.get('btcSeries');
+    const ethSeries = chartState.get('ethSeries');
     btcSeries.setData(btcRows.map(toCandle));
     ethSeries.setData(ethRows.map(toCandle));
 
+    const btcChart = chartState.get('btcChart');
+    const ethChart = chartState.get('ethChart');
     const initial = btcChart.timeScale().getVisibleLogicalRange();
     if (initial) ethChart.timeScale().setVisibleLogicalRange(initial);
 
@@ -151,6 +128,8 @@ async function loadRange(startMs, endMs) {
     clearTimeout(timeoutId);
     activeController = null;
     sync = sync || createRangeSync();
+    const btcChart = chartState.get('btcChart');
+    const ethChart = chartState.get('ethChart');
     unsubBtc = sync.link(btcChart.timeScale(), ethChart.timeScale());
     unsubEth = sync.link(ethChart.timeScale(), btcChart.timeScale());
   }
@@ -160,9 +139,8 @@ async function init() {
   const initial = parseRangeParams(window.location.search) ?? nowRange();
   const btc = renderChart('btc-chart', []);
   const eth = renderChart('eth-chart', []);
-  btcChart = btc.chart; btcSeries = btc.series;
-  ethChart = eth.chart; ethSeries = eth.series;
-  window.__charts = { btcChart, ethChart, btcSeries, ethSeries };
+  chartState.set('btcChart', btc.chart).set('btcSeries', btc.series);
+  chartState.set('ethChart', eth.chart).set('ethSeries', eth.series);
 
   setPickersFromMs(initial.startMs, initial.endMs);
   await loadRange(initial.startMs, initial.endMs);
