@@ -16,6 +16,9 @@ import {
   pickerEpoch,
 } from './datetime-helpers.js';
 
+// Constants
+const FILTER_DEBOUNCE_MS = 250;  // 250ms debounce for filter input
+
 // Records state factory instance
 const recordsManager = createRecordsManager();
 
@@ -186,12 +189,28 @@ async function submitForm() {
     formError.hidden = false;
     return;
   }
+
+  // Validate radio button selection
+  const typeRadio = document.querySelector('input[name="type"]:checked');
+  if (!typeRadio) {
+    formError.textContent = '請選擇類型';
+    formError.hidden = false;
+    return;
+  }
+
+  const msbRadio = document.querySelector('input[name="msb"]:checked');
+  if (!msbRadio) {
+    formError.textContent = '請選擇 MSB';
+    formError.hidden = false;
+    return;
+  }
+
   try {
     const payload = {
       start_time: start,
       end_time: end,
-      type: document.querySelector('input[name="type"]:checked').value,
-      msb: document.querySelector('input[name="msb"]:checked').value,
+      type: typeRadio.value,
+      msb: msbRadio.value,
       notes: document.querySelector('#notes').value,
       tags: document.querySelector('#tags').value,
     };
@@ -267,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.querySelector('#tag-filter').addEventListener('input', debounce(() => {
     loadRecords().catch(showFilterError);
-  }, 250));
+  }, FILTER_DEBOUNCE_MS));
   const startPicker = document.querySelector('[data-picker="start"]');
   const endPicker = document.querySelector('[data-picker="end"]');
   populatePicker(startPicker);
