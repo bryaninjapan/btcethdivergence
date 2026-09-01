@@ -67,6 +67,7 @@
 | 4-8 | 功能開發（記錄、圖表、計算器） | ✅ Complete |
 | 9-12 | 質量保證 + 技術改進 | ✅ Complete |
 | 13 | 前端數據隔離 + UI 增強 | ✅ Complete |
+| 14 | 架構基礎（時間轉換 + 分歧類型統一） | ✅ Complete |
 
 **v1.0 完成日期**: 2026-09-02  
 **總 Requirements**: 35/35 ✅  
@@ -127,6 +128,8 @@ npm run build
 - **Roadmap**: [.planning/ROADMAP.md](.planning/ROADMAP.md) — 各 phase 計劃
 - **Requirements**: [.planning/REQUIREMENTS.md](.planning/REQUIREMENTS.md) — 35 項要求
 - **Phases**: [.planning/phases/](.planning/phases/) — 各 phase 細節
+- **Time Conversions**: [docs/TIMESTAMP-GUIDE.md](docs/TIMESTAMP-GUIDE.md) — TemporalConverter 時間轉換指南
+- **Timestamp Guide**: [docs/TIMESTAMP-GUIDE.md](docs/TIMESTAMP-GUIDE.md) — 時間轉換 API 參考與陷阱
 
 ---
 
