@@ -1,170 +1,122 @@
 ---
 phase: 16
 name: Backend Service Deepening (Records Repository)
-status: planning
+status: planned
 created: 2026-09-02
 depends_on: 14
+duration: 1-1.5 days
 ---
 
-# Phase 16 Plan: Backend Service Deepening
+# Phase 16 Plan: Backend Service Deepening (Records Repository)
 
 ## Overview
 
-Elevate the thin RecordsService into a rich RecordsRepository with advanced query methods (listWithStats, findByTimeRange, etc.), improving testability and consolidating query logic.
+Replace the pass-through `recordsService` + `lib/db.ts` record helpers with a single rich `RecordsRepository` class that owns all divergence-record SQL, error translation, and time handling. Route handlers become pure HTTP layer (parse → validate → delegate → format).
 
-**Duration**: 2 days  
-**Work Type**: Service layer deepening + refactoring  
-**Risk Level**: Medium (database operations, needs integration testing)
-
----
-
-## Goals
-
-1. **RecordsRepository Interface**: Define rich query methods (findAll, findById, listWithStats, findByTimeRange, etc.)
-2. **Query Consolidation**: Move all query logic from route handlers into RecordsRepository
-3. **SQL Safety**: Use parameterized queries, avoid dynamic SQL injection
-4. **Thin Routes**: Simplify route handlers to ≤10 lines (pure HTTP concerns)
-5. **Test Coverage**: 25+ unit tests using Mock D1, integration tests for all routes
-
----
-
-## Scope
-
-### Files to Create
-- `src/services/RecordsRepository.ts` — rich repository with advanced queries
-- `src/services/RecordsRepository.test.ts` — 25+ unit tests
-
-### Files to Refactor
-- `src/routes/records.ts` — remove query logic, use RecordsRepository
-- `src/services/RecordsService.ts` — adjust if needed (may become thin wrapper or merge into RecordsRepository)
-
-### Files to Update
-- `src/types.ts` — review repository interfaces
-- Test suite: ensure all integration tests pass
+**Duration**: 1-1.5 days (≈9.5 focused hours)
+**Work Type**: Backend refactor + new query methods + test migration
+**Risk Level**: Medium — touches every records endpoint; mitigated by existing route-level integration suite
 
 ---
 
 ## Success Criteria
 
-- [ ] RecordsRepository class created with methods: `findAll()`, `findById(id)`, `listWithStats()`, `findByTimeRange(start, end)`, `findByType(type)`, `create()`, `update()`, `delete()`
-- [ ] All query logic moved from route handlers to RecordsRepository
-- [ ] All queries use parameterized SQL (no dynamic injection risk)
-- [ ] Route handlers simplified to ≤10 lines per endpoint
-- [ ] 25+ RecordsRepository unit tests passing (Mock D1)
-- [ ] All integration tests passing (routes still work)
-- [ ] Code coverage ≥85% for repository layer
-- [ ] Code review: zero HIGH issues
+| SC# | Criterion |
+|-----|-----------|
+| SC1 | RecordsRepository exports 8 methods: findAll, findById, listWithStats, findByTimeRange, findByType, create, update, delete |
+| SC2 | All record query logic moved from routes and lib/db.ts to RecordsRepository |
+| SC3 | Repository accepts D1 instance + injectable temporal clock via constructor |
+| SC4 | Every route handler ≤10 lines, HTTP concerns only |
+| SC5 | 25+ unit tests using MockD1 (target 41) |
+| SC6 | Integration tests pass with zero regressions |
+| SC7 | Coverage ≥85%; repository ≥95% |
+| SC8 | Code review: zero HIGH/CRITICAL |
+
+---
+
+## Design Decisions (Approved 2026-09-02)
+
+- **listWithStats()**: Simple statistics (totalRecords, byType, byMsb, dateRange)
+- **findByTimeRange()**: Overlap semantics (records spanning the window included)
+- **No pagination**: Single-owner scale; optional for Phase 17+
+- **Delete records.service.ts**: One layer, not two
+- **Move record SQL**: All in RecordsRepository, not split across files
 
 ---
 
 ## Task Breakdown
 
-### Task 16-01: RecordsRepository Implementation (1.5 days)
+### 16-01: Extend MockD1 (1 hour)
+- Add overlap predicate support
+- Guard against silent no-op filtering
+- 4 tests + npm test green
 
-**Objectives**:
-1. Design RecordsRepository interface
-2. Implement all query methods with parameterized SQL
-3. Write 25+ unit tests using Mock D1
-4. Integrate temporal-api (from Phase 14) for time operations
+### 16-02: Implement Repository (3 hours)
+- 8 public methods (findAll, findById, etc.)
+- Pure function computeRecordStats()
+- JSDoc on all methods
+- Remove record functions from db.ts
 
-**Subtasks**:
-- [ ] 16-01-1: Define RecordsRepository interface and method signatures
-- [ ] 16-01-2: Implement `findAll()` with sorting/pagination
-- [ ] 16-01-3: Implement `findById(id)` 
-- [ ] 16-01-4: Implement `listWithStats()` (count, avg duration per type)
-- [ ] 16-01-5: Implement `findByTimeRange(start, end)` with temporal-api
-- [ ] 16-01-6: Implement `findByType(type)` with temporal-api
-- [ ] 16-01-7: Implement CRUD operations (create, update, delete)
-- [ ] 16-01-8: Write RecordsRepository unit tests (25+, Mock D1)
-- [ ] 16-01-9: Verify all SQL queries are parameterized
+### 16-03: Unit Tests (2.5 hours)
+- 41 test cases covering all methods
+- SQL safety + immutability tests
+- Coverage ≥95%
 
-**Expected Deliverables**:
-- `src/services/RecordsRepository.ts` — full implementation
-- `src/services/RecordsRepository.test.ts` — 25+ tests passing
-- All queries using parameterized SQL
+### 16-04: Route Refactor (2 hours)
+- Rewrite 4 handlers (≤10 lines each)
+- Add GET /api/records/stats endpoint
+- 6 integration tests
+- npm test + E2E green
 
----
-
-### Task 16-02: Route Handler Refactoring + Testing (0.5 days)
-
-**Objectives**:
-1. Refactor routes/records.ts to use RecordsRepository
-2. Simplify route handlers
-3. Run integration tests
-4. Verify no regressions
-
-**Subtasks**:
-- [ ] 16-02-1: Update GET /api/records to use repository.findAll()
-- [ ] 16-02-2: Update GET /api/records/:id to use repository.findById()
-- [ ] 16-02-3: Update POST /api/records to use repository.create()
-- [ ] 16-02-4: Update PUT /api/records/:id to use repository.update()
-- [ ] 16-02-5: Update DELETE /api/records/:id to use repository.delete()
-- [ ] 16-02-6: Verify all route handlers ≤10 lines
-- [ ] 16-02-7: Run integration tests (all routes should pass)
-- [ ] 16-02-8: Code review + sign-off
-
-**Expected Deliverables**:
-- Refactored `src/routes/records.ts` (thin HTTP layer)
-- All integration tests passing
-- Zero regressions
-
----
-
-## Dependencies
-
-- **Blocks**: None (can run parallel with Phase 15)
-- **Blocked By**: Phase 14 ✅ (temporal-api available)
-- **Related**: Phase 15 (independent refactoring), Phase 17 (uses RecordsRepository patterns)
+### 16-05: Review + Docs (1 hour)
+- Code review audit
+- 16-REVIEW.md, IMPLEMENTATION-NOTES.md
+- Update ROADMAP.md, STATE.md
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests (25+)
-- RecordsRepository: findAll, findById, listWithStats, findByTimeRange, findByType
-- CRUD operations (create, update, delete)
-- SQL parameterization verification
-- Mock D1 ensuring correct query structure
-
-### Integration Tests
-- All existing route tests must pass (no regressions)
-- Verify routes correctly delegate to RecordsRepository
-- End-to-end workflow: create → read → update → delete
-
-### Manual QA (if needed)
-- Verify records still display correctly
-- Verify filtering by time range works
-- Verify stats calculations accurate
+- **Unit**: 41 repository cases + 4 MockD1 overlap cases
+- **Integration**: existing records.test.ts pass unchanged (regression net)
+- **E2E**: records.spec.ts green (81 runs across browsers)
+- **Coverage**: 85% global gate; 95% target for repository
 
 ---
 
-## Rollback Plan
+## Critical Constraints
 
-If issues found:
-1. Revert routes/records.ts changes
-2. Keep RecordsRepository for future use
-3. Analyze issue and retry Phase 16 later
-
----
-
-## Time Estimate
-
-| Task | Estimate | Status |
-|------|----------|--------|
-| 16-01 (RecordsRepository) | 1.5 days | Ready to start after Phase 14 |
-| 16-02 (Route refactoring + tests) | 0.5 days | Ready to start |
-| **Total Phase 16** | **2 days** | **Planned after Phase 14** |
+- DELETE /api/records/1 must issue exactly 1 statement (no pre-SELECT)
+- GET /api/records returns an array (not {records, stats})
+- Stats on separate /api/records/stats endpoint
+- Port SQL verbatim from db.ts (test assertions depend on substrings)
 
 ---
 
-## Handoff Criteria
+## Risks & Mitigations
 
-Phase 16 is complete when:
-1. ✅ RecordsRepository fully implemented with rich query interface
-2. ✅ All queries use parameterized SQL (no injection risk)
-3. ✅ Routes refactored to use RecordsRepository (≤10 lines each)
-4. ✅ 25+ RecordsRepository unit tests passing
-5. ✅ All integration tests passing (no regressions)
-6. ✅ Code coverage ≥85% for repository layer
-7. ✅ Code review complete (zero HIGH issues)
-8. ✅ Ready to unblock Phase 17
+| Risk | Sev | Mitigation |
+|------|-----|-----------|
+| MockD1 silently ignores overlap WHERE | High | Task 16-01 first with guard |
+| Route test SQL assertions broken | Medium | Port verbatim; treat failures as bugs |
+| /stats shadowed by /:id | Medium | Explicit registration order |
+| delete() gains pre-SELECT | Low | Explicit in implementation, tested |
+
+---
+
+## Verification Commands
+
+```bash
+npm test
+npm run typecheck
+npm run test:coverage
+
+npx vitest run src/services/RecordsRepository.test.ts
+npx playwright test e2e/records.spec.ts
+```
+
+---
+
+## Handoff
+
+Phase 16 complete when all SC met and code review yields zero HIGH/CRITICAL.
