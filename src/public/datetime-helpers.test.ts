@@ -7,8 +7,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { fillSelect, rebuildDays, setPickerFromEpoch, pickerEpoch } from '../../public/js/datetime-helpers';
 import { Timestamp } from '../../public/js/timestamp';
 
+// tsconfig lib is [ES2022, WebWorker] (no DOM); access the jsdom globals
+// via globalThis and treat DOM nodes as any.
+const document = (globalThis as unknown as { document: any }).document;
+
 describe('datetime-helpers', () => {
-  let pickerEl: HTMLElement;
+  let pickerEl: any;
 
   beforeEach(() => {
     // Create a minimal picker element with required selects
@@ -37,7 +41,7 @@ describe('datetime-helpers', () => {
 
   describe('fillSelect', () => {
     it('should populate select with option values', () => {
-      const select = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
+      const select = pickerEl.querySelector('[data-part="year"]') as any;
       const values = [2022, 2023, 2024, 2025];
 
       fillSelect(select, values);
@@ -51,7 +55,7 @@ describe('datetime-helpers', () => {
     });
 
     it('should clear existing options before populating', () => {
-      const select = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
+      const select = pickerEl.querySelector('[data-part="year"]') as any;
 
       // Add initial options
       fillSelect(select, [2024]);
@@ -64,14 +68,14 @@ describe('datetime-helpers', () => {
     });
 
     it('should handle empty values array', () => {
-      const select = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
+      const select = pickerEl.querySelector('[data-part="year"]') as any;
       fillSelect(select, []);
 
       expect(select.querySelectorAll('option').length).toBe(0);
     });
 
     it('should convert values to strings', () => {
-      const select = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
+      const select = pickerEl.querySelector('[data-part="year"]') as any;
       const values = ['Jan', 'Feb', 'Mar'];
 
       fillSelect(select, values);
@@ -84,9 +88,9 @@ describe('datetime-helpers', () => {
 
   describe('rebuildDays', () => {
     it('should rebuild day options based on year and month', () => {
-      const daySel = pickerEl.querySelector('[data-part="day"]') as HTMLSelectElement;
-      const yearSel = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
-      const monthSel = pickerEl.querySelector('[data-part="month"]') as HTMLSelectElement;
+      const daySel = pickerEl.querySelector('[data-part="day"]') as any;
+      const yearSel = pickerEl.querySelector('[data-part="year"]') as any;
+      const monthSel = pickerEl.querySelector('[data-part="month"]') as any;
 
       fillSelect(yearSel, [2024]);
       fillSelect(monthSel, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
@@ -100,9 +104,9 @@ describe('datetime-helpers', () => {
     });
 
     it('should clamp day value when selecting a shorter month', () => {
-      const daySel = pickerEl.querySelector('[data-part="day"]') as HTMLSelectElement;
-      const yearSel = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
-      const monthSel = pickerEl.querySelector('[data-part="month"]') as HTMLSelectElement;
+      const daySel = pickerEl.querySelector('[data-part="day"]') as any;
+      const yearSel = pickerEl.querySelector('[data-part="year"]') as any;
+      const monthSel = pickerEl.querySelector('[data-part="month"]') as any;
 
       fillSelect(yearSel, [2024]);
       fillSelect(monthSel, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
@@ -132,10 +136,10 @@ describe('datetime-helpers', () => {
 
   describe('setPickerFromEpoch', () => {
     it('should set picker values from Unix timestamp', () => {
-      const yearSel = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
-      const monthSel = pickerEl.querySelector('[data-part="month"]') as HTMLSelectElement;
-      const daySel = pickerEl.querySelector('[data-part="day"]') as HTMLSelectElement;
-      const hourSel = pickerEl.querySelector('[data-part="hour"]') as HTMLSelectElement;
+      const yearSel = pickerEl.querySelector('[data-part="year"]') as any;
+      const monthSel = pickerEl.querySelector('[data-part="month"]') as any;
+      const daySel = pickerEl.querySelector('[data-part="day"]') as any;
+      const hourSel = pickerEl.querySelector('[data-part="hour"]') as any;
 
       // Populate with year, months, days, and hours to simulate real picker
       fillSelect(yearSel, [2024]);
@@ -165,10 +169,10 @@ describe('datetime-helpers', () => {
 
   describe('pickerEpoch', () => {
     it('should extract Unix timestamp from picker', () => {
-      const yearSel = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
-      const monthSel = pickerEl.querySelector('[data-part="month"]') as HTMLSelectElement;
-      const daySel = pickerEl.querySelector('[data-part="day"]') as HTMLSelectElement;
-      const hourSel = pickerEl.querySelector('[data-part="hour"]') as HTMLSelectElement;
+      const yearSel = pickerEl.querySelector('[data-part="year"]') as any;
+      const monthSel = pickerEl.querySelector('[data-part="month"]') as any;
+      const daySel = pickerEl.querySelector('[data-part="day"]') as any;
+      const hourSel = pickerEl.querySelector('[data-part="hour"]') as any;
 
       // Populate and set values
       fillSelect(yearSel, [2024]);
@@ -192,10 +196,10 @@ describe('datetime-helpers', () => {
     });
 
     it('should round-trip through setPickerFromEpoch', () => {
-      const yearSel = pickerEl.querySelector('[data-part="year"]') as HTMLSelectElement;
-      const monthSel = pickerEl.querySelector('[data-part="month"]') as HTMLSelectElement;
-      const daySel = pickerEl.querySelector('[data-part="day"]') as HTMLSelectElement;
-      const hourSel = pickerEl.querySelector('[data-part="hour"]') as HTMLSelectElement;
+      const yearSel = pickerEl.querySelector('[data-part="year"]') as any;
+      const monthSel = pickerEl.querySelector('[data-part="month"]') as any;
+      const daySel = pickerEl.querySelector('[data-part="day"]') as any;
+      const hourSel = pickerEl.querySelector('[data-part="hour"]') as any;
 
       // Populate selects
       fillSelect(yearSel, [2024]);

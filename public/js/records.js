@@ -1,9 +1,6 @@
 import { api, ApiError, describeApiError } from './api.js';
 import { Timestamp } from './timestamp.js';
 import {
-  buildUtcEpoch,
-  dayOptions,
-  daysInMonth,
   epochToParts,
   hourOptions,
   monthOptions,

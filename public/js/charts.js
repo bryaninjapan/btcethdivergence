@@ -1,15 +1,6 @@
 import { api, ApiError, describeApiError } from './api.js';
 import { createRangeSync } from './chart-sync.js';
 import { Timestamp } from './timestamp.js';
-import {
-  dayOptions,
-  daysInMonth,
-  hourOptions,
-  monthOptions,
-  yearOptions,
-  buildUtcEpoch,
-  epochToParts,
-} from './datetime.js';
 import { nowRange, parseRangeParams } from './chart-range.js';
 import { createChartState } from './chart-state.js';
 import {
