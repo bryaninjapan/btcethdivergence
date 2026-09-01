@@ -9,7 +9,7 @@ const EXISTING: DivergenceRecord = {
   start_time: 1600000000,
   end_time: 1600003600,
   type: 'btc_hh_eth_lh',
-  msb: 'btc_hh_eth_lh',
+  msb: 'no',
   notes: 'existing notes',
   tags: 'existing tags',
   created_at: 1,
