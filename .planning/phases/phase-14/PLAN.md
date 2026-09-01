@@ -92,19 +92,18 @@ Write tests covering all 30+ boundary cases in `src/domains/temporal-api.test.ts
 - [ ] Cross-module: Records service uses both old and new APIs in same flow
 
 #### 14-01-03: Migrate Backend Modules to TemporalConverter (8 hours)
-Migrate the following 8+ modules. For each, run `npm test -- <file>` after migration:
+Migrate actual time-conversion sites (binance.ts:18, klines.ts:30–31, db.ts:52/92/128). Audit remaining modules for any `Math.floor(ms/1000)` patterns; migrate if found. For each change, run `npm test -- <file>` after migration:
 
 1. **`src/lib/db.ts`** (SC2 explicit):
-   - [ ] Line 39: `start` parameter: `Timestamp.fromMillis(start).toSeconds()` → `TemporalConverter.msToSec(start)`
-   - [ ] Line 40: `end` parameter: `Timestamp.fromMillis(end).toSeconds()` → `TemporalConverter.msToSec(end)`
-   - [ ] Lines 52, 92, 128: `Timestamp.now().toSeconds()` → `TemporalConverter.secToMs(Date.now())`? (or keep Timestamp for now/Date.now, clarify intent)
-   - [ ] Verify SQL BETWEEN queries still correct after migration
+   - [ ] Lines 52, 92, 128: `Timestamp.now().toSeconds()` currently produce seconds; these populate `created_at`/`updated_at`/backfill cursor (all in seconds)
+   - [ ] Replace with: `TemporalConverter.dateToSec(new Date())` (NOT `secToMs`, which returns ms and would corrupt second-domain columns)
+   - [ ] Verify: queryKlines passes start/end as raw numbers (no conversion in db.ts); migration scope is only the Timestamp.now() sites, not start/end params
    - [ ] Test: existing tests for `queryKlines`, `listRecords` pass
 
-2. **`src/lib/validate.ts`** (SC2 explicit, W2 warning):
-   - [ ] Line 43: Time validation (`start_time < end_time`) — no direct conversion, but document intent
-   - [ ] Import TemporalConverter for documentation
-   - [ ] Test: validation tests pass
+2. **`src/lib/validate.ts`** (SC2 explicit, audit-only):
+   - [ ] Audit: Search for any `Math.floor(ms/1000)` or Timestamp time conversions
+   - [ ] Line 43 (`start_time < end_time`) is pure comparison; no conversion to migrate
+   - [ ] Test: validation tests pass (no code changes expected)
 
 3. **`src/lib/binance.ts`**:
    - [ ] Line 18: `Timestamp.fromMillis(raw[0]).toSeconds()` → `TemporalConverter.msToSec(raw[0])`
@@ -116,22 +115,24 @@ Migrate the following 8+ modules. For each, run `npm test -- <file>` after migra
    - [ ] Test: API endpoint tests pass
 
 5. **`src/routes/admin.ts`**:
-   - [ ] Line 38: `Date.now() - 2*60*60*1000` → `TemporalConverter.msToSec(Date.now() - 2*60*60*1000)` OR use TemporalConverter for arithmetic
+   - [ ] Line 38: `Date.now() - 2*60*60*1000` is Binance probe `startTime` in MILLISECONDS; do NOT apply `msToSec` (would break spike-test)
+   - [ ] Clarify intent: if converting from ms to sec, use `TemporalConverter.msToSec(value)`; if staying in ms, leave arithmetic as-is
+   - [ ] Verify: spike-test endpoint still correctly fetches 2 hours of backfill data
    - [ ] Test: admin spike-test endpoint works
 
-6. **`src/services/klines.service.ts`** (W2 warning, services layer):
-   - [ ] Audit for any `Math.floor(ms/1000)` patterns
-   - [ ] Migrate to TemporalConverter if found
+6. **`src/services/klines.service.ts`** (audit-only):
+   - [ ] Audit for any `Math.floor(ms/1000)` or time-domain conversions
+   - [ ] Migrate to TemporalConverter if found (likely no-op)
    - [ ] Test: service layer tests pass
 
-7. **`src/services/records.service.ts`** (W2 warning):
-   - [ ] Audit for time logic
-   - [ ] Migrate if found
+7. **`src/services/records.service.ts`** (audit-only):
+   - [ ] Audit for any `Math.floor(ms/1000)` or time-domain conversions
+   - [ ] Migrate to TemporalConverter if found (likely no-op)
    - [ ] Test: service layer tests pass
 
-8. **`src/services/admin.service.ts`** (W2 warning):
-   - [ ] Audit for time logic
-   - [ ] Migrate if found
+8. **`src/services/admin.service.ts`** (audit-only):
+   - [ ] Audit for any `Math.floor(ms/1000)` or time-domain conversions
+   - [ ] Migrate to TemporalConverter if found (likely no-op)
    - [ ] Test: admin service tests pass
 
 #### 14-01-04: Fix Remaining Timezone/Edge Cases (2 hours)
@@ -181,9 +182,11 @@ Migrate the following 8+ modules. For each, run `npm test -- <file>` after migra
 - [ ] No hardcoded definitions
 
 #### 14-02-03: Hardcoded String Search & Refactor (2 hours)
-- [ ] Command: `rg "BTC_HH_ETH_LH|BTC_LH_ETH_HH|BTC_LL_ETH_HL|BTC_HL_ETH_LL" src/ public/`
-- [ ] For each match: refactor to use `DIVERGENCE_TYPES[i]` or named constant
-- [ ] Example fix: `if (type === 'BTC_HH_ETH_LH')` → `if (type === DIVERGENCE_TYPES[0])`
+- [ ] Command (lowercase): `rg "btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll" src/ public/ --type ts --type js`
+- [ ] Check `public/index.html` lines 27–30 & 80–83 for hardcoded option values
+- [ ] For each match: refactor to use the typed `DivergenceType` constant or imported `DIVERGENCE_TYPES` array
+- [ ] Example fix: `if (type === 'btc_hh_eth_lh')` → reference a named constant like `const types = ['btc_hh_eth_lh', 'btc_lh_eth_hh', …]` imported from divergence module (NOT array index, which breaks on reorder)
+- [ ] `public/index.html`: either generate `<option>` values from `public/js/divergence.js` at runtime or add hardcoded values to the sync test
 - [ ] Test: all tests pass after refactor
 
 #### 14-02-04: Type Sync Automated Test (1 hour)
@@ -263,7 +266,7 @@ Migrate the following 8+ modules. For each, run `npm test -- <file>` after migra
 - [ ] 30+ new tests added to `temporal-api.test.ts`
 - [ ] All tests pass
 - [ ] Coverage ≥ 90% for TemporalConverter
-- [ ] 44 existing Timestamp tests still pass
+- [ ] 36 existing Timestamp tests still pass
 - [ ] Total: 365+ tests passing
 
 **SC7 — Code Review**:
@@ -294,8 +297,10 @@ npx vitest run src/domains/divergence.test.ts
 # Coverage report
 npm run test:coverage
 
-# No hardcoded divergence strings remain
-rg "BTC_HH_ETH_LH|BTC_LH_ETH_HH|BTC_LL_ETH_HL|BTC_HL_ETH_LL" src/ public/ || echo "None found"
+# No hardcoded divergence strings remain (lowercase check)
+rg "btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll" src/ public/ --type ts --type js || echo "None found"
+# Also check public/index.html for hardcoded option values
+rg "btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll" public/index.html || echo "None found"
 
 # All imports centralized
 rg "DIVERGENCE_TYPES" src/ | grep -v "import"  || echo "Only imports, good"
