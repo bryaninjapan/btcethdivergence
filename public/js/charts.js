@@ -7,6 +7,9 @@ import {
   pickerEpoch,
 } from './datetime-helpers.js';
 
+// Constants
+const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
+
 // Direct Lightweight Charts API surface (2 references; <=5 required by phase).
 const { createChart, CandlestickSeries } = LightweightCharts;
 const { Normal, Logarithmic } = LightweightCharts.PriceScaleMode;
@@ -71,7 +74,12 @@ async function loadRange(startMs, endMs) {
   if (inFlight) {
     const previous = inFlight;
     inFlight = null;
-    await previous.catch(() => {});
+    await previous.catch((error) => {
+      // Only log non-abort errors for debugging
+      if (error?.name !== 'AbortError' && !(error instanceof DOMException)) {
+        console.warn('Superseded load failed:', error);
+      }
+    });
   }
 
   const errorEl = document.getElementById('chart-error');
@@ -81,7 +89,7 @@ async function loadRange(startMs, endMs) {
 
   const controller = new AbortController();
   activeController = controller;
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
 
   const promise = (async () => {
     try {
