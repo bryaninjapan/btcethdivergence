@@ -25,8 +25,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Error Handling & Structured Responses** - Replace ad-hoc error handling with structured error types, unified response envelope, centralized middleware ✅
 - [x] **Phase 12: Service Layer Pattern** - Extract business logic from route handlers, implement service layer for improved testability and reusability ✅
 - [x] **Phase 13: Frontend Data Isolation & UI Enhancement** - Refactor frontend state (charts.js, records.js) from globals to isolated modules; apply TradingView-style K-line colors and MSB indicator ✅
-- [ ] **Phase 14: Architecture Foundations (Temporal + Divergence)** - Consolidate time-domain logic into centralized temporal-api module; unify divergence type definitions across backend and frontend
-- [ ] **Phase 15: Frontend State Refactoring (Chart State Machine)** - Merge chart-state.js, chart-range.js, chart-sync.js into unified ChartManager state machine
+- [x] **Phase 14: Architecture Foundations (Temporal + Divergence)** ✅ - Consolidate time-domain logic into centralized temporal-api module; unify divergence type definitions across backend and frontend
+- [x] **Phase 15: Frontend State Refactoring (Chart State Machine)** ✅ - Merge chart-state.js, chart-range.js, chart-sync.js into unified ChartManager state machine; 62 tests (49 unit + 13 integration), 81/81 E2E pass
+- [ ] **Phase 16A: Structured Logging System** - Add production-grade observability: integrate Sentry/pino logging into ChartManager, charts.js, records.js; add user context and monitoring
 - [ ] **Phase 16: Backend Service Deepening (Records Repository)** - Elevate shallow service wrappers into rich RecordsRepository interface with query methods (listWithStats, findByTimeRange, etc.)
 - [ ] **Phase 17: Future-Proofing (Calculator Validation, Optional)** - Extract calculator validation rules into schema-driven module, prepare for future API endpoints
 
@@ -307,8 +308,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Architecture Foundations (Temporal + Divergence) | 0/2 | Ready to plan | - |
-| 15. Frontend State Refactoring (Chart State Machine) | 0/3 | Ready to plan | - |
+| 14. Architecture Foundations (Temporal + Divergence) | 2/2 | ✅ COMPLETE | 2026-09-02 |
+| 15. Frontend State Refactoring (Chart State Machine) | 3/3 | ✅ COMPLETE | 2026-09-02 |
+| 16A. Structured Logging System | 0/1 | Planned (new) | - |
 | 16. Backend Service Deepening (Records Repository) | 0/2 | Ready to plan | - |
 | 17. Future-Proofing (Calculator Validation, Optional) | 0/1 | Ready to plan | - |
 
@@ -348,9 +350,30 @@ Plans:
 **Plans**: 15-01 (ChartManager core + state machine), 15-02 (charts.js refactoring), 15-03 (tests + E2E verification)
 
 Plans:
-- [ ] 15-01: ChartManager state machine implementation
-- [ ] 15-02: Refactor charts.js to use ChartManager
-- [ ] 15-03: Unit tests + E2E verification
+- [x] 15-01: ChartManager state machine implementation ✅
+- [x] 15-02: Refactor charts.js to use ChartManager ✅
+- [x] 15-03: Unit tests + E2E verification ✅
+
+### Phase 16A: Structured Logging System
+**Goal**: Add production-grade observability and error tracking by replacing console.error() with a structured logging layer (Sentry/pino/custom). Enable production monitoring, user context correlation, and debugging support.
+**Depends on**: Phase 15
+**Requirements**: CODE-06 (Observability), CODE-07 (Production Monitoring)
+**Success Criteria** (what must be TRUE):
+  1. Logging library selected and integrated (Sentry OR pino OR lightweight custom logger).
+  2. Structured logging layer wraps all error/warning calls in ChartManager, charts.js, records.js with user context (user ID, component, action).
+  3. Error types clearly distinguished: abort errors vs real failures vs validation errors.
+  4. Telemetry basics: timestamp, severity level, stack trace, context object.
+  5. E2E tests pass: no regressions from logging instrumentation.
+  6. Code coverage maintained ≥85%.
+  7. Code review complete: zero HIGH issues.
+  8. Monitoring dashboard or alerts configured (if using Sentry/external service).
+**Plans**: 16A-01 (logging library selection + integration), 16A-02 (instrumentation + monitoring setup)
+**Status**: Planned, based on Phase 15 code review IN-01 finding
+**Duration**: 1-1.5 days
+
+Plans:
+- [ ] 16A-01: Logging library selection and integration into ChartManager
+- [ ] 16A-02: Instrument charts.js, records.js, add monitoring/alerting
 
 ### Phase 16: Backend Service Deepening (Records Repository)
 **Goal**: Elevate the thin service layer into a rich RecordsRepository with advanced query methods, improving testability and reducing query logic scattered across route handlers.
@@ -366,6 +389,13 @@ Plans:
   7. Code coverage ≥85% for repository layer.
   8. Code review complete: zero HIGH issues.
 **Plans**: 16-01 (RecordsRepository interface + implementation), 16-02 (route handler refactoring + testing)
+**Status**: Planned, design approved (2026-09-02)
+**Duration**: 1-1.5 days
+
+**Design Decisions (approved 2026-09-02)**:
+  - **listWithStats()**: Simple statistics (byType count, byMsb count, totalRecords, dateRange min/max) — not complex time-series analysis
+  - **findByTimeRange(start, end)**: Overlap semantics — `WHERE start_time < endSec AND end_time > startSec` — includes records that span/overlap the query window
+  - **Pagination**: Not added in Phase 16 (single-owner scale); designed for future addition if needed via optional limit/offset params
 
 Plans:
 - [ ] 16-01: RecordsRepository implementation with advanced queries
