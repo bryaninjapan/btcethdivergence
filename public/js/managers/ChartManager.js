@@ -230,7 +230,8 @@ export class ChartManager {
     if (this._syncState === SyncState.SYNCING) return false;
     const chart = this._charts[sourceId];
     if (!chart) return false;
-    const resolved = range ?? chart.timeScale().getVisibleLogicalRange();
+    const ts = chart && chart.timeScale();
+    const resolved = range ?? (ts && ts.getVisibleLogicalRange());
     if (!isUsableRange(resolved)) return false;
     this._syncState = SyncState.SYNCING;
     try {
