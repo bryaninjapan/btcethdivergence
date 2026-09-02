@@ -152,7 +152,7 @@ describe('records CRUD route contract', () => {
 
   it('PUT omitting notes/tags → preserves existing notes/tags (regression: HIGH issue)', async () => {
     const db = createMockD1WithData({
-      divergence_records: [{ ...EXISTING_RECORD, notes: 'existing notes', tags: 'existing tags' }],
+      divergence_records: [{ ...EXISTING_RECORD, notes: 'existing notes', tags: 'existing tags', msb: 'yes' }],
     });
 
     const res = await callRecordsRoute(
@@ -160,7 +160,7 @@ describe('records CRUD route contract', () => {
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'btc_lh_eth_hh' }), // omit notes and tags
+        body: JSON.stringify({ type: 'btc_lh_eth_hh' }), // omit notes, tags, and msb
       },
       makeEnv(db),
     );
@@ -168,9 +168,10 @@ describe('records CRUD route contract', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: DivergenceRecord };
     expect(body.ok).toBe(true);
-    // REGRESSION TEST: notes and tags should NOT be cleared
+    // REGRESSION TEST: notes, tags, and msb should NOT be cleared
     expect(body.data.notes).toBe('existing notes');
     expect(body.data.tags).toBe('existing tags');
+    expect(body.data.msb).toBe('yes');
     expect(body.data.type).toBe('btc_lh_eth_hh');
   });
 
