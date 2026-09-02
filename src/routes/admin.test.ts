@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { errorMiddleware } from '../lib/error-middleware';
+import { createMockD1Database, type MockD1Database } from '../lib/test-db';
 import type { Env } from '../types';
 
 const timingSafeEqualSpy = vi.hoisted(() => vi.fn());
@@ -18,27 +19,10 @@ vi.mock('crypto', async (importOriginal) => {
 
 const { default: admin } = await import('./admin');
 
-/**
- * Minimal fake D1Database supporting the .first() call used by
- * getBackfillCursor, so we can exercise the /api/admin/backfill-cursor
- * route end-to-end through the real `auth()` middleware.
- */
-class FakeD1Database {
-  prepare(_sql: string) {
-    return {
-      bind(..._params: unknown[]) {
-        return {
-          first: async <T>() => null as unknown as T,
-        };
-      },
-    };
-  }
-}
-
 const INGEST_TOKEN = 'super-secret-token-value-1234567890';
 
-function makeEnv(): Env {
-  return { DB: new FakeD1Database() as unknown as Env['DB'], INGEST_TOKEN };
+function makeEnv(db: MockD1Database): Env {
+  return { DB: db as unknown as Env['DB'], INGEST_TOKEN };
 }
 
 function createAppWithErrorMiddleware(): Hono<{ Bindings: Env }> {
@@ -48,7 +32,7 @@ function createAppWithErrorMiddleware(): Hono<{ Bindings: Env }> {
   return app;
 }
 
-async function callBackfillCursor(authHeader: string | undefined) {
+async function callBackfillCursor(authHeader: string | undefined, db = createMockD1Database()) {
   const headers: Record<string, string> = {};
   if (authHeader !== undefined) {
     headers.Authorization = authHeader;
@@ -57,7 +41,7 @@ async function callBackfillCursor(authHeader: string | undefined) {
   return app.request(
     '/api/admin/backfill-cursor?symbol=BTCUSDT',
     { headers },
-    makeEnv(),
+    makeEnv(db),
   );
 }
 

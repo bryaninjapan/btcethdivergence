@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Hono } from 'hono';
 import klines from './klines';
 import { errorMiddleware } from '../lib/error-middleware';
+import { createMockD1Database, createMockD1WithData, type MockD1Database } from '../lib/test-db';
 import type { Env, Kline } from '../types';
 
 /**
@@ -18,29 +19,12 @@ app.onError((err, c) => errorMiddleware(err, c));
 app.route('/', klines);
 
 /**
- * Minimal fake D1Database that records every bind() call and returns a
- * fixed set of rows. Lets us assert exactly what params reach the query
- * layer (in particular: seconds, not milliseconds).
+ * The shared MockD1 in-memory database records every bind() call and applies
+ * the klines WHERE/BETWEEN semantics over its seeded rows. Lets us assert
+ * exactly what params reach the query layer (in particular: seconds, not
+ * milliseconds).
  */
-class FakeD1Database {
-  public calls: unknown[][] = [];
-
-  constructor(private readonly rows: Kline[] = []) {}
-
-  prepare(_sql: string) {
-    const self = this;
-    return {
-      bind(...params: unknown[]) {
-        self.calls.push(params);
-        return {
-          all: async <T>() => ({ results: self.rows as unknown as T[] }),
-        };
-      },
-    };
-  }
-}
-
-function makeEnv(db: FakeD1Database): Env {
+function makeEnv(db: MockD1Database): Env {
   return { DB: db as unknown as Env['DB'], INGEST_TOKEN: 'unused' };
 }
 
@@ -55,7 +39,7 @@ const SAMPLE_ROW: Kline = {
 
 describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   it('converts millisecond query params to seconds before querying the DB', async () => {
-    const db = new FakeD1Database([SAMPLE_ROW]);
+    const db = createMockD1WithData({ klines: [{ symbol: "BTCUSDT", ...SAMPLE_ROW }] });
     const startMs = 1627473600000; // -> 1627473600 s
     const endMs = 1627477200000; // -> 1627477200 s
 
@@ -68,7 +52,10 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: Kline[] };
     expect(body.ok).toBe(true);
-    expect(body.data).toEqual([SAMPLE_ROW]);
+    // MockD1 stores full rows (incl. the symbol column used for filtering),
+    // so compare against the kline projection fields rather than the seed.
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject(SAMPLE_ROW);
 
     // The critical assertion: DB must receive SECONDS, not the raw ms input.
     expect(db.calls).toHaveLength(1);
@@ -82,7 +69,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   });
 
   it('floors fractional millisecond timestamps when converting to seconds', async () => {
-    const db = new FakeD1Database([]);
+    const db = createMockD1Database();
     // 1627473600999 ms -> 1627473600.999 s -> floored to 1627473600 s
     const res = await app.request(
       '/api/klines?symbol=ETHUSDT&start=1627473600999&end=1627477200500',
@@ -97,7 +84,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   });
 
   it('returns an empty array (not an error) when the ms range maps outside stored data', async () => {
-    const db = new FakeD1Database([]); // simulates no matching rows in D1
+    const db = createMockD1Database(); // simulates no matching rows in D1
     const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=9999999999000&end=9999999999999',
       {},
@@ -111,7 +98,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   });
 
   it('rejects non-numeric timestamp query params with 400', async () => {
-    const db = new FakeD1Database([SAMPLE_ROW]);
+    const db = createMockD1WithData({ klines: [{ symbol: "BTCUSDT", ...SAMPLE_ROW }] });
     const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=not-a-number&end=1627477200000',
       {},
@@ -126,7 +113,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   });
 
   it('rejects missing required query params with 400', async () => {
-    const db = new FakeD1Database([SAMPLE_ROW]);
+    const db = createMockD1WithData({ klines: [{ symbol: "BTCUSDT", ...SAMPLE_ROW }] });
     const res = await app.request('/api/klines?symbol=BTCUSDT', {}, makeEnv(db));
 
     expect(res.status).toBe(400);
@@ -134,7 +121,7 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   });
 
   it('rejects negative timestamp query params with 400 (Phase 10 behavior change)', async () => {
-    const db = new FakeD1Database([SAMPLE_ROW]);
+    const db = createMockD1WithData({ klines: [{ symbol: "BTCUSDT", ...SAMPLE_ROW }] });
     const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=-1000&end=1627477200000',
       {},
@@ -150,23 +137,12 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
   });
 
   it('returns 500 with a generic message when the DB query throws', async () => {
-    class ThrowingDb {
-      prepare() {
-        return {
-          bind() {
-            return {
-              all: async () => {
-                throw new Error('D1 connection lost');
-              },
-            };
-          },
-        };
-      }
-    }
+    const db = createMockD1Database();
+    db.failNext('all');
     const res = await app.request(
       '/api/klines?symbol=BTCUSDT&start=1627473600000&end=1627477200000',
       {},
-      makeEnv(new ThrowingDb() as unknown as FakeD1Database),
+      makeEnv(db),
     );
 
     expect(res.status).toBe(500);

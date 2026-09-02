@@ -109,6 +109,87 @@ describe('createMockD1Database — prepare().bind()', () => {
     expect(cursor).toBe(1609459200);
   });
 
+  it('all() applies overlap predicate: start_time < ? AND end_time > ? (record spans window)', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...RECORD, id: 1, start_time: 1600000000, end_time: 1600003600 },
+        { ...RECORD, id: 2, start_time: 1600002000, end_time: 1600005600 },
+        { ...RECORD, id: 3, start_time: 1600010000, end_time: 1600013600 },
+      ],
+    });
+
+    // Query window: [1600001000, 1600004000]
+    // Record 1: [1600000000, 1600003600] — spans (1600000000 < 1600004000 AND 1600003600 > 1600001000) ✓
+    // Record 2: [1600002000, 1600005600] — spans (1600002000 < 1600004000 AND 1600005600 > 1600001000) ✓
+    // Record 3: [1600010000, 1600013600] — no overlap (1600010000 NOT < 1600004000) ✗
+    const res = await db
+      .prepare('SELECT * FROM divergence_records WHERE start_time < ? AND end_time > ?')
+      .bind(1600004000, 1600001000)
+      .all<DivergenceRecord>();
+
+    expect(res.results).toHaveLength(2);
+    expect(res.results?.map((r) => r.id)).toEqual([1, 2]);
+  });
+
+  it('all() overlap predicate: no matching records', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...RECORD, id: 1, start_time: 1600000000, end_time: 1600003600 },
+        { ...RECORD, id: 2, start_time: 1600010000, end_time: 1600013600 },
+      ],
+    });
+
+    // Query window: [1600020000, 1600023600] — far in the future
+    // Record 1: [1600000000, 1600003600] — no overlap ✗
+    // Record 2: [1600010000, 1600013600] — no overlap ✗
+    const res = await db
+      .prepare('SELECT * FROM divergence_records WHERE start_time < ? AND end_time > ?')
+      .bind(1600023600, 1600020000)
+      .all<DivergenceRecord>();
+
+    expect(res.results).toHaveLength(0);
+  });
+
+  it('all() overlap predicate is strict: records touching the window boundary are excluded', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        // Ends exactly at window start (end_time === startSec) → no overlap
+        { ...RECORD, id: 1, start_time: 1600000000, end_time: 1600001000 },
+        // Starts exactly at window end (start_time === endSec) → no overlap
+        { ...RECORD, id: 2, start_time: 1600004000, end_time: 1600005000 },
+        // Fully inside the window → overlap
+        { ...RECORD, id: 3, start_time: 1600000500, end_time: 1600001500 },
+      ],
+    });
+
+    // Query window: [1600001000, 1600004000]
+    const res = await db
+      .prepare('SELECT * FROM divergence_records WHERE start_time < ? AND end_time > ? ORDER BY start_time DESC')
+      .bind(1600004000, 1600001000)
+      .all<DivergenceRecord>();
+
+    expect(res.results).toHaveLength(1);
+    expect(res.results?.[0].id).toBe(3);
+  });
+
+  it('all() overlap predicate with type filter: start_time < ? AND end_time > ? AND type = ?', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...RECORD, id: 1, type: 'btc_hh_eth_lh', start_time: 1600000000, end_time: 1600003600 },
+        { ...RECORD, id: 2, type: 'btc_hl_eth_ll', start_time: 1600002000, end_time: 1600005600 },
+      ],
+    });
+
+    // Query window: [1600001000, 1600004000], type: 'btc_hl_eth_ll'
+    const res = await db
+      .prepare('SELECT * FROM divergence_records WHERE type = ? AND start_time < ? AND end_time > ?')
+      .bind('btc_hl_eth_ll', 1600004000, 1600001000)
+      .all<DivergenceRecord>();
+
+    expect(res.results).toHaveLength(1);
+    expect(res.results?.[0].id).toBe(2);
+  });
+
   it('run() persists INSERT rows and reports meta.changes', async () => {
     const db = createMockD1Database();
 
