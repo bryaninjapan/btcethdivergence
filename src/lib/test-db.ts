@@ -146,15 +146,24 @@ function applyWhere(sql: string, params: unknown[], rows: Row[]): Row[] {
   const symbolIdx = condSql.indexOf('symbol = ?');
   const betweenIdx = condSql.indexOf('open_time BETWEEN ? AND ?');
   const idIdx = condSql.indexOf('id = ?');
+  // Overlap semantics: records spanning the time window (start_time < endSec AND end_time > startSec)
+  const overlapIdx = condSql.indexOf('start_time < ?') !== -1 && condSql.indexOf('end_time > ?') !== -1
+    ? Math.min(condSql.indexOf('start_time < ?'), condSql.indexOf('end_time > ?'))
+    : -1;
 
   // Conditions are applied in the order their params appear in the SQL.
-  const steps: { idx: number; kind: 'type' | 'like' | 'symbol' | 'between' | 'id' }[] = [];
+  const steps: { idx: number; kind: 'type' | 'like' | 'symbol' | 'between' | 'id' | 'overlap' }[] = [];
   if (typeIdx !== -1) steps.push({ idx: typeIdx, kind: 'type' });
   if (likeIdx !== -1) steps.push({ idx: likeIdx, kind: 'like' });
   if (symbolIdx !== -1) steps.push({ idx: symbolIdx, kind: 'symbol' });
   if (betweenIdx !== -1) steps.push({ idx: betweenIdx, kind: 'between' });
+  if (overlapIdx !== -1) steps.push({ idx: overlapIdx, kind: 'overlap' });
   if (idIdx !== -1) steps.push({ idx: idIdx, kind: 'id' });
   steps.sort((a, b) => a.idx - b.idx);
+
+  // Track which params we've consumed to validate against unknown predicates
+  const expectedParamCount = params.length;
+  let actualParamCount = 0;
 
   let paramCursor = 0;
   for (const step of steps) {
@@ -162,6 +171,7 @@ function applyWhere(sql: string, params: unknown[], rows: Row[]): Row[] {
       case 'type': {
         const type = param(paramCursor);
         paramCursor += 1;
+        actualParamCount += 1;
         filtered = filtered.filter((r) => r.type === type);
         break;
       }
@@ -169,12 +179,14 @@ function applyWhere(sql: string, params: unknown[], rows: Row[]): Row[] {
         const pattern = String(param(paramCursor));
         const escapeChar = String(param(paramCursor + 1));
         paramCursor += 2;
+        actualParamCount += 2;
         filtered = filtered.filter((r) => likeMatch(pattern, String(r.tags ?? ''), escapeChar));
         break;
       }
       case 'symbol': {
         const symbol = param(paramCursor);
         paramCursor += 1;
+        actualParamCount += 1;
         filtered = filtered.filter((r) => r.symbol === symbol);
         break;
       }
@@ -182,20 +194,46 @@ function applyWhere(sql: string, params: unknown[], rows: Row[]): Row[] {
         const start = Number(param(paramCursor));
         const end = Number(param(paramCursor + 1));
         paramCursor += 2;
+        actualParamCount += 2;
         filtered = filtered.filter((r) => {
           const t = Number(r.open_time);
           return t >= start && t <= end;
         });
         break;
       }
+      case 'overlap': {
+        const endSec = Number(param(paramCursor));
+        const startSec = Number(param(paramCursor + 1));
+        paramCursor += 2;
+        actualParamCount += 2;
+        // Overlap: record spans the query window if its [start_time, end_time]
+        // intersects with the query [startSec, endSec].
+        // Condition: start_time < endSec AND end_time > startSec
+        filtered = filtered.filter((r) => {
+          const recStart = Number(r.start_time);
+          const recEnd = Number(r.end_time);
+          return recStart < endSec && recEnd > startSec;
+        });
+        break;
+      }
       case 'id': {
         const id = Number(param(paramCursor));
         paramCursor += 1;
+        actualParamCount += 1;
         filtered = filtered.filter((r) => Number(r.id) === id);
         break;
       }
     }
   }
+
+  // Guard: log warning if there are unconsumed params (unknown predicates)
+  if (actualParamCount !== expectedParamCount) {
+    console.warn(
+      `test-db: applyWhere consumed ${actualParamCount} params but expected ${expectedParamCount}. ` +
+      `SQL: ${sql}. Unknown predicates may be silently ignored.`
+    );
+  }
+
   return filtered;
 }
 

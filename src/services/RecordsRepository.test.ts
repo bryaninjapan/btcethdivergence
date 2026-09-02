@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMockD1Database, createMockD1WithData } from '../lib/test-db';
-import { recordsService } from './records.service';
+import { RecordsRepository, computeRecordStats } from './RecordsRepository';
 import { ErrorCode } from '../lib/errors';
 import type { DivergenceRecord } from '../types';
 
@@ -16,11 +16,15 @@ const EXISTING: DivergenceRecord = {
   updated_at: 1,
 };
 
-describe('recordsService.createRecord', () => {
+function repo(db: ReturnType<typeof createMockD1Database>, now?: () => number): RecordsRepository {
+  return new RecordsRepository(db as unknown as D1Database, now);
+}
+
+describe('RecordsRepository.create', () => {
   it('creates a record from valid input and returns it', async () => {
     const db = createMockD1Database();
 
-    const record = await recordsService.createRecord(db as unknown as D1Database, {
+    const record = await repo(db).create({
       start_time: 1600000000,
       end_time: 1600003600,
       type: 'btc_hh_eth_lh',
@@ -44,7 +48,7 @@ describe('recordsService.createRecord', () => {
     const db = createMockD1Database();
     const longNotes = 'n'.repeat(1000);
 
-    const record = await recordsService.createRecord(db as unknown as D1Database, {
+    const record = await repo(db).create({
       start_time: 1600000000,
       end_time: 1600003600,
       type: 'btc_ll_eth_hl',
@@ -59,7 +63,7 @@ describe('recordsService.createRecord', () => {
   it('returns the tags passed through the validated input', async () => {
     const db = createMockD1Database();
 
-    const record = await recordsService.createRecord(db as unknown as D1Database, {
+    const record = await repo(db).create({
       start_time: 1600000000,
       end_time: 1600003600,
       type: 'btc_hh_eth_lh',
@@ -72,12 +76,28 @@ describe('recordsService.createRecord', () => {
     expect(record.notes).toBe('');
   });
 
+  it('uses the injected clock for created_at/updated_at', async () => {
+    const db = createMockD1Database();
+
+    const record = await repo(db, () => 12345).create({
+      start_time: 1600000000,
+      end_time: 1600003600,
+      type: 'btc_hh_eth_lh',
+      msb: 'no',
+      notes: '',
+      tags: '',
+    });
+
+    expect(record.created_at).toBe(12345);
+    expect(record.updated_at).toBe(12345);
+  });
+
   it('translates a raw database failure into DatabaseError', async () => {
     const db = createMockD1Database();
     db.failNext('first');
 
     await expect(
-      recordsService.createRecord(db as unknown as D1Database, {
+      repo(db).create({
         start_time: 1600000000,
         end_time: 1600003600,
         type: 'btc_hh_eth_lh',
@@ -92,13 +112,11 @@ describe('recordsService.createRecord', () => {
   });
 });
 
-describe('recordsService.updateRecord', () => {
+describe('RecordsRepository.update', () => {
   it('updates an existing record and returns the merged record', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
-    const record = await recordsService.updateRecord(db as unknown as D1Database, 1, {
-      notes: 'updated',
-    });
+    const record = await repo(db).update(1, { notes: 'updated' });
 
     expect(record?.id).toBe(1);
     expect(record?.notes).toBe('updated');
@@ -107,9 +125,7 @@ describe('recordsService.updateRecord', () => {
   it('returns null when the record does not exist', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
-    const record = await recordsService.updateRecord(db as unknown as D1Database, 999, {
-      type: 'btc_hl_eth_ll',
-    });
+    const record = await repo(db).update(999, { type: 'btc_hl_eth_ll' });
 
     expect(record).toBeNull();
   });
@@ -117,9 +133,7 @@ describe('recordsService.updateRecord', () => {
   it('partial update preserves untouched fields', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
-    const record = await recordsService.updateRecord(db as unknown as D1Database, 1, {
-      type: 'btc_hl_eth_ll',
-    });
+    const record = await repo(db).update(1, { type: 'btc_hl_eth_ll' });
 
     expect(record?.type).toBe('btc_hl_eth_ll');
     expect(record?.notes).toBe('existing notes');
@@ -127,20 +141,27 @@ describe('recordsService.updateRecord', () => {
     expect(record?.start_time).toBe(EXISTING.start_time);
   });
 
+  it('refresh updated_at from the injected clock', async () => {
+    const db = createMockD1WithData({ divergence_records: [EXISTING] });
+
+    const record = await repo(db, () => 99999).update(1, { notes: 'x' });
+
+    expect(record?.updated_at).toBe(99999);
+    expect(record?.created_at).toBe(EXISTING.created_at);
+  });
+
   it('translates a raw database failure into DatabaseError', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
     db.failNext('first');
 
-    await expect(
-      recordsService.updateRecord(db as unknown as D1Database, 1, { type: 'btc_hl_eth_ll' }),
-    ).rejects.toMatchObject({
+    await expect(repo(db).update(1, { type: 'btc_hl_eth_ll' })).rejects.toMatchObject({
       code: ErrorCode.DATABASE_ERROR,
       message: expect.stringContaining('Failed to update record'),
     });
   });
 });
 
-describe('recordsService.listRecords', () => {
+describe('RecordsRepository.findAll', () => {
   it('returns all records with no filters', async () => {
     const db = createMockD1WithData({
       divergence_records: [
@@ -150,7 +171,7 @@ describe('recordsService.listRecords', () => {
       ],
     });
 
-    const rows = await recordsService.listRecords(db as unknown as D1Database);
+    const rows = await repo(db).findAll();
 
     expect(rows).toHaveLength(3);
   });
@@ -164,9 +185,7 @@ describe('recordsService.listRecords', () => {
       ],
     });
 
-    const rows = await recordsService.listRecords(db as unknown as D1Database, {
-      type: 'btc_hl_eth_ll',
-    });
+    const rows = await repo(db).findAll({ type: 'btc_hl_eth_ll' });
 
     expect(rows).toHaveLength(2);
     expect(rows.every((r) => r.type === 'btc_hl_eth_ll')).toBe(true);
@@ -181,30 +200,42 @@ describe('recordsService.listRecords', () => {
       ],
     });
 
-    const rows = await recordsService.listRecords(db as unknown as D1Database, { tag: 'btc' });
+    const rows = await repo(db).findAll({ tag: 'btc' });
 
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.id).sort()).toEqual([1, 3]);
+  });
+
+  it('orders results by start_time DESC', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...EXISTING, id: 1, start_time: 100 },
+        { ...EXISTING, id: 2, start_time: 300 },
+        { ...EXISTING, id: 3, start_time: 200 },
+      ],
+    });
+
+    const rows = await repo(db).findAll();
+
+    expect(rows.map((r) => r.id)).toEqual([2, 3, 1]);
   });
 
   it('translates a raw database failure into DatabaseError', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
     db.failNext('all');
 
-    await expect(
-      recordsService.listRecords(db as unknown as D1Database),
-    ).rejects.toMatchObject({
+    await expect(repo(db).findAll()).rejects.toMatchObject({
       code: ErrorCode.DATABASE_ERROR,
       message: expect.stringContaining('Failed to list records'),
     });
   });
 });
 
-describe('recordsService.deleteRecord', () => {
+describe('RecordsRepository.delete', () => {
   it('returns true when a record was deleted', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
-    const deleted = await recordsService.deleteRecord(db as unknown as D1Database, 1);
+    const deleted = await repo(db).delete(1);
 
     expect(deleted).toBe(true);
     expect(db.rowsOf('divergence_records')).toHaveLength(0);
@@ -213,18 +244,25 @@ describe('recordsService.deleteRecord', () => {
   it('returns false when no record matches', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
 
-    const deleted = await recordsService.deleteRecord(db as unknown as D1Database, 999);
+    const deleted = await repo(db).delete(999);
 
     expect(deleted).toBe(false);
+  });
+
+  it('issues exactly one statement (no pre-SELECT)', async () => {
+    const db = createMockD1WithData({ divergence_records: [EXISTING] });
+
+    await repo(db).delete(1);
+
+    expect(db.prepares).toHaveLength(1);
+    expect(db.prepares[0]).toContain('DELETE FROM divergence_records');
   });
 
   it('translates a raw database failure into DatabaseError', async () => {
     const db = createMockD1WithData({ divergence_records: [EXISTING] });
     db.failNext('run');
 
-    await expect(
-      recordsService.deleteRecord(db as unknown as D1Database, 1),
-    ).rejects.toMatchObject({
+    await expect(repo(db).delete(1)).rejects.toMatchObject({
       code: ErrorCode.DATABASE_ERROR,
       message: expect.stringContaining('Failed to delete record'),
     });

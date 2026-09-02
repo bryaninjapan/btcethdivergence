@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { NotFoundError, ValidationError } from '../lib/errors';
-import { recordsService } from '../services/records.service';
+import { RecordsRepository } from '../services/RecordsRepository';
 import {
   createRecordSchema,
   listRecordsQuerySchema,
@@ -19,7 +19,7 @@ records.get('/api/records', async (c) => {
     throw new ValidationError('query', validationMessage(parsed.error));
   }
 
-  const rows = await recordsService.listRecords(c.env.DB, parsed.data);
+  const rows = await new RecordsRepository(c.env.DB).findAll(parsed.data);
   const response: ApiResponse<DivergenceRecord[]> = {
     ok: true,
     data: rows,
@@ -40,7 +40,7 @@ records.post('/api/records', async (c) => {
     throw new ValidationError('body', validationMessage(parsed.error));
   }
 
-  const row = await recordsService.createRecord(c.env.DB, parsed.data);
+  const row = await new RecordsRepository(c.env.DB).create(parsed.data);
   const response: ApiResponse<DivergenceRecord> = {
     ok: true,
     data: row,
@@ -63,7 +63,7 @@ records.put('/api/records/:id', async (c) => {
     throw new ValidationError('body', validationMessage(parsed.error));
   }
 
-  const row = await recordsService.updateRecord(c.env.DB, id, parsed.data);
+  const row = await new RecordsRepository(c.env.DB).update(id, parsed.data);
   if (!row) {
     throw new NotFoundError('Record');
   }
@@ -77,7 +77,7 @@ records.put('/api/records/:id', async (c) => {
 records.delete('/api/records/:id', async (c) => {
   const id = validatePositiveInteger(c.req.param('id'), 'Record ID');
 
-  const deleted = await recordsService.deleteRecord(c.env.DB, id);
+  const deleted = await new RecordsRepository(c.env.DB).delete(id);
   if (!deleted) {
     throw new NotFoundError('Record');
   }
