@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-09-02)
 ## Current Position
 
 **Active Milestone**: v2.0 Architecture Deepening (Phases 14-17)
-**Current Phase**: Phase 14 (Architecture Foundations: Temporal + Divergence) — PLANNING
-**Status**: 🚀 **STARTING v2.0 MILESTONE** — v1.0 complete, architecture improvement roadmap active
-**Last activity**: 2026-09-02 — Milestone v2.0 planning complete, 4 phases defined, Phase 14 ready to plan
+**Current Phase**: Phase 16 (Backend Service Deepening — Records Repository) — **COMPLETE** ✅
+**Status**: Phase 14-16 complete. Phase 16A ready for execution (parallel-safe with 16)
+**Last activity**: 2026-09-02 — Phase 16 complete (RecordsRepository, /stats endpoint, MockD1 migration, 480 tests, 81/81 E2E)
 
-Progress: [░░░░░░░░░░] 0% v2.0 (4 phases planned)
+Progress: [████░░░░░░] 75% v2.0 (3/4 phases complete: 14 ✅, 15 ✅, 16 ✅)
 
 ## Performance Metrics
 
@@ -64,7 +64,24 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+<!-- REVISED 2026-09-02: Phase 16A and Phase 16 now parallel-ready -->
+
+**Phase 16A — Structured Logging System** (decided 2026-09-02)
+- [ ] Logger core + ChartManager integration (16A-01, 0.5 days)
+- [ ] Page instrumentation + Workers Logs setup (16A-02, 0.5 days)
+- [ ] Verification + code review (16A-03, 0.25 days)
+- **Duration**: 1-1.5 days (plan-check: Needs Clarification on 3 blockers)
+- **Rationale**: Code review IN-01 finding; production-grade observability needed before v2.0 launch
+- **Plan location**: `.planning/phases/phase-16a/PLAN.md`
+
+**Phase 16 — Backend Service Deepening (Records Repository)** ✅ COMPLETE 2026-09-02
+- [x] Extend MockD1 + migrate records.test.ts (16-01, 2 hours)
+- [x] Implement RecordsRepository + migrate service tests (16-02, 3.5 hours)
+- [x] Unit tests (16-03, 2.5 hours)
+- [x] Route refactor + stats endpoint (16-04, 2 hours)
+- [x] Code review + docs (16-05, 1 hour)
+- **Delivered**: `src/services/RecordsRepository.ts` (8 methods, JS-computed stats, overlap time-range queries); `GET /api/records/stats`; all route tests on MockD1; records.service layer deleted; 42 repository unit tests (96.6% lines), global 87.1% lines; E2E 81/81
+- **Plan location**: `.planning/phases/phase-16/PLAN.md`
 
 ### Blockers/Concerns
 
@@ -89,7 +106,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-01
-Stopped at: Entering Phase 12 (Service Layer Pattern) planning.
-Quality status: v1.0 fully shipped, TypeScript clean, 249/249 tests passing, E2E verified.
-Next: Phase 12 planning → Quick Task #1 (Service Layer)
+Last session: 2026-09-02
+Stopped at: Phase 16 complete (Records Repository + /stats endpoint).
+Quality status: v1.0 shipped, TypeScript clean, 480 tests passing, 81/81 E2E, coverage 87.1% global / 96.6% repository.
+Next: Phase 16A (Structured Logging) — parallel-ready; then Phase 17 (Calculator Validation).

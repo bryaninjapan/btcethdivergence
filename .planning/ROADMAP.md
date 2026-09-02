@@ -27,8 +27,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Frontend Data Isolation & UI Enhancement** - Refactor frontend state (charts.js, records.js) from globals to isolated modules; apply TradingView-style K-line colors and MSB indicator ✅
 - [x] **Phase 14: Architecture Foundations (Temporal + Divergence)** ✅ - Consolidate time-domain logic into centralized temporal-api module; unify divergence type definitions across backend and frontend
 - [x] **Phase 15: Frontend State Refactoring (Chart State Machine)** ✅ - Merge chart-state.js, chart-range.js, chart-sync.js into unified ChartManager state machine; 62 tests (49 unit + 13 integration), 81/81 E2E pass
-- [ ] **Phase 16A: Structured Logging System** - Add production-grade observability: integrate Sentry/pino logging into ChartManager, charts.js, records.js; add user context and monitoring
-- [ ] **Phase 16: Backend Service Deepening (Records Repository)** - Elevate shallow service wrappers into rich RecordsRepository interface with query methods (listWithStats, findByTimeRange, etc.)
+- [ ] **Phase 16A: Structured Logging System** - Replace console.* with structured logging layer; add ChartManager/charts.js/records.js instrumentation; enable Workers Logs for production observability
+- [ ] **Phase 16: Backend Service Deepening (Records Repository)** - Consolidate records SQL into RecordsRepository; migrate integration tests to MockD1; add listWithStats and findByTimeRange query methods
 - [ ] **Phase 17: Future-Proofing (Calculator Validation, Optional)** - Extract calculator validation rules into schema-driven module, prepare for future API endpoints
 
 ## Phase Details
@@ -310,8 +310,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 14. Architecture Foundations (Temporal + Divergence) | 2/2 | ✅ COMPLETE | 2026-09-02 |
 | 15. Frontend State Refactoring (Chart State Machine) | 3/3 | ✅ COMPLETE | 2026-09-02 |
-| 16A. Structured Logging System | 0/1 | Planned (new) | - |
-| 16. Backend Service Deepening (Records Repository) | 0/2 | Ready to plan | - |
+| 16A. Structured Logging System | 0/3 | Plan-checked (Needs Clarification) | - |
+| 16. Backend Service Deepening (Records Repository) | 0/5 | Plan-checked (Ready to Execute) | - |
 | 17. Future-Proofing (Calculator Validation, Optional) | 0/1 | Ready to plan | - |
 
 ---
@@ -355,51 +355,64 @@ Plans:
 - [x] 15-03: Unit tests + E2E verification ✅
 
 ### Phase 16A: Structured Logging System
-**Goal**: Add production-grade observability and error tracking by replacing console.error() with a structured logging layer (Sentry/pino/custom). Enable production monitoring, user context correlation, and debugging support.
+**Goal**: Add production-grade observability and error tracking by replacing console.error() with a structured logging layer. Enable ChartManager/charts.js/records.js instrumentation with context correlation and Workers Logs backend observability.
 **Depends on**: Phase 15
 **Requirements**: CODE-06 (Observability), CODE-07 (Production Monitoring)
 **Success Criteria** (what must be TRUE):
-  1. Logging library selected and integrated (Sentry OR pino OR lightweight custom logger).
-  2. Structured logging layer wraps all error/warning calls in ChartManager, charts.js, records.js with user context (user ID, component, action).
-  3. Error types clearly distinguished: abort errors vs real failures vs validation errors.
-  4. Telemetry basics: timestamp, severity level, stack trace, context object.
-  5. E2E tests pass: no regressions from logging instrumentation.
-  6. Code coverage maintained ≥85%.
-  7. Code review complete: zero HIGH issues.
-  8. Monitoring dashboard or alerts configured (if using Sentry/external service).
-**Plans**: 16A-01 (logging library selection + integration), 16A-02 (instrumentation + monitoring setup)
-**Status**: Planned, based on Phase 15 code review IN-01 finding
+  1. Logging approach decided: Option C (custom lightweight logger, no external dependencies, preserves no-build-step architecture)
+  2. Structured logging integrated in ChartManager, charts.js, records.js with context fields (component, action, timestamp, severity)
+  3. Error classification: abort-timeout / abort-superseded / validation / service / database / auth / unknown
+  4. redaction rule: user-supplied notes/tags logged as length only, not content
+  5. 443 existing unit tests + ~40 new logging tests pass
+  6. 81/81 E2E pass (no behavioral regression)
+  7. Coverage ≥85% (baseline 87.91%)
+  8. Workers Logs enabled in wrangler.jsonc, verified on deployed Worker with RUNBOOK.md
+  9. Code review: zero HIGH/CRITICAL
+  10. Zero raw console.* in production code outside logger sinks
+**Plans**: 16A-01 (logger core + ChartManager integration), 16A-02 (page instrumentation + monitoring), 16A-03 (verification + review)
+**Status**: Plan-checked (Needs Clarification on 3 blockers — see PLAN.md)
 **Duration**: 1-1.5 days
 
 Plans:
-- [ ] 16A-01: Logging library selection and integration into ChartManager
-- [ ] 16A-02: Instrument charts.js, records.js, add monitoring/alerting
+- [ ] 16A-01: Logger core + ChartManager integration (0.5 days)
+- [ ] 16A-02: Page instrumentation + Workers Logs setup (0.5 days)
+- [ ] 16A-03: Verification + review (0.25 days)
 
 ### Phase 16: Backend Service Deepening (Records Repository)
-**Goal**: Elevate the thin service layer into a rich RecordsRepository with advanced query methods, improving testability and reducing query logic scattered across route handlers.
+**Goal**: Consolidate all records SQL into a rich RecordsRepository class; migrate route integration tests to MockD1; add advanced query methods (listWithStats, findByTimeRange) with proper statistics and overlap semantics.
 **Depends on**: Phase 14
 **Requirements**: CODE-04 (Service Layer Pattern), CODE-03 (DRY Validation)
 **Success Criteria** (what must be TRUE):
   1. New `src/services/RecordsRepository.ts` exports: `findAll()`, `findById(id)`, `listWithStats()`, `findByTimeRange(start, end)`, `findByType(type)`, `create()`, `update()`, `delete()`.
-  2. All query logic moved from route handlers into RecordsRepository methods (parameterized SQL, no dynamic injection).
-  3. RecordsRepository accepts D1 database instance and temporal-api for time operations.
+  2. All record query logic moved from route handlers + lib/db.ts into RecordsRepository (parameterized SQL, no injection).
+  3. RecordsRepository accepts D1 database instance + optional temporal-api clock: `constructor(db: D1Database, now?: () => number)`
   4. Route handlers simplified: ≤10 lines per endpoint, pure HTTP concerns (validation, response formatting).
-  5. 25+ unit tests using Mock D1 verify query correctness, edge cases, and call sequences.
-  6. Integration tests pass: all routes continue to work correctly.
-  7. Code coverage ≥85% for repository layer.
-  8. Code review complete: zero HIGH issues.
-**Plans**: 16-01 (RecordsRepository interface + implementation), 16-02 (route handler refactoring + testing)
-**Status**: Planned, design approved (2026-09-02)
-**Duration**: 1-1.5 days
+  5. 25+ unit tests using MockD1 (target 41); migration of unique error cases from records.service.test.ts.
+  6. Integration tests pass including new GET /api/records/stats endpoint (6 tests).
+  7. Coverage ≥85% globally; repository layer ≥95% (manual verification).
+  8. Code review complete: zero HIGH/CRITICAL issues.
+**Plans**: 16-01 (MockD1 migration + extend), 16-02 (RecordsRepository + service-test migration), 16-03 (unit tests), 16-04 (route refactor + stats), 16-05 (review + docs)
+**Status**: ✅ COMPLETE (2026-09-02)
+**Duration**: 1.5 days (11 hours)
 
 **Design Decisions (approved 2026-09-02)**:
-  - **listWithStats()**: Simple statistics (byType count, byMsb count, totalRecords, dateRange min/max) — not complex time-series analysis
-  - **findByTimeRange(start, end)**: Overlap semantics — `WHERE start_time < endSec AND end_time > startSec` — includes records that span/overlap the query window
-  - **Pagination**: Not added in Phase 16 (single-owner scale); designed for future addition if needed via optional limit/offset params
+  - **listWithStats()**: Simple JS-computed statistics (totalRecords, byType, byMsb, dateRange); no SQL COUNT/GROUP BY
+  - **findByTimeRange(start, end)**: Overlap semantics — `WHERE start_time < ? AND end_time > ?` — includes records spanning the query window
+  - **Pagination**: Not added in Phase 16 (single-owner scale); optional for Phase 17+
+  - **One Mock, One Layer**: Consolidate records.test.ts→MockD1 (B3:A), delete records.service.ts + migrate error cases (B4)
+
+**Blockers Resolved**:
+  - **B1**: STATE.md aligned with ROADMAP.md (Phase 16 = Records Repository)
+  - **B2**: Task ID unified (16-01..05 match PLAN.md → ROADMAP.md sync)
+  - **B3**: MockD1 migration (Option A) — records.test.ts consolidated, time +1h
+  - **B4**: records.service.test.ts migration — error cases moved to repository tests, time +0.5h
 
 Plans:
-- [ ] 16-01: RecordsRepository implementation with advanced queries
-- [ ] 16-02: Route handler refactoring and integration testing
+- [x] 16-01: Extend MockD1 + migrate records.test.ts (2 hours)
+- [x] 16-02: RecordsRepository implementation + service-test migration (3.5 hours)
+- [x] 16-03: Unit tests (2.5 hours)
+- [x] 16-04: Route refactor + stats endpoint (2 hours)
+- [x] 16-05: Code review + docs (1 hour)
 
 ### Phase 17: Future-Proofing (Calculator Validation, Optional)
 **Goal**: Extract calculator validation rules into a schema-driven, reusable module. Prepares for future calculator API endpoints while keeping client-side calculator unchanged.
