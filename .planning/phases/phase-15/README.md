@@ -131,10 +131,35 @@ chartManager.setVisibleRange(start, end);
 ## Next Steps
 
 1. ✅ Run plan-check to validate Phase 15 plan
-2. ⏳ Execute Phase 15 tasks
-3. ⏳ Verify with E2E tests
-4. ⏳ Code review and sign-off
+2. ✅ Execute Phase 15 tasks
+3. ✅ Verify with E2E tests
+4. ✅ Code review and sign-off (4 warnings fixed)
+
+## Recommended Follow-up: Phase 16 — Structured Logging System
+
+**Decision**: Push structured logging to Phase 16 (separate from Phase 15 frontend refactoring).
+
+**Reason**: Code review found **IN-01** — current code uses `console.error()` instead of structured logging.
+
+**What this means**:
+- Phase 15 ships cleanly with ChartManager state machine ✅
+- Phase 16 adds observability layer (Sentry / pino / custom logger)
+- Future phases benefit from production-grade error tracking
+
+**Phase 16 Scope** (tentative):
+- [ ] Evaluate logging libraries (Sentry, pino, custom logger)
+- [ ] Integrate structured logging into ChartManager, charts.js, records.js
+- [ ] Add user context and telemetry
+- [ ] Set up monitoring alerts
+- **Duration**: 1-1.5 days
+- **Depends on**: Phase 15 ✅
+
+**Why structured logging matters** (see [IN-01 details](15-REVIEW.md#in-01-prefer-structured-logging-over-consoleerror)):
+- Track real user errors in production
+- Distinguish between abort errors and real failures
+- Correlate errors with user journey and device context
+- Enable proactive monitoring and alerting
 
 ---
 
-*Phase 15 depends on Phase 14 (TemporalConverter, divergence types) being complete.*
+*Phase 15 depends on Phase 14 (TemporalConverter, divergence types) being complete.* ✅

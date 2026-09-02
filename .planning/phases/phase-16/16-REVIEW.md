@@ -1,105 +1,51 @@
----
-phase: 16
-name: Backend Service Deepening (Records Repository)
-reviewed: 2026-09-02
-depth: standard
-files_reviewed: 6
-files_reviewed_list:
-  - src/services/RecordsRepository.ts
-  - src/services/RecordsRepository.test.ts
-  - src/routes/records.ts
-  - src/routes/records.test.ts
-  - src/lib/db.ts
-  - src/lib/test-db.ts
-findings:
-  critical: 0
-  high: 0
-  warning: 0
-  info: 2
-  total: 2
-status: clean
----
+# Phase 16 Code Review Report
 
-# Phase 16: Code Review Report
+**Date**: 2026-09-03
+**Reviewer**: gsd-code-reviewer (independent pass)
+**Commit range reviewed**: `44204ef..4a3e072` (base `44204ef~1`) — 6 commits:
+- `44204ef` test(16-01) MockD1 migration
+- `227b311` feat(16-02) RecordsRepository + delete records.service layer
+- `740eacf` test(16-03) repository suite expansion
+- `dce9120` feat(16-04) route refactor + GET /api/records/stats
+- `d13d4ca` / `4a3e072` docs(16-05)/(16)
 
-**Reviewed:** 2026-09-02
-**Depth:** standard
-**Files Reviewed:** 6
-**Status:** clean (zero HIGH/CRITICAL)
+**Files reviewed**: `src/services/RecordsRepository.ts`, `src/services/RecordsRepository.test.ts`, `src/routes/records.ts`, `src/routes/records.test.ts`, `src/lib/db.ts`, `src/lib/test-db.ts`, `src/lib/test-db.test.ts`, `src/routes/klines.test.ts`, `src/routes/admin.test.ts`.
+
+**Verification run green**: `npm test` 480/480, `npm run typecheck` zero errors, targeted suites 86/86.
 
 ## Summary
 
-Phase 16 consolidates all divergence-record SQL into a single `RecordsRepository`
-class, deletes the pass-through `records.service` layer, migrates every route
-integration test onto the shared MockD1, and adds a `GET /api/records/stats`
-endpoint backed by JS-computed statistics.
+1 HIGH, 0 CRITICAL, 0 MEDIUM, 4 LOW
 
-**Key Strengths:**
-- ✅ Single owner of records SQL — parameterized statements throughout, no string
-  interpolation of user input
-- ✅ `delete()` issues exactly one statement (no pre-SELECT); route test asserts
-  the single-call contract
-- ✅ `update()` merges via internal `findById` and re-wraps all failures under
-  one error contract (`Failed to update record`)
-- ✅ Statistics computed in JS (`computeRecordStats`), pure and side-effect free —
-  no SQL aggregates for MockD1 to parse
-- ✅ Route handlers are pure HTTP (parse → validate → delegate → format), all ≤10 lines
-- ✅ 42 repository unit tests (96.6% line coverage) + 25 route integration tests
-  + 81/81 E2E; global coverage 87.1% lines (≥85% gate)
+The refactor itself is sound: all records SQL is consolidated in `RecordsRepository` with parameterized statements throughout (no string interpolation of user input), `delete()` issues exactly one statement, LIKE wildcards are escaped, stats are computed in JS, and route handlers are now pure HTTP (parse → validate → delegate → format). Injection safety, error sanitization (client envelope strips `details`), and CF Access gating of the new `/api/records/stats` path all check out. One genuine data-integrity bug — a partial `PUT` silently resets the `msb` field — was carried into the new repository and is masked by the new test fixtures. It must be fixed before merge.
 
-## Critical Issues
+## Issues
+
+### CRITICAL
 
 *None found.*
 
-## High Issues
+### HIGH
+
+- **`src/services/RecordsRepository.ts:242-277` (+ `src/lib/validate.ts:32`)** — Partial update silently resets `msb` to `'no'`, violating the documented contract "omitted fields are preserved — never cleared". `baseFields.msb = msbStatus.default('no')`; in Zod v4, `.partial()` still applies that default on a missing key, so `updateRecordSchema.parse({ notes: 'x' })` yields `{ msb: 'no', notes: 'x' }` (confirmed empirically). `update()`'s merge then keeps the injected `'no'` via `msb: input.msb ?? existing.msb`, overwriting a stored `msb: 'yes'`. The route regression test "PUT omitting notes/tags → preserves existing notes/tags" (`records.test.ts:153-175`) exercises the exact buggy path on a `msb:'yes'` fixture but never asserts `msb`, and the unit fixture (`EXISTING`) uses `msb:'no'`, so the suite cannot catch it. Pre-existing (ported from the old `updateRecord` in `lib/db.ts`), but re-authored here under the "merge preserves omitted fields" design and left untested.
+  Fix hint: move the default off `baseFields` — `msb: msbStatus` in `baseFields`, then `msb: msbStatus.default('no')` only inside `createRecordSchema` — and add a regression test: seed a `msb:'yes'` record, `PUT` with `{ type }` only, assert `msb === 'yes'`. The UI always sends `msb`, so the practical trigger is API-level partial updates, but the API contract and the method's own JSDoc promise preservation.
+
+### MEDIUM
 
 *None found.*
 
-## Warnings
+### LOW
 
-*None found.*
+- **`src/routes/records.ts:33-44,46-59`** — POST (~12 lines) and PUT (~14 lines) handlers exceed the SC4 "≤10 lines" claim, while GET/DELETE comply. Minor; the handlers are materially simplified and remain pure HTTP.
+- **`src/lib/test-db.ts` (mock fidelity)** — MockD1 does not implement SELECT column projection; `SELECT open_time, open, ...` returns full stored rows (incl. `symbol`). This forces `klines.test.ts` to use `toMatchObject` and would mask a projection bug in `queryKlines`. Documented in 16-SUMMARY; test-only, no production impact.
+- **`src/services/RecordsRepository.ts:242-277`** — `update()` is read-then-write without a transaction: a concurrent delete between `findById` and the `UPDATE` returns 200 with a merged row that no longer exists (the `.run()` `changes` is ignored). Negligible in a single-owner app; consider checking `res.meta.changes > 0` to return null/404.
+- **`src/services/RecordsRepository.ts:169-196`** — `findByTimeRange()` and `findByType()` are exported but unused outside tests. Required API surface per SC1/Phase 17+; informational, not dead code.
 
-## Info
+## Recommendation
 
-### IN-01: Defensive `INSERT ... RETURNING` null guard is untestable via MockD1
+Do not merge as-is. Fix the one HIGH before merge:
 
-**File:** `src/services/RecordsRepository.ts:224`
+1. **HIGH-1 (must fix)**: remove the `.default('no')` from `baseFields.msb` in `src/lib/validate.ts`, apply the default only in `createRecordSchema`, and add the `msb:'yes'` partial-PUT regression test in `RecordsRepository.test.ts` / `records.test.ts`.
+2. **LOW items** are optional follow-ups (handler line-count note, mock projection fidelity, update `changes` check) — none block merge.
 
-`create()` guards against a null `RETURNING *` result. Real D1 always returns
-the row for a returning insert, so this branch is unreachable through MockD1
-(which likewise always returns the inserted row). Coverage is 96.6% lines; the
-two uncovered lines (151, 224) are defensive branches whose reachable error
-paths are already exercised by `failNext()` tests.
-
-**Verdict:** Accept — defensive guard retained, no scaffolding added.
-
-### IN-02: `/api/records/stats` gated by existing Cloudflare Access Policy 1
-
-**File:** `.planning/phases/09-access-launch/09-PLAN.md:336,351`
-
-Policy 1 protects the `/api/records*` prefix (owner email OTP). The new
-`/api/records/stats` path matches that wildcard, so it is already gated without
-a dashboard change. Verified against the Phase 9 policy documentation; the
-Access policy itself lives in the Cloudflare dashboard and was not modified.
-
-**Verdict:** Accept — no action required.
-
----
-
-## Security Scan Results
-
-| Check | Result |
-|-------|--------|
-| DEV_* / debug flags | None present in changed code |
-| Hardcoded secrets | None introduced (INGEST_TOKEN remains an env binding) |
-| Auth bypass | None — /stats rides the existing CF Access-gated records router |
-| SQL injection | Parameterized `.bind()` on all statements; LIKE wildcards escaped; injection-payload test added |
-| Error leak | `DatabaseError` carries `originalError` server-side only; client envelope is sanitized |
-
-## Dead Code Scan Results
-
-| Check | Result |
-|-------|--------|
-| `records.service.ts` / `records.service.test.ts` | Deleted; error cases migrated to `RecordsRepository.test.ts` |
-| Record helpers in `src/lib/db.ts` | Removed (`listRecords`, `createRecord`, `updateRecord`, `deleteRecord`, `escapeLikeWildcards`); klines/backfill helpers kept and still consumed by `klines.service` / `admin.service` |
-| `FakeD1Database` references | Zero across `public/js` + `src` |
+1 HIGH issue(s) found — must fix before merge.
