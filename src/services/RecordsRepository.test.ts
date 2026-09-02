@@ -196,6 +196,17 @@ describe('RecordsRepository.update', () => {
       message: expect.stringContaining('Failed to update record'),
     });
   });
+
+  it('preserves msb:yes on partial update (regression: HIGH msb default bug)', async () => {
+    const recordWithMsbYes: DivergenceRecord = { ...EXISTING, msb: 'yes' };
+    const db = createMockD1WithData({ divergence_records: [recordWithMsbYes] });
+
+    const record = await repo(db).update(1, { type: 'btc_hl_eth_ll' });
+
+    // Critical: msb must stay 'yes', not be reset to 'no' by Zod's .partial() default bug
+    expect(record?.msb).toBe('yes');
+    expect(record?.type).toBe('btc_hl_eth_ll');
+  });
 });
 
 describe('RecordsRepository.findAll', () => {
