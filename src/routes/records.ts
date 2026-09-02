@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { NotFoundError, ValidationError } from '../lib/errors';
-import { RecordsRepository } from '../services/RecordsRepository';
+import { RecordsRepository, type RecordStats } from '../services/RecordsRepository';
 import {
   createRecordSchema,
   listRecordsQuerySchema,
@@ -15,16 +15,19 @@ const records = new Hono<{ Bindings: Env }>();
 
 records.get('/api/records', async (c) => {
   const parsed = listRecordsQuerySchema.safeParse(c.req.query());
-  if (!parsed.success) {
-    throw new ValidationError('query', validationMessage(parsed.error));
-  }
-
+  if (!parsed.success) throw new ValidationError('query', validationMessage(parsed.error));
   const rows = await new RecordsRepository(c.env.DB).findAll(parsed.data);
-  const response: ApiResponse<DivergenceRecord[]> = {
-    ok: true,
-    data: rows,
-  };
-  return c.json(response);
+  return c.json({ ok: true, data: rows } satisfies ApiResponse<DivergenceRecord[]>);
+});
+
+// Registered before any `/:id` route so `/api/records/stats` is never
+// shadowed by an id param (there is no GET /:id handler today, but the
+// ordering is a documented invariant).
+records.get('/api/records/stats', async (c) => {
+  const parsed = listRecordsQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) throw new ValidationError('query', validationMessage(parsed.error));
+  const stats = await new RecordsRepository(c.env.DB).listWithStats(parsed.data);
+  return c.json({ ok: true, data: stats } satisfies ApiResponse<RecordStats>);
 });
 
 records.post('/api/records', async (c) => {
@@ -34,58 +37,32 @@ records.post('/api/records', async (c) => {
   } catch {
     throw new ValidationError('body', 'Invalid JSON body');
   }
-
   const parsed = createRecordSchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError('body', validationMessage(parsed.error));
-  }
-
+  if (!parsed.success) throw new ValidationError('body', validationMessage(parsed.error));
   const row = await new RecordsRepository(c.env.DB).create(parsed.data);
-  const response: ApiResponse<DivergenceRecord> = {
-    ok: true,
-    data: row,
-  };
-  return c.json(response, 201);
+  return c.json({ ok: true, data: row } satisfies ApiResponse<DivergenceRecord>, 201);
 });
 
 records.put('/api/records/:id', async (c) => {
   const id = validatePositiveInteger(c.req.param('id'), 'Record ID');
-
   let body: unknown;
   try {
     body = await c.req.json();
   } catch {
     throw new ValidationError('body', 'Invalid JSON body');
   }
-
   const parsed = updateRecordSchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError('body', validationMessage(parsed.error));
-  }
-
+  if (!parsed.success) throw new ValidationError('body', validationMessage(parsed.error));
   const row = await new RecordsRepository(c.env.DB).update(id, parsed.data);
-  if (!row) {
-    throw new NotFoundError('Record');
-  }
-  const response: ApiResponse<DivergenceRecord> = {
-    ok: true,
-    data: row,
-  };
-  return c.json(response);
+  if (!row) throw new NotFoundError('Record');
+  return c.json({ ok: true, data: row } satisfies ApiResponse<DivergenceRecord>);
 });
 
 records.delete('/api/records/:id', async (c) => {
   const id = validatePositiveInteger(c.req.param('id'), 'Record ID');
-
   const deleted = await new RecordsRepository(c.env.DB).delete(id);
-  if (!deleted) {
-    throw new NotFoundError('Record');
-  }
-  const response: ApiResponse<{ id: number }> = {
-    ok: true,
-    data: { id },
-  };
-  return c.json(response);
+  if (!deleted) throw new NotFoundError('Record');
+  return c.json({ ok: true, data: { id } } satisfies ApiResponse<{ id: number }>);
 });
 
 export default records;

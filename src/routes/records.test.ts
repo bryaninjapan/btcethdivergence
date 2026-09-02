@@ -377,3 +377,106 @@ describe('records filter contract (REC-05, REC-06)', () => {
     expect(db.prepares).toHaveLength(0);
   });
 });
+
+describe('GET /api/records/stats', () => {
+  it('returns zeroed stats with dateRange null when there are no records', async () => {
+    const db = createMockD1Database();
+
+    const res = await callRecordsRoute('/api/records/stats', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: unknown };
+    expect(body.ok).toBe(true);
+    expect(body.data).toEqual({
+      totalRecords: 0,
+      byType: {},
+      byMsb: {},
+      dateRange: null,
+    });
+  });
+
+  it('computes totals, per-type/per-msb counts and the date range', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...EXISTING_RECORD, id: 1, type: 'btc_hh_eth_lh', msb: 'yes', start_time: 100, end_time: 200 },
+        { ...EXISTING_RECORD, id: 2, type: 'btc_hh_eth_lh', msb: 'no', start_time: 300, end_time: 400 },
+        { ...EXISTING_RECORD, id: 3, type: 'btc_hl_eth_ll', msb: 'no', start_time: 500, end_time: 600 },
+      ],
+    });
+
+    const res = await callRecordsRoute('/api/records/stats', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: { totalRecords: number } };
+    expect(body.data.totalRecords).toBe(3);
+    expect(body.data).toMatchObject({
+      byType: { btc_hh_eth_lh: 2, btc_hl_eth_ll: 1 },
+      byMsb: { yes: 1, no: 2 },
+      dateRange: { start: 100, end: 600 },
+    });
+  });
+
+  it('computes stats over a type-filtered subset', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...EXISTING_RECORD, id: 1, type: 'btc_hh_eth_lh' },
+        { ...EXISTING_RECORD, id: 2, type: 'btc_hh_eth_lh' },
+        { ...EXISTING_RECORD, id: 3, type: 'btc_hl_eth_ll' },
+      ],
+    });
+
+    const res = await callRecordsRoute(
+      '/api/records/stats?type=btc_hh_eth_lh',
+      {},
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: { totalRecords: number } };
+    expect(body.data.totalRecords).toBe(2);
+    expect(body.data).toMatchObject({ byType: { btc_hh_eth_lh: 2 } });
+  });
+
+  it('computes stats over a tag-filtered subset', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...EXISTING_RECORD, id: 1, tags: 'btc_crash' },
+        { ...EXISTING_RECORD, id: 2, tags: 'eth_pump' },
+        { ...EXISTING_RECORD, id: 3, tags: 'btc' },
+      ],
+    });
+
+    const res = await callRecordsRoute('/api/records/stats?tag=btc', {}, makeEnv(db));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; data: { totalRecords: number } };
+    expect(body.data.totalRecords).toBe(2);
+  });
+
+  it('GET /api/records/stats?type=bogus → 400 mentioning the enum, no DB call', async () => {
+    const db = createMockD1Database();
+
+    const res = await callRecordsRoute('/api/records/stats?type=bogus', {}, makeEnv(db));
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
+    expect(body.ok).toBe(false);
+    expect(body.error?.message).toMatch(/btc_hh_eth_lh|btc_lh_eth_hh|btc_ll_eth_hl|btc_hl_eth_ll/);
+    expect(db.prepares).toHaveLength(0);
+  });
+
+  it('GET /api/records/stats?tag=<201 chars> → 400 (max 200), no DB call', async () => {
+    const db = createMockD1Database();
+
+    const res = await callRecordsRoute(
+      `/api/records/stats?tag=${'a'.repeat(201)}`,
+      {},
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
+    expect(body.ok).toBe(false);
+    expect(db.prepares).toHaveLength(0);
+  });
+});
