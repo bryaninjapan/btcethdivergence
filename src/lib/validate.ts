@@ -29,7 +29,7 @@ const baseFields = {
   start_time: z.number().int(),
   end_time: z.number().int(),
   type: divergenceType,
-  msb: msbStatus.default('no'),
+  msb: msbStatus,
   notes: z.string().max(1000),
   tags: z.string().max(200),
 };
@@ -37,6 +37,7 @@ const baseFields = {
 export const createRecordSchema = z
   .object({
     ...baseFields,
+    msb: msbStatus.default('no'),
     notes: z.string().max(1000).default(''),
     tags: z.string().max(200).default(''),
   })
