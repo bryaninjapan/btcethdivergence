@@ -4,11 +4,113 @@
 
 - ✅ **v1.0 MVP** — Phases 1-13 (shipped 2026-08-30)
 - ✅ **v2.0 Architecture Deepening** — Phases 14-17 (shipped 2026-09-03)
-- 🚧 **v3.0 Future** — Phase 18+ (planning)
+- 🚧 **v3.0 TradingView 級升級** — Phases 18-22 (started 2026-09-03)
 
 ---
 
 ## Active Development
+
+### v3.0: TradingView 級升級 (Phases 18-22) 🚧
+
+**Branch**: `feature/klinechart-migration`  
+**Started**: 2026-09-03  
+**Estimated**: 82-101 hours, 5 phases
+
+#### Phase 18: 充分準備 (Full Preparation) — 18-20h
+
+**Goal**: 環境就緒、評估完成、第一個 demo 運行、性能基準已記錄
+
+**Deliverables**:
+- Dev environment validation (klinecharts@10.0.3 + extension CDN)
+- Three-repo compatibility assessment document
+- Migration checklist line-by-line verification
+- First KLineChart standalone demo rendering real Binance data
+- Performance baseline: lightweight-charts timing/memory/bundle
+- Finalized 5-phase detailed plan
+
+**Success Criteria (充分準備版)**:
+- [ ] klinecharts 可正確 import 和渲染
+- [ ] @klinecharts/extension CDN 連線測試通過
+- [ ] Migration checklist 所有項目理解並標記
+- [ ] Demo HTML 使用假資料正確顯示 K 線
+- [ ] 性能基準數字已記錄到文件
+- [ ] 5-phase 計劃確認（此 ROADMAP）
+- [ ] 所有高風險 API 差異已識別
+
+**Requirements**: R18-01 to R18-10  
+**Status**: ⬜ Not started
+
+---
+
+#### Phase 19: 核心遷移 (Core Migration) — 16-20h
+
+**Goal**: lightweight-charts 完全替換為 KLineChart，所有現有功能保持等價
+
+**Deliverables**:
+- charts.html 改用 KLineChart UMD CDN
+- ChartManager.js 完整重寫（KLineChart API）
+- charts.js 遷移（資料格式、事件監聽）
+- 雙圖表時間同步（用 KLineChart 事件系統）
+- 所有現有功能通過測試
+
+**Key Risks**:
+- Timestamp 轉換：Binance `open_time` 是毫秒，KLineChart 需要秒 → `Math.floor(open_time / 1000)`
+- 事件 API 變更：`onVisibleLogicalRangeChange` → `subscribeAction`
+- Style config 語法完全不同（物件結構）
+
+**Requirements**: R19-01 to R19-10  
+**Status**: ⬜ Not started
+
+---
+
+#### Phase 20: 繪圖工具 (Drawing Tools) — 20-25h
+
+**Goal**: @klinecharts/extension 整合，使用者可在圖上繪製分析標記
+
+**Deliverables**:
+- @klinecharts/extension 整合（CDN 或 npm build）
+- 繪圖工具欄 UI（在圖表旁）
+- 趨勢線、水平線、矩形、斐波那契回撤
+- 磁吸模式（magnet）啟用後游標吸附 K 線高低點
+- 繪圖物件持久化（切換區間不消失）
+
+**Requirements**: R20-01 to R20-09  
+**Status**: ⬜ Not started
+
+---
+
+#### Phase 21: 技術指標 (Indicators) — 16-20h
+
+**Goal**: 內建技術指標面板，使用者可疊加標準指標到 K 線
+
+**Deliverables**:
+- 指標選單 UI
+- 主面板指標：MA, EMA, Bollinger Bands
+- 副面板指標：MACD, RSI
+- 指標週期和顏色設定
+- BTC/ETH 各自獨立指標管理
+
+**Requirements**: R21-01 to R21-09  
+**Status**: ⬜ Not started
+
+---
+
+#### Phase 22: 優化上線 (Polish & Production) — 12-16h
+
+**Goal**: 所有功能完整，性能達標，merge 到 main 並部署
+
+**Deliverables**:
+- 性能對比報告（vs Phase 18 基準）
+- 響應式佈局修復
+- Cloudflare Workers 生產部署
+- 現有 E2E 測試全部通過
+- feature/klinechart-migration → main merge
+- ROADMAP.md 更新為 ✅
+
+**Requirements**: R22-01 to R22-07  
+**Status**: ⬜ Not started
+
+---
 
 ### v2.0 Complete ✅
 
@@ -79,20 +181,11 @@
 
 ## What's Next
 
-### v3.0 Planning: Phase 18+
+### v3.1+ (Deferred)
 
-User-driven features:
-- **Phase 18**: Analytics Dashboard
-  - Aggregate stats (records per type, avg duration, frequency over time)
-  - CSV export
-  
-- Enhanced Charts
-  - Divergence record markers (vertical lines)
-  - Click-to-record linking
-
-- Automated Detection (optional)
-  - ML-based pattern recognition
-  - Real-time alerts (deferred, depends on detection)
+- **@klinecharts/data-aggregator** — 實時 tick 聚合（WebSocket → K 線）
+- **記錄標記疊加** — 在圖上顯示背離記錄時間點
+- **Analytics Dashboard** — 記錄統計、類型頻率、CSV 匯出
 
 ---
 
@@ -113,7 +206,7 @@ Full phase details, requirements traceability, and quality metrics for each mile
 |-----------|--------|--------|------|-------|----------|
 | v1.0 MVP | 1-13 | ✅ Shipped | 2026-08-30 | 571 | 86.12% |
 | v2.0 Architecture | 14-17 | ✅ Shipped | 2026-09-03 | 628 | 88.42% |
-| v3.0 Future | 18+ | 🚧 Planning | TBD | — | — |
+| v3.0 TradingView 級 | 18-22 | 🚧 In Progress | Started 2026-09-03 | — | — |
 
 ---
 

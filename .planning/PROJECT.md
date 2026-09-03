@@ -26,9 +26,13 @@
 - [x] 時間輸入使用下拉選單（年/月/日/時）而非手打 — Phase 5
 - [x] 網站透過 Cloudflare Access 進行密碼保護 — Phase 9
 
-### Active
+### Active (v3.0 — TradingView 級升級)
 
-(None — v1.0 complete)
+- [ ] 將圖表庫從 lightweight-charts 遷移到 KLineChart — Phase 19
+- [ ] 整合 @klinecharts/extension 繪圖工具（趨勢線、斐波那契、磁吸模式） — Phase 20
+- [ ] 新增技術指標面板（MA, EMA, MACD, RSI, Bollinger） — Phase 21
+- [ ] 環境準備、相容性評估、性能基準 — Phase 18
+- [ ] 優化、上線、生產驗證 — Phase 22
 
 ### Out of Scope
 
@@ -59,7 +63,7 @@
 - **Tech stack**: Cloudflare Workers (單一部署，含 Static Assets binding) + D1 — 不使用 Pages，單一 Worker 專案服務靜態資源和 API（架構已鎖定於 Phase 1 ROADMAP INFRA-01）
 - **Data source**: Binance public API (no API key required for klines)
 - **Frontend**: 純靜態 HTML/CSS/JS — 由 Google AI Studio 生成，無構建步驟
-- **Chart library**: Lightweight Charts — 開源，無需申請 API key
+- **Chart library**: KLineChart v10.0.3 (replacing Lightweight Charts) + @klinecharts/extension
 - **Privacy**: Public repo + Cloudflare Access 密碼保護
 - **Budget**: 免費/低成本方案（Cloudflare free tier）
 
@@ -77,12 +81,11 @@
 
 ## Current Status
 
-**Milestone**: v1.0 ✅ COMPLETE (Phases 1-13, 35/35 requirements met)  
+**Milestone**: v3.0 🚧 IN PROGRESS (TradingView 級升級, Phases 18-22)  
 **Live URL**: https://btcethdivergence.bryanlab.cc  
-**Deployment**: 2026-09-01  
-**Phases**: 9/9 complete (100%)  
-**Requirements**: 35/35 satisfied (100%)  
-**UAT**: 6/6 tests passed (100%)  
+**Branch**: feature/klinechart-migration  
+**Started**: 2026-09-03  
+**Phases**: 0/5 complete (0%)  
 
 ---
 
@@ -113,17 +116,22 @@
 
 ---
 
-## v2 Candidates (Deferred, Not Blocked)
+## v3.0 Goals (TradingView 級升級)
 
-Features identified but out of scope for v1.0:
+KLineChart 生態系統遷移，讓圖表達到 TradingView 級功能：
 
-1. **Automated divergence detection** — Patterns vs manual observation
-2. **Additional trading pairs** — XRP, SOL, etc. (only BTC/ETH for v1)
-3. **Real-time updates** — WebSocket sync vs daily cron
-4. **Backtesting engine** — Historical simulation of rules
-5. **Mobile app** — iOS/Android native (web responsive sufficient)
-6. **Dark mode** — Light mode only for v1
-7. **Collaborative workspace** — Multi-user support (single-owner for v1)
+1. **KLineChart 核心遷移** — 從 lightweight-charts 換到 KLineChart v10（更快、更小）
+2. **繪圖工具** — @klinecharts/extension（趨勢線、斐波那契、磁吸、更多形狀）
+3. **技術指標** — 內建 MA/EMA/MACD/RSI/Bollinger（無需自行實作）
+4. **@klinecharts/data-aggregator** — 延後至 v3.1（使用者為事後分析，REST API 足夠）
+
+## v4 Candidates (Deferred)
+
+- **Automated divergence detection** — Patterns vs manual observation
+- **Additional trading pairs** — XRP, SOL, etc.
+- **Real-time updates** — WebSocket sync + data-aggregator
+- **Backtesting engine** — Historical simulation of rules
+- **Dark mode** — Light mode only for v1-v3
 
 ---
 

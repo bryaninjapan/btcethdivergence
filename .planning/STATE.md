@@ -1,12 +1,12 @@
 ---
 gsd_state_version: '1.0'
 status: in_progress
-milestone: v2.0
+milestone: v3.0
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 0
-  planned_phases: 4
-  total_requirements: 0
+  planned_phases: 5
+  total_requirements: 45
   completed_requirements: 0
   percent: 0
 ---
@@ -15,94 +15,83 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-02)
+See: .planning/PROJECT.md (updated 2026-09-03)
 
-**Milestone:** v1.0 ✅ COMPLETE | v2.0 🚀 STARTING
+**Milestone:** v2.0 ✅ COMPLETE | v3.0 🚧 IN PROGRESS (TradingView 級升級)  
 **Core value:** 讓使用者能快速記錄、回顧和分析 BTC 與 ETH 之間的價格背離事件，累積可靠的歷史觀察數據。
 
 ## Current Position
 
-**Active Milestone**: v2.0 Architecture Deepening (Phases 14-17) — **SHIPPED** ✅
-**Current Phase**: Phase 17 (Future-Proofing: Calculator Validation) — **SHIPPED** ✅
-**Status**: v2.0 milestone fully shipped. All 4 phases complete (14, 15, 16/16A, 17).
-**Last activity**: 2026-09-03 13:10 UTC — Phase 17 shipped (9 commits, 628 tests, 88.42% coverage, all 6 criteria PASS)
+**Active Milestone**: v3.0 TradingView 級升級 (Phases 18-22) — **IN PROGRESS** 🚧  
+**Current Phase**: Phase 18 (充分準備) — **NOT STARTED** ⬜  
+**Status**: Milestone initialized. Phase 18 planning complete. Ready to execute.  
+**Branch**: `feature/klinechart-migration`  
+**Last activity**: 2026-09-03 — Milestone docs created (PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md)
 
-Progress: [██████████] 100% v2.0 (5/5 phases complete: 14 ✅, 15 ✅, 16 ✅, 16A ✅, 17 ✅)
+Progress: [░░░░░░░░░░] 0% v3.0 (0/5 phases complete)
 
-## Performance Metrics
+Phase checklist:
+- ⬜ Phase 18: 充分準備 (Full Preparation)
+- ⬜ Phase 19: 核心遷移 (Core Migration)
+- ⬜ Phase 20: 繪圖工具 (Drawing Tools)
+- ⬜ Phase 21: 技術指標 (Indicators)
+- ⬜ Phase 22: 優化上線 (Polish & Production)
 
-**Velocity:**
-- Total plans completed: 4 (01-02, 02-01/02, 03-x, 04-01/02)
-- Average duration: ~30 min per plan
-- Total execution time: ~2.5 hours (Phase 1-4)
+## v3.0 Key Decisions
 
-**By Phase:**
+| Decision | Rationale |
+|----------|-----------|
+| KLineChart v10.0.3 | Canvas-based, 2-3x faster init, 44% smaller bundle, active maintenance |
+| @klinecharts/extension | Provides drawing tools (fibonacci, gann, waves) without building from scratch |
+| data-aggregator deferred | User is post-analysis trader; REST API sufficient; deferred to v3.1 |
+| Phase 1 = 充分準備版 | Conservative start: environment validation + demo + baseline before any migration |
+| 5 phases | Relaxed schedule: 18-22, ~82-101h total |
+| Git branch isolation | `feature/klinechart-migration` keeps main stable during migration |
 
-| Phase | Plans | Total | Avg/Plan | Status |
-|-------|-------|-------|----------|--------|
-| 1 | 2 | 45 min | 22 min | ✅ Complete |
-| 2 | 2 | 40 min | 20 min | ✅ Complete |
-| 3 | 1 | 25 min | 25 min | ✅ Complete |
-| 4 | 2 | 30 min | 15 min | ✅ Complete |
+## Critical Risks (Monitor)
 
-**Recent Trend:**
-- Last 4 plans: 22 → 20 → 25 → 15 min (trending faster)
-- Trend: Accelerating (better planning, fewer blockers per round)
-
-*Updated after each plan completion*
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Timestamp format mismatch | Chart renders empty or wrong | `Math.floor(open_time / 1000)` — CRITICAL in Phase 19 |
+| Event API name changes | Sync breaks silently | Verify `subscribeAction` vs `onVisibleLogicalRangeChange` in Phase 18 |
+| Style config syntax | Charts render with wrong colors | Test all styles in Phase 18 demo |
+| @klinecharts/extension CDN availability | Phase 20 blocked | Verify CDN in Phase 18, have npm fallback |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Roadmap]: Consolidate to a single Cloudflare Worker + Static Assets project (not separate Pages + Workers), per research recommendation.
-- [Roadmap]: Binance reachability spike test placed at the start of Phase 1, before any backfill/cron logic is written.
-- [Roadmap]: Backfill and cron sync split into separate phases (2 and 3) — Phase 2 proves the paginated/rate-limited/chunked-insert engine works, Phase 3 runs it to completion and wires up the daily cron.
+- [v3.0 Roadmap]: KLineChart migration replaces lightweight-charts; extension adds drawing tools.
+- [v3.0 Roadmap]: data-aggregator deferred to v3.1; user confirmed post-analysis trading style.
+- [v3.0 Phase 1]: 充分準備版 standard chosen — demo must work before any production migration.
 
 ### Pending Todos
 
-**Phase 17 — Future-Proofing (Calculator Validation)** (next phase)
-- [ ] Extract calculator validation rules into schema-driven module
-- [ ] Prepare for future API endpoints (Phase 17+)
-- **Rationale**: Optional phase; deferred to post-v2.0 if time permits
-- **Plan location**: `.planning/phases/phase-17/PLAN.md`
-
-**Phase 16A — Structured Logging System** ✅ COMPLETE 2026-09-03
-- [x] Extend MockD1 + migrate records.test.ts (16-01, 2 hours)
-- [x] Implement RecordsRepository + migrate service tests (16-02, 3.5 hours)
-- [x] Unit tests (16-03, 2.5 hours)
-- [x] Route refactor + stats endpoint (16-04, 2 hours)
-- [x] Code review + docs (16-05, 1 hour)
-- **Delivered**: `src/services/RecordsRepository.ts` (8 methods, JS-computed stats, overlap time-range queries); `GET /api/records/stats`; all route tests on MockD1; records.service layer deleted; 42 repository unit tests (96.6% lines), global 87.1% lines; E2E 81/81
-- **Plan location**: `.planning/phases/phase-16/PLAN.md`
+**Phase 18 — 充分準備 (Full Preparation)** (CURRENT phase)
+- [ ] Verify klinecharts@10.0.3 npm installation (`import { init } from 'klinecharts'`)
+- [ ] Test @klinecharts/extension CDN URL
+- [ ] Three-repo compatibility assessment document
+- [ ] Migration checklist line-by-line review
+- [ ] Build standalone KLineChart demo HTML with Binance data
+- [ ] Measure lightweight-charts performance baseline
+- [ ] Identify all timestamp/event/style API differences
 
 ### Blockers/Concerns
 
-- [Phase 1]: Binance may block or geo-restrict Cloudflare Workers' shared datacenter IPs (documented recurring issue) — must be resolved by the Phase 1 spike test before Phase 2/3 backfill work begins. If blocked, a fallback (e.g. `data-api.binance.vision` or an external fetcher posting into an admin ingest endpoint) will be needed.
-- [Phase 3]: Lightweight Charts v5's exact API for logical-range sync (`subscribeVisibleLogicalRangeChange`/`setVisibleLogicalRange`) should be verified against the installed version during Phase 6 planning — most public examples online are still v4-era.
+- None currently. All known risks documented in Risk table above.
 
-## Deferred Items
+## Performance Baseline (to be filled in Phase 18)
 
-Items acknowledged and carried forward from previous milestone close:
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
-
-## Quick Tasks & Architecture Improvements Completed
-
-| Task | Status | Date | Commit |
-|------|--------|------|--------|
-| Quick Task #5: Shared Enum Definition | ✅ Complete | 2026-09-01 | 0d7aa23 |
-| Quick Task #3: Centralize Validation Logic | ✅ Complete | 2026-09-01 | 4ea9c33 |
-| Technical Debt Cleanup | ✅ Complete | 2026-09-01 | 90745ea |
+| Metric | lightweight-charts (before) | KLineChart (after) | Delta |
+|--------|----------------------------|-------------------|-------|
+| Init time | TBD | TBD | TBD |
+| Memory (MB) | TBD | TBD | TBD |
+| Bundle gzip | ~50KB | ~28KB est. | ~44% |
+| FPS during scroll | TBD | TBD | TBD |
 
 ## Session Continuity
 
-Last session: 2026-09-03 (Phase 16A execution + UAT + post-deploy verification)
-Stopped at: Phase 16A complete (Structured Logging System, beacon endpoint, Workers Logs).
-Quality status: v2.0 milestone 85% complete (14/15/16/16A all ✅); TypeScript clean, 571 tests passing, 84/84 E2E, coverage 88.13% global.
-Next: Phase 17 (Calculator Validation) — optional phase for future API work.
+Last session: 2026-09-03 (v3.0 milestone setup, /gsd-new-milestone)
+Stopped at: Milestone docs created. Phase 18 ready to start.
+Quality status: v2.0 baseline — 628 tests, 88.42% coverage, TypeScript clean.
+Next: `/gsd-plan-phase 18` to start execution.
