@@ -351,8 +351,10 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
 4. Cross-reference all 45 requirements with phases:
    - Phases 18 (10) + 19 (10) + 20 (9) + 21 (9) + 22 (7) = 45 ✓
 
-5. Push the dev branch (R18-08):
-   - Run `git push -u origin feature/klinechart-migration`
+5. Commit Phase 18 deliverables and push the dev branch (R18-08):
+   - Stage Phase 18 artifacts: `git add public/demo-klinechart.html .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md .planning/ROADMAP.md`
+   - Commit with message referencing phase: `git commit -m "Phase 18: demo + compatibility assessment + performance baseline + migration checklist verified"`
+   - Push to remote: `git push -u origin feature/klinechart-migration`
    - Verify: `git ls-remote origin feature/klinechart-migration` returns the local HEAD commit
 </action>
 
