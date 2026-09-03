@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-09-02)
 ## Current Position
 
 **Active Milestone**: v2.0 Architecture Deepening (Phases 14-17)
-**Current Phase**: Phase 16 (Backend Service Deepening — Records Repository) — **COMPLETE** ✅
-**Status**: Phase 14-16 complete. Phase 16A ready for execution (parallel-safe with 16)
-**Last activity**: 2026-09-02 — Phase 16 complete (RecordsRepository, /stats endpoint, MockD1 migration, 480 tests, 81/81 E2E)
+**Current Phase**: Phase 16A (Structured Logging System) — **COMPLETE** ✅
+**Status**: Phase 14-16 complete. Phase 16A complete. Phase 17 ready for execution.
+**Last activity**: 2026-09-03 — Phase 16A complete (Structured logging, beacon endpoint, Workers Logs, 571 tests, 84/84 E2E, post-deploy verified)
 
-Progress: [████░░░░░░] 75% v2.0 (3/4 phases complete: 14 ✅, 15 ✅, 16 ✅)
+Progress: [██████░░░░] 85% v2.0 (4/4 phases complete: 14 ✅, 15 ✅, 16 ✅, 16A ✅)
 
 ## Performance Metrics
 
@@ -64,17 +64,13 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-<!-- REVISED 2026-09-02: Phase 16A and Phase 16 now parallel-ready -->
+**Phase 17 — Future-Proofing (Calculator Validation)** (next phase)
+- [ ] Extract calculator validation rules into schema-driven module
+- [ ] Prepare for future API endpoints (Phase 17+)
+- **Rationale**: Optional phase; deferred to post-v2.0 if time permits
+- **Plan location**: `.planning/phases/phase-17/PLAN.md`
 
-**Phase 16A — Structured Logging System** (decided 2026-09-02)
-- [ ] Logger core + ChartManager integration (16A-01, 0.5 days)
-- [ ] Page instrumentation + Workers Logs setup (16A-02, 0.5 days)
-- [ ] Verification + code review (16A-03, 0.25 days)
-- **Duration**: 1-1.5 days (plan-check: Needs Clarification on 3 blockers)
-- **Rationale**: Code review IN-01 finding; production-grade observability needed before v2.0 launch
-- **Plan location**: `.planning/phases/phase-16a/PLAN.md`
-
-**Phase 16 — Backend Service Deepening (Records Repository)** ✅ COMPLETE 2026-09-02
+**Phase 16A — Structured Logging System** ✅ COMPLETE 2026-09-03
 - [x] Extend MockD1 + migrate records.test.ts (16-01, 2 hours)
 - [x] Implement RecordsRepository + migrate service tests (16-02, 3.5 hours)
 - [x] Unit tests (16-03, 2.5 hours)
@@ -106,7 +102,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-02
-Stopped at: Phase 16 complete (Records Repository + /stats endpoint).
-Quality status: v1.0 shipped, TypeScript clean, 480 tests passing, 81/81 E2E, coverage 87.1% global / 96.6% repository.
-Next: Phase 16A (Structured Logging) — parallel-ready; then Phase 17 (Calculator Validation).
+Last session: 2026-09-03 (Phase 16A execution + UAT + post-deploy verification)
+Stopped at: Phase 16A complete (Structured Logging System, beacon endpoint, Workers Logs).
+Quality status: v2.0 milestone 85% complete (14/15/16/16A all ✅); TypeScript clean, 571 tests passing, 84/84 E2E, coverage 88.13% global.
+Next: Phase 17 (Calculator Validation) — optional phase for future API work.
