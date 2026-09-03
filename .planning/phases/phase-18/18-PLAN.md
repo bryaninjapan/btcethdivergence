@@ -73,10 +73,18 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
      ```
    - Do NOT use `applyNew()` / `setData()` / `updateData()` — none exist in v10 (removed; use `setDataLoader`).
 
-2. @klinecharts/extension CDN connectivity (R18-02):
+2. @klinecharts/extension CDN connectivity & ESM import verification (R18-02, R18-01):
    - @klinecharts/extension@0.1.0 is **ESM-only** (`"type": "module"`, no UMD/IIFE build) — it CANNOT be loaded via a plain `<script src>` tag.
    - Record the ESM URL: `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js`
    - Verify connectivity with a HEAD request (see <verify> below).
+   - Optional ESM import test (R18-01 supplement): Add a `<script type="module">` block to the demo that dynamically imports klinecharts:
+     ```javascript
+     <script type="module">
+       import { init } from 'https://unpkg.com/klinecharts@10.0.3/dist/index.esm.js'
+       console.log('ESM import verified:', typeof init === 'function' ? 'OK' : 'FAIL')
+     </script>
+     ```
+     This verifies the ESM path works under zero-build constraint (complements the CDN UMD check).
    - Functional extension integration is deferred to Phase 20 (drawing tools). Note this in the demo doc.
    - R18-01 note: npm-ESM `import { init } from 'klinecharts'` (RESEARCH.md §5 checklist item) is intentionally OUT OF SCOPE under the locked no-build constraint — R18-01 "`import` 可用" is satisfied via the CDN UMD global; validate the ESM path only if a build step is ever introduced.
 
@@ -101,11 +109,13 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
 - [ ] Safari iOS can load and render the same page (test via remote debugging or iOS simulator)
 - [ ] Binance API call succeeds (verified in Network tab: 200 OK, ~1000+ candles returned)
 - [ ] Extension ESM URL returns 200 (R18-02 connectivity confirmed)
+- [ ] (Optional I3 hardening) Playwright smoke check: canvas element painted + no console errors in headless browser (use `@playwright/test` already installed; not required for execution)
 </acceptance_criteria>
 
 <verify>
 <automated>set -o pipefail; curl -sf "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000" | jq -e 'length >= 1000' > /dev/null && curl -sf "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000" | jq -r '.[0][0]' | awk '{ if (length($0) == 13) print "OK ms openTime:", $0; else exit 1 }' && curl -sfI "https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js" -o /dev/null</automated>
-<fails_when>non-zero exit: Binance HTTP error, response length < 1000, openTime not exactly 13 digits (invalid ms), or extension ESM URL not reachable (non-200)</fails_when>
+<manual>Open public/demo-klinechart.html in Chrome. In the DevTools Console, verify: (1) no "Invalid time" / "Invalid timestamp" errors; (2) the console.assert message shows "VERIFIED" or "OK" for the fake data render; (3) after the real-data swap, the X-axis shows dates in 2026 (not 1970); (4) chart renders visible candles (not empty). These manual checks prove timestamp ms pass-through works correctly in the real demo.</manual>
+<fails_when>non-zero exit: Binance HTTP error, response length < 1000, openTime not exactly 13 digits (invalid ms), or extension ESM URL not reachable (non-200); OR manual checks: console errors, fake data not rendered, real data shows 1970 dates, or chart empty</fails_when>
 </verify>
 
 ---
@@ -195,13 +205,30 @@ Sections:
    - Binance API: v3 endpoint, rate limits, backfill limits
 
 2. **API Mapping Reference** (Function-by-function correspondence — re-verify EACH mapping against the installed v10.0.3 types; do NOT copy technical-assessment.md)
-   - lightweight-charts → KLineChart v10
+   - lightweight-charts → KLineChart v10 (10+ key mappings below):
+   
+   **Initialization & Chart Setup**:
    - `chart.createChart(container, opts)` → `klinecharts.init(container, opts)` (UMD global is lowercase `klinecharts`; `Options` has no `kline` key)
    - `chart.addCandlestickSeries()` → built-in — v10 has no explicit series creation
-   - `series.setData(candles)` → `chart.setDataLoader({ getBars })` + `resetData()` (v9 `applyNew`/`updateData`/`applyMoreData` were REMOVED in v10)
-   - `onVisibleLogicalRangeChange()` → `subscribeAction('onVisibleRangeChange')` (verified correct in v10)
+   
+   **Data Loading & Manipulation**:
+   - `series.setData(candles)` → `chart.setDataLoader({ getBars })` (v9 `applyNew`/`updateData`/`applyMoreData` were REMOVED in v10)
+   - `chart.resetData()` → `chart.resetData()` (clears chart, triggers re-fetch via setDataLoader)
    - Data field `time` → `timestamp` (ms, pass-through — no ms→s conversion)
-   - `setPriceVolumePrecision()` → `setSymbol({ pricePrecision, volumePrecision })`
+   
+   **Symbol & Period Configuration**:
+   - `setPriceVolumePrecision(price, volume)` → `chart.setSymbol({ ticker, pricePrecision, volumePrecision })`
+   - `setSymbol({ ticker })` → `chart.setSymbol({ ticker })`
+   - `chart.setPeriod({ span, type })` → sets the K-line aggregation period (e.g., 1 hour, daily)
+   
+   **Event System**:
+   - `onVisibleLogicalRangeChange()` → `chart.subscribeAction('onVisibleRangeChange', callback)` (verified in v10; full observer pattern)
+   - `unsubscribeAction(id)` → unsubscribe from specific action (v10 tracks subscription IDs)
+   - Available actions: `onVisibleRangeChange`, `onCrosshairChange`, `onCandleClick`, etc.
+   
+   **Chart Navigation & Viewport**:
+   - `timeScale().scrollToTimestamp(timestamp)` → `chart.scrollToTimestamp(timestamp)` (v10 direct method)
+   - `timeScale().zoomAtTimestamp(scale, timestamp)` → use `subscribeAction` to track zoom + re-render (v10 uses different zoom model)
 
 3. **CDN vs npm Trade-offs**
    - CDN: Pros (zero build setup, cache), Cons (size, no tree-shake, extension is ESM-only)
@@ -224,6 +251,8 @@ Sections:
 **Part B — Performance Baseline (lightweight-charts reference)**
 
 Measure and record lightweight-charts performance as the reference for Phase 19's comparison.
+
+**Prerequisite**: Ensure `wrangler dev` is running and D1 database is seeded with kline data before starting measurements. The charts page makes HTTP requests to `/api/klines` (Worker route), which requires the local dev server to be active. Without it, the page will timeout or error.
 
 1. **Initialization Time** (Chrome DevTools)
    - Open `public/charts.html` (the page that actually renders charts — `index.html` is the records page with NO charts)
@@ -368,8 +397,8 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
 </acceptance_criteria>
 
 <verify>
-<automated>grep -cE "^#### Phase 1[89]|^#### Phase 2[0-2]" .planning/ROADMAP.md | awk '$1>=5' && git ls-remote origin feature/klinechart-migration | grep -q "$(git rev-parse HEAD)"</automated>
-<fails_when>fewer than 5 headings for Phases 18-22 in ROADMAP.md, or remote branch does not match local HEAD (exit code non-zero)</fails_when>
+<automated>grep -cE "^#### Phase 1[89]|^#### Phase 2[0-2]" .planning/ROADMAP.md | awk '$1>=5' && grep -q "^#### Phase 18.*Status.*IN PROGRESS\|^#### Phase 18.*Status.*🚧" .planning/ROADMAP.md && grep -c "| R18-\|| R19-\|| R20-\|| R21-\|| R22-" .planning/ROADMAP.md | awk '$1>=45' && git ls-remote origin feature/klinechart-migration | grep -q "$(git rev-parse HEAD)"</automated>
+<fails_when>fewer than 5 headings for Phases 18-22 in ROADMAP.md, Phase 18 status not updated to IN PROGRESS/🚧, requirement count < 45 across all phases, or remote branch does not match local HEAD (exit code non-zero)</fails_when>
 </verify>
 
 ---
