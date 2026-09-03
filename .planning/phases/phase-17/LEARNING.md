@@ -1,0 +1,164 @@
+---
+phase: 17
+title: Phase 17 Plan-Check Learning Log
+date: 2026-09-03
+status: documented
+---
+
+# Phase 17 Learning — Plan-Check Iterations & Warnings
+
+## Overview
+
+Phase 17 (Calculator Validation, Optional) underwent 3 plan-check iterations to resolve blockers and warnings. This document records the findings and design decisions made during refinement.
+
+---
+
+## Iteration 1: Initial Plan-Check (2026-09-03 11:40)
+
+**Status**: 2 blockers, 5 warnings, 5 info
+
+### Blockers (Resolved in Iteration 2)
+
+**B1 — SC4 "frontend and backend import from same `calculator-rules.ts`" has no covering task**
+- **Root cause**: PLAN froze `public/js/calculator.js` but created only backend files. Browser cannot import `.ts` files (no build step is locked).
+- **Resolution**: Added subtask 17-01-1.5 to create `public/js/calculator-rules.js` mirror + parity test, following established divergence.js precedent.
+- **Learning**: Shared state in a no-build environment requires a mirror + parity-test pattern, not literal imports.
+
+**B2 — SC3 stubs are never wired into the app; endpoint tests missing**
+- **Root cause**: `src/routes/calculator.ts` created but `src/index.ts` has no `app.route('/', calculator)` registration; endpoints would 404. No contract tests for stubs.
+- **Resolution**: Added subtask 17-01-4.5 for route registration in `src/index.ts` + expanded 17-01-5 with ≥5 contract tests.
+- **Learning**: Route registration must be explicit in this codebase (see index.ts:48-51 pattern). Stubs are deliverables and require contract tests to prove envelope shape.
+
+---
+
+## Iteration 2: After B1/B2 Resolution (2026-09-03 11:42)
+
+**Status**: 0 blockers, 6 warnings, 6 info
+
+### Warnings (Addressed in Iteration 3)
+
+**W1 — Stub response format contradicts locked Phase 11 envelope contract**
+- **Issue**: Plan said stubs "return 'not yet implemented'" (raw text). Phase 11 response contract is `{ok, data?, error?}`.
+- **Resolution**: Changed to return `{ok: false, error: {code: ErrorCode.INTERNAL_ERROR, message: 'Not yet implemented'}}` with HTTP 501 (matches notFound handler pattern).
+- **Learning**: Response envelope is a locked contract; all endpoints must conform, even stubs.
+
+**W2 — `CalculatorInputs` field names don't match frozen client vocabulary**
+- **Issue**: Plan specified `entry`, `takeProfit` but frozen client uses `entryPrice`, `takeProfitPrice` (calculator.js:6-9, calculator-init.js:14-16).
+- **Resolution**: Renamed schema fields to `entryPrice`, `takeProfitPrice` for 1:1 mapping with frozen `calculatePosition()` params.
+- **Learning**: Schema is the DRY source-of-truth for field naming. Names must match the interface being abstracted (frozen client), not invented independently.
+
+**W3 — "`CalculatorOutputs` matches exactly" claim is factually wrong**
+- **Issue**: `calculatePosition()` returns 15 fields (6 echoed inputs + 9 computed), but plan only listed 9 computed. `warnings` subfields not enumerated.
+- **Resolution**: Updated SC2 and 17-01-2 acceptance criteria to enumerate all computed fields + `warnings: {riskRewardTooLow, liquidationRisk}` subobject.
+- **Learning**: Be precise about what "output shape" includes. Enumerate all fields, including subfields and conditional fields.
+
+**W4 — Coverage target (80%) contradicts repo threshold (85%)**
+- **Issue**: Plan said "≥80% for calculator-rules module" but `npm run test:coverage` enforces `--coverage.thresholds.lines=85` globally.
+- **Resolution**: Aligned all mentions to "new files meet ≥85% line coverage (repo threshold); global stays ≥85%".
+- **Learning**: Document coverage standards explicitly. Per-module thresholds must be configurable in vitest.config.ts to be enforceable.
+
+**W5 — "auth required" contract test is not implementable**
+- **Issue**: 17-01-5 listed "auth required" as a test case, but CF Access is edge-enforced (client-log.ts:9-11), not in Worker code.
+- **Resolution**: Reframed as "CORS boundary test" + assertion that stub returns 501 without auth headers (proving edge-auth, not in-code auth).
+- **Learning**: Auth patterns in this codebase are edge-enforced. In-process tests can only verify that code does NOT duplicate auth, not that auth is required.
+
+**W6 — SC4 wording doesn't match mirror approach**
+- **Issue**: ROADMAP SC4 says "import from same `calculator-rules.ts`" but plan delivers a mirror. Wording mismatch could confuse UAT.
+- **Resolution**: Updated SC4 and 17-01-1.5 acceptance criteria to explicitly state "mirror pattern (divergence.js precedent)".
+- **Learning**: Document architectural decisions in acceptance criteria. If a SC can't be met literally (due to constraints), state the chosen alternative explicitly.
+
+---
+
+## Iteration 3: After W1-W6 Initial Fixes (2026-09-03 11:46)
+
+**Status**: 0 blockers, 5 warnings, 5 info
+
+### Remaining Warnings (Not Fully Resolved; Flagged for Execution)
+
+**W1 (Revised) — Coverage threshold documentation still inconsistent**
+- **Remaining issue**: Handoff Criteria #6 says "coverage ≥80%", but task 17-01-6 and Verification Commands say "≥85%". Per-file coverage claim is unenforced (vitest has no per-file setting by default).
+- **Action**: Unify on "global aggregate ≥85%" in all sections during execution. Drop per-file claims unless vitest.config.ts is updated to enforce them.
+- **Status**: Flagged for execution-phase cleanup.
+
+**W2 (Revised) — "auth required" test still conflicting with edge-auth stance**
+- **Remaining issue**: 17-01-5 "Done when" still includes "auth required" test case despite consensus that auth is edge-enforced.
+- **Action**: Replace with explicit CORS-boundary case (mirroring client-log.test.ts:85-98) + assertion that unauth request still reaches 501 handler.
+- **Status**: Flagged for task 17-01-5 sign-off.
+
+**W3 — SC2 verification cannot prove client calculator unchanged**
+- **Issue**: Verification commands don't run `public/js/calculator.test.ts`; accidental edits to frozen file would go undetected.
+- **Action**: Add `npm test -- public/js/calculator` and `git diff --stat public/js/calculator.js` (expect empty) to Verification Commands.
+- **Status**: Flagged for Verification Commands update before execution.
+
+**W4 — Single task with 10 subtasks exceeds granularity target**
+- **Issue**: 10 subtasks (17-01-1…8 + 17-01-4.5 + 17-01-1.5) is high; phase-level convention is 2-3 tasks/plan.
+- **Action**: Optional: split into 17-01 (schemas), 17-02 (stubs), 17-03 (parity) during planning, or group into 3 logical milestones within 17-01.
+- **Status**: Granularity improvement; not a blocker.
+
+**W5 — ROADMAP SC4 literal wording not delivered**
+- **Issue**: SC4 says "import from same `calculator-rules.ts`" but plan delivers mirror. Literal reading fails; intent succeeds.
+- **Action**: Update ROADMAP SC4 to include "(or .js mirror, divergence precedent)" for consistency with Phase 14 SC4.
+- **Status**: Flagged for ROADMAP update; does not block this phase.
+
+### Info (Non-Blocking Observations)
+
+**I1 — CODE-03/CODE-04 are already validated requirements**
+- CODE-03 (DRY Validation) and CODE-04 (Service Layer Pattern) are marked ✅ complete in REQUIREMENTS.md (Phases 11/12).
+- Phase 17 applies these patterns to a new module rather than introducing new requirements.
+- Suggestion: ROADMAP phase line could note "applies existing CODE-03/04" to avoid implying new requirements.
+
+**I2 — `longShort` normalization nuance**
+- `calculator.js:66-69` normalizes `'short'/'Short'/'SHORT'` to `'short'` and everything else to `'long'`.
+- A strict `z.enum(['long','short'])` would reject client values like `'SHORT'`, creating drift.
+- Design decision: plan must either normalize before validation (mirroring client) or document stricter contract.
+- Parity/contract tests should pin down the chosen approach.
+
+**I3 — Filtered test commands may under-collect**
+- `npm test -- calculator-rules` matches only `calculator-rules.test.ts`.
+- `npm test -- calculator.test` matches route tests.
+- Final sign-off should use unfiltered `npm test` to catch cross-file regressions.
+
+**I4 — Curl verification wording confusion**
+- Verification Commands label curl as "(after deploy)" but target `http://localhost:8787` (wrangler dev).
+- Localhost is correct (CF Access would block curl on live domain); clarify label to "(after `wrangler dev`)" to avoid confusion.
+
+**I5 — `calculator.test.ts` in coverage claim is unmeasurable**
+- Vitest excludes test files from coverage by default; listing `src/routes/calculator.test.ts` among files expected to meet ≥85% is unenforceable.
+- Either remove from coverage claim or add `--coverage.all` per-file config intentionally.
+
+---
+
+## Key Design Decisions Locked During Plan-Checks
+
+1. **Field Names**: Schema uses `entryPrice` / `takeProfitPrice` to match frozen client (not `entry` / `takeProfit`).
+2. **Response Envelope**: Stubs return `{ok: false, error: {code: INTERNAL_ERROR, ...}}` with 501 (matches locked Phase 11 contract).
+3. **Frontend Sharing**: Uses mirror + parity-test pattern (`public/js/calculator-rules.js`), not literal TS imports (no-build constraint).
+4. **Route Registration**: Explicit `app.route('/', calculator)` in `src/index.ts` (same pattern as records/klines/admin).
+5. **Auth**: Edge-enforced by CF Access; no in-code auth duplication. Contract tests verify CORS boundary, not auth requirement.
+6. **Coverage**: Global aggregate ≥85% (repo standard); per-file thresholds are optional and must be configured explicitly.
+
+---
+
+## Recommendations for Future Phases
+
+1. **Early validation of schema field names** — align to the interface being abstracted before starting schema design.
+2. **Response envelope compliance** — any new endpoint must use the locked `{ok, data?, error?}` contract from day 1.
+3. **Mirror + parity pattern** — when sharing state across a no-build boundary, document the mirror pattern and parity test explicitly in SC wording.
+4. **Test filtering discipline** — use filtered tests during development, but final sign-off should run full suite to catch cross-module regressions.
+5. **Authorization patterns** — document clearly whether auth is edge-enforced or in-code for each route; don't leave it ambiguous.
+
+---
+
+## Execution Readiness
+
+**Status**: ✅ READY TO EXECUTE
+
+All blockers resolved. Remaining 5 warnings are minor clarifications/improvements to be handled during task sign-off, not execution blockers. Phase 17 can proceed as planned.
+
+**Next step**: Execute Phase 17 via `/gsd-execute-phase 17` and address W1-W5 during subtask completion.
+
+---
+
+**Last Updated**: 2026-09-03 11:46 (after 3rd plan-check)  
+**Checker**: gsd-plan-checker  
+**Recommendation**: APPROVE with minor revisions. Plans verified. Ready to execute.
