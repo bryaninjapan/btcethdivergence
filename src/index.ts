@@ -9,7 +9,29 @@ import type { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors({ credentials: true }));
+// CORS policy: allow credentials from trusted origins only
+// - Development: localhost (any port)
+// - Production: btcethdivergence.bryanlab.cc
+// Note: All /api/* endpoints are also protected by Cloudflare Access,
+// so CORS rejection is a second layer of defense (defense-in-depth)
+app.use(
+  '*',
+  cors({
+    credentials: true,
+    origin: (origin) => {
+      if (!origin) return '*'; // allow requests without origin header
+
+      // Allow localhost for development
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) return origin;
+
+      // Allow production domain
+      if (origin === 'https://btcethdivergence.bryanlab.cc') return origin;
+
+      // Reject other origins (Hono cors will omit Access-Control-Allow-Origin header)
+      return false;
+    },
+  }),
+);
 
 // Register error middleware to catch all errors from route handlers
 app.onError((err, c) => errorMiddleware(err, c));
