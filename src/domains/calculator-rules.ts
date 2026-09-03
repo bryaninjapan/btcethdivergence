@@ -138,6 +138,19 @@ export const CalculatorInputs = z
  * only; input echoes are intentionally out of scope (see PLAN.md I3: the full
  * frozen calculatePosition() return also echoes the 6 inputs).
  */
+/**
+ * CalculatorOutputs — computed position metrics (9 fields, results-only design).
+ *
+ * Design Choice: Option C (Results Only)
+ * - Returns calculated output only, no input echo (margin, entryPrice, stopLoss, etc.)
+ * - Rationale: API responsibility = "compute", not "repeat"
+ * - Client already knows its own inputs; Server provides new computed data
+ * - Aligned with REST best practices (Stripe, OpenAI API pattern)
+ * - Verified via TDD comparison (.planning/phases/phase-17/L2-TDD-Schema-Comparison.test.ts)
+ *
+ * Future /api/calculator/compute (Phase 18+) will return this schema shape.
+ * See LEARNING.md "L2 Deep Dive: CalculatorOutputs Schema Design" for full analysis.
+ */
 export const CalculatorOutputs = z.object({
   isValid: z.boolean(),
   errorMessage: z.string(),
