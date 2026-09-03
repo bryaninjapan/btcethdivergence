@@ -253,7 +253,7 @@ export class RecordsRepository {
         tags: input.tags ?? existing.tags,
         updated_at: this.now(),
       };
-      await this.db
+      const res = await this.db
         .prepare(
           'UPDATE divergence_records SET start_time = ?, end_time = ?, type = ?, msb = ?, notes = ?, tags = ?, updated_at = ? WHERE id = ?',
         )
@@ -268,6 +268,10 @@ export class RecordsRepository {
           id,
         )
         .run();
+      // If concurrent delete happened after findById, UPDATE would touch 0 rows
+      if ((res.meta.changes ?? 0) === 0) {
+        return null;
+      }
       return merged;
     } catch (error) {
       // Re-wrap any failure (including findById's translation) so the
