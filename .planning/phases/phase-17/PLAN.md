@@ -50,10 +50,10 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 
 ## Success Criteria
 
-- [ ] SC1: CalculatorInputs Zod schema created with 6 fields (margin, entry, stopLoss, takeProfit, leverage, **longShort**)
-- [ ] SC2: CalculatorOutputs Zod schema created with 9 output fields (isValid, errorMessage, positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio, lossRatePercent, gainRatePercent, warnings)
+- [ ] SC1: CalculatorInputs Zod schema created with 6 fields (margin, **entryPrice**, stopLoss, **takeProfitPrice**, leverage, **longShort**)
+- [ ] SC2: CalculatorOutputs Zod schema created with computed output fields (positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio, lossRatePercent, gainRatePercent, isValid, errorMessage, warnings: {riskRewardTooLow, liquidationRisk})
 - [ ] SC3: API endpoints created as stubs with correct envelope (return `{ok: false, error: {code, message}}` + 501); endpoints registered in `src/index.ts`; 5+ contract tests written
-- [ ] SC4: Frontend and backend can import schemas (parity test verifies `public/js/calculator-rules.js` mirrors `src/domains/calculator-rules.ts`)
+- [ ] SC4: Schemas available to both frontend and backend via mirror pattern (parity test verifies `public/js/calculator-rules.js` mirrors `src/domains/calculator-rules.ts`; divergence.js precedent)
 - [ ] SC5: Schemas handle edge cases (direction-dependent SL/TP via longShort; liquidation threshold; leverage bounds 1–125)
 - [ ] SC6: 15+ unit tests passing (validation, edge cases, parity test included)
 - [ ] SC7: Code review: zero HIGH issues
@@ -73,16 +73,16 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 
 **Subtasks**:
 - [ ] 17-01-1: Design CalculatorInputs schema
-  **Done when**: 6 fields validated (margin, entry, stopLoss, takeProfit, leverage, longShort); direction-dependent SL/TP rules in .refine(); error messages match calculator.js strings; MAX_LEVERAGE/MIN_LEVERAGE exported as 125/1
+  **Done when**: 6 fields validated (margin, **entryPrice**, stopLoss, **takeProfitPrice**, leverage, longShort); field names match frozen client param names (calculator.js:6-9, calculator-init.js:14-16); direction-dependent SL/TP rules in .refine(); error messages match calculator.js strings; MAX_LEVERAGE/MIN_LEVERAGE exported as 125/1
 
 - [ ] 17-01-2: Design CalculatorOutputs schema
-  **Done when**: 9 output fields enumerated (isValid, errorMessage, positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio, lossRatePercent, gainRatePercent, warnings); matches calculator.js output shape exactly
+  **Done when**: Computed output fields enumerated (positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio, lossRatePercent, gainRatePercent, isValid, errorMessage); warnings subobject {riskRewardTooLow, liquidationRisk} enumerated (calculator.js:27, 59-62); schema structure matches calculatePosition() return shape (calculator.js:12-28)
 
 - [ ] 17-01-3: Implement edge case validation
   **Done when**: liquidation threshold tests pass; margin vs leverage × entry validation; SL/TP direction tests (long vs short); leverage bound tests (1–125); all conditions raise appropriate warnings
 
 - [ ] 17-01-4: Create `/api/calculator/validate` stub endpoint
-  **Done when**: POST /api/calculator/validate returns `{ok: false, error: {code: 'NOT_IMPLEMENTED', message: '...'}}` with 501 status; rejects invalid schema with 400 + error details; respects CF Access gate (email OTP)
+  **Done when**: POST /api/calculator/validate returns `{ok: false, error: {code: ErrorCode.INTERNAL_ERROR, message: 'Not yet implemented'}}` with HTTP 501 status (follows notFound handler pattern in src/index.ts:53-62); rejects invalid CalculatorInputs schema with 400 + zod error details; respects CF Access gate (email OTP)
 
 - [ ] 17-01-4.5 (NEW): Register calculator routes in `src/index.ts`
   **Done when**: `app.route('/', calculator)` added to src/index.ts (after records route); curl /api/calculator/validate returns 501 (not 404); route order verified in code review
@@ -91,10 +91,10 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
   **Done when**: POST /api/calculator/compute returns same 501 envelope; `src/routes/calculator.test.ts` written with ≥5 test cases (valid input, invalid schema, boundary values, auth required, envelope format); all tests passing
 
 - [ ] 17-01-1.5 (NEW): Create frontend mirror + parity test
-  **Done when**: `public/js/calculator-rules.js` exports CalculatorInputs/Outputs matching backend; `src/domains/calculator-rules.test.ts` includes parity test asserting field lists sync (use divergence.js pattern as reference)
+  **Done when**: `public/js/calculator-rules.js` exports schema-derived constants (field lists, MAX/MIN_LEVERAGE, error strings) matching backend; parity test in `src/domains/calculator-rules.test.ts` asserts both sides' field lists/constants sync exactly (divergence.js+divergence.test.ts pattern); mirror enables SC2-frozen client.js to reference shared constants in future versions
 
 - [ ] 17-01-6: Write calculator validation unit tests (15+)
-  **Done when**: ≥15 tests passing (field validation, margin/SL rules, liquidation warnings, leverage bounds, direction-dependent rules, parity test); coverage ≥80% for calculator-rules module
+  **Done when**: ≥15 tests passing (field validation, margin/SL rules, liquidation warnings, leverage bounds, direction-dependent rules, parity test); new files meet ≥85% line coverage (repo threshold), global coverage stays ≥85%
 
 - [ ] 17-01-7: Document schemas for future API implementation
   **Done when**: PLAN notes future CalculatorService.ts pattern; access policy stated (email OTP); rate-limit recommendations documented; error message contract documented
@@ -132,11 +132,11 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 - **Parity test (NEW)**: `public/js/calculator-rules.js` field lists sync with backend
 
 ### Endpoint Contract Tests (5+)
-- Valid CalculatorInputs: returns 501 with correct envelope
-- Invalid schema: returns 400 with error details
-- Boundary values: leverage=1, leverage=125, margin=0
-- Missing required fields: caught by Zod validation
-- Access gate: CF Access OTP required
+- Valid CalculatorInputs: returns 501 with correct envelope `{ok: false, error}`
+- Invalid schema: returns 400 with zod validation error details
+- Boundary values: leverage=1, leverage=125 (limits enforced)
+- Missing required fields: caught by Zod validation (returns 400)
+- CORS boundary: stub does not duplicate CF Access auth (edge-enforced, consistent with client-log.test.ts:95)
 
 ### Manual QA
 - None required (no UI changes, stubs only)
@@ -155,16 +155,16 @@ npm run typecheck
 npm test -- calculator-rules
 npm test -- calculator.test
 
-# Coverage verification
+# Coverage verification (repo threshold: 85% global)
 npm run test:coverage
-# Expected: new files (calculator-rules.ts, calculator.ts) meet ≥80% threshold
+# Expected: new files (calculator-rules.ts, calculator.ts, calculator.test.ts) meet ≥85% line coverage; global aggregate stays ≥85%
 
 # Manual endpoint test (after deploy)
 curl -X POST http://localhost:8787/api/calculator/validate \
   -H "Content-Type: application/json" \
-  -H "CF-Access-Token: [token]" \
-  -d '{"margin": 1000, "entry": 100, "stopLoss": 95, "takeProfit": 110, "leverage": 10, "longShort": "long"}' \
-# Expected: { "ok": false, "error": { "code": "NOT_IMPLEMENTED", "message": "..." } } with HTTP 501
+  -d '{"margin": 1000, "entryPrice": 100, "stopLoss": 95, "takeProfitPrice": 110, "leverage": 10, "longShort": "long"}' \
+# Expected: { "ok": false, "error": { "code": "INTERNAL_ERROR", "message": "Not yet implemented" } } with HTTP 501
+# Note: CF Access OTP auth is enforced at the edge (gateway), not in Worker code
 ```
 
 ---
