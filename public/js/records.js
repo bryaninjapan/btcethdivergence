@@ -9,6 +9,7 @@ import {
 import { recordToRange } from './managers/ChartManager.js';
 import { DIVERGENCE_TYPES, TYPE_LABELS, MSB_LABELS } from './divergence.js';
 import { createRecordsManager } from './records-state.js';
+import { createBeaconSink, createLogger, installGlobalHandlers } from './logger.js';
 import {
   fillSelect,
   rebuildDays,
@@ -18,6 +19,9 @@ import {
 
 // Constants
 const FILTER_DEBOUNCE_MS = 250;  // 250ms debounce for filter input
+
+// Structured logger: console (dev) + client-log beacon (production).
+const logger = createLogger('records', { sinks: [createBeaconSink()] });
 
 // Records state factory instance
 const recordsManager = createRecordsManager();
@@ -121,10 +125,15 @@ async function loadRecords() {
   if (type) params.set('type', type);
   if (tag) params.set('tag', tag);
   const qs = params.toString();
-  const data = await api(qs ? `/api/records?${qs}` : '/api/records');
-  if (requestToken !== recordsManager.getLatestRequestToken()) return;
-  recordsManager.setRecords(data);
-  renderTable(data);
+  try {
+    const data = await api(qs ? `/api/records?${qs}` : '/api/records');
+    if (requestToken !== recordsManager.getLatestRequestToken()) return;
+    recordsManager.setRecords(data);
+    renderTable(data);
+  } catch (error) {
+    logger.captureException('loadRecords.error', error, { type, tag });
+    throw error;
+  }
 }
 
 /**
@@ -187,6 +196,7 @@ async function submitForm() {
   if (start >= end) {
     formError.textContent = '開始時間必須早於結束時間';
     formError.hidden = false;
+    logger.warn('submitForm.validation', '開始時間必須早於結束時間', { start, end });
     return;
   }
 
@@ -195,6 +205,7 @@ async function submitForm() {
   if (!typeRadio) {
     formError.textContent = '請選擇類型';
     formError.hidden = false;
+    logger.warn('submitForm.validation', '請選擇類型', {});
     return;
   }
 
@@ -202,6 +213,7 @@ async function submitForm() {
   if (!msbRadio) {
     formError.textContent = '請選擇 MSB';
     formError.hidden = false;
+    logger.warn('submitForm.validation', '請選擇 MSB', {});
     return;
   }
 
@@ -215,15 +227,24 @@ async function submitForm() {
       tags: document.querySelector('#tags').value,
     };
     const editingId = recordsManager.getEditingId();
-    if (editingId) {
-      await api(`/api/records/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
-    } else {
-      await api('/api/records', { method: 'POST', body: JSON.stringify(payload) });
-    }
+    const saved = editingId
+      ? await api(`/api/records/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      : await api('/api/records', { method: 'POST', body: JSON.stringify(payload) });
     recordsManager.stopEditing();
     document.querySelector('#record-dialog').close();
     await loadRecords();
+    // Redaction rule: never log notes/tags content — lengths only.
+    logger.info(editingId ? 'submitForm.update' : 'submitForm.create', editingId ? 'Record updated' : 'Record created', {
+      record_id: saved?.id ?? editingId ?? null,
+      notes_len: payload.notes.length,
+      tags_len: payload.tags.length,
+    });
   } catch (error) {
+    logger.captureException('submitForm.error', error, {
+      record_id: recordsManager.getEditingId() ?? null,
+      notes_len: document.querySelector('#notes').value.length,
+      tags_len: document.querySelector('#tags').value.length,
+    });
     const message = describeApiError(error, 'Failed to save record');
 
     formError.textContent = message;
@@ -252,7 +273,9 @@ async function confirmDeleteAction() {
     await api(`/api/records/${deleteId}`, { method: 'DELETE' });
     closeDeleteDialog();
     await loadRecords();
+    logger.info('delete.success', 'Record deleted', { record_id: deleteId });
   } catch (error) {
+    logger.captureException('delete.error', error, { record_id: deleteId });
     const message = describeApiError(error, 'Failed to delete record');
 
     deleteError.textContent = message;
@@ -308,8 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#confirm-delete').addEventListener('click', confirmDeleteAction);
   document.querySelector('#cancel-delete').addEventListener('click', closeDeleteDialog);
   document.querySelector('#delete-dialog').addEventListener('cancel', closeDeleteDialog);
+
+  // Capture uncaught exceptions and unhandled rejections into the logger
+  // (which also forwards them to the client-log beacon).
+  installGlobalHandlers(logger);
+
   loadRecords().catch((e) => {
-    console.error('Failed to load records on init:', e);
+    logger.captureException('loadRecords.init', e, {});
     // Table remains empty with visible error, better than silent failure
   });
 });
