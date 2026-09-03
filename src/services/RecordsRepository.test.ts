@@ -225,6 +225,20 @@ describe('RecordsRepository.update', () => {
     // Verify no UPDATE was sent to DB (failed before executing)
     expect(db.prepares).toHaveLength(1); // Only the findById SELECT
   });
+
+  it('returns null when concurrent delete happens after findById (changes===0 concurrent delete protection)', async () => {
+    const db = createMockD1WithData({ divergence_records: [EXISTING] });
+    // Simulate: findById succeeds, but UPDATE touches 0 rows because the record
+    // was concurrently deleted by another process (changes===0 protection).
+    db.setNextRunMetaChanges(0);
+
+    const record = await repo(db).update(1, { notes: 'updated' });
+
+    expect(record).toBeNull();
+    // Verify both findById SELECT and UPDATE were attempted
+    expect(db.prepares.length).toBeGreaterThanOrEqual(2);
+    expect(db.prepares[1]).toContain('UPDATE');
+  });
 });
 
 describe('RecordsRepository.findAll', () => {
@@ -447,6 +461,13 @@ describe('RecordsRepository.listWithStats', () => {
 });
 
 describe('RecordsRepository.findByTimeRange', () => {
+  it('rejects when start >= end (start must be strictly before end)', async () => {
+    const db = createMockD1WithData({ divergence_records: [EXISTING] });
+
+    await expect(repo(db).findByTimeRange(100, 50)).rejects.toBeInstanceOf(ValidationError);
+    await expect(repo(db).findByTimeRange(100, 100)).rejects.toBeInstanceOf(ValidationError);
+  });
+
   it('returns records overlapping the query window (span semantics)', async () => {
     const db = createMockD1WithData({
       divergence_records: [
