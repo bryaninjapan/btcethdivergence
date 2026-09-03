@@ -12,7 +12,6 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { validationMessage } from '../lib/validate';
 import { createLogger } from '../lib/logger';
 import type { Env } from '../types';
 
