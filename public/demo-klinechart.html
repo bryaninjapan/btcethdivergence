@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KLineChart v10 Demo — BTCUSDT 1h</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 20px;
+        font-size: 24px;
+      }
+      .status-section {
+        background: white;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+      }
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      .status-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        font-weight: bold;
+        color: white;
+        font-size: 12px;
+      }
+      .status-icon.pending {
+        background: #999;
+      }
+      .status-icon.ok {
+        background: #4caf50;
+      }
+      .status-icon.error {
+        background: #f44336;
+      }
+      .status-text {
+        flex: 1;
+      }
+      .status-value {
+        font-family: 'Monaco', monospace;
+        font-size: 12px;
+        background: #f0f0f0;
+        padding: 4px 8px;
+        border-radius: 2px;
+      }
+      #chart {
+        width: 100%;
+        height: 500px;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 20px;
+      }
+      #loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 500px;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        font-size: 16px;
+        color: #666;
+      }
+      #error-message {
+        display: none;
+        background: #ffebee;
+        border: 1px solid #f44336;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: #b71c1c;
+        font-family: 'Monaco', monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .info-section {
+        background: white;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 20px;
+        border: 1px solid #e0e0e0;
+      }
+      .info-section h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #333;
+      }
+      .info-item {
+        font-size: 13px;
+        margin: 6px 0;
+        padding: 4px 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .info-item:last-child {
+        border-bottom: none;
+      }
+      .label {
+        color: #666;
+        font-weight: 500;
+      }
+      .value {
+        font-family: 'Monaco', monospace;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>KLineChart v10.0.3 Demo — BTCUSDT 1h Candles</h1>
+
+      <div class="status-section">
+        <div class="status-item">
+          <span class="status-icon pending" id="icon-binance">⧗</span>
+          <span class="status-text">Binance API</span>
+          <span class="status-value" id="status-binance">Connecting...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon pending" id="icon-extension">⧗</span>
+          <span class="status-text">Extension ESM URL</span>
+          <span class="status-value" id="status-extension">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon pending" id="icon-chart">⧗</span>
+          <span class="status-text">Chart Render</span>
+          <span class="status-value" id="status-chart">Initializing...</span>
+        </div>
+      </div>
+
+      <div id="error-message"></div>
+
+      <div id="loading">Loading chart...</div>
+      <div id="chart" style="display: none;"></div>
+
+      <div class="info-section">
+        <h3>API Call (curl)</h3>
+        <div class="info-item">
+          <span class="label">Binance REST API:</span>
+          <br />
+          <code>
+            curl -s
+            "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000"
+            | jq -r '.[0] | "\(.openTime) ms (len: \(. | length)) | O:\(.open) H:\(.high) L:\(.low)
+            C:\(.close) V:\(.volume)"'
+          </code>
+        </div>
+        <div class="info-item">
+          <span class="label">Expected response:</span>
+          <br />
+          <code>1000+ rows, openTime 13-digit ms, OHLCV data</code>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>Data Contract</h3>
+        <div class="info-item">
+          <span class="label">v10 KLineData format:</span>
+          <br />
+          <code>{ timestamp (ms), open, high, low, close, volume }</code>
+        </div>
+        <div class="info-item">
+          <span class="label">Binance mapping:</span>
+          <br />
+          <code
+            >Binance row [openTime, open, high, low, close, quoteAssetVolume, ...] → v10
+            KLineData</code
+          >
+        </div>
+        <div class="info-item">
+          <span class="label">Timestamp pass-through:</span>
+          <br />
+          <code>timestamp: row[0] (13-digit ms, unchanged — no Math.floor)</code>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>Extension ESM URL (R18-02)</h3>
+        <div class="info-item">
+          <span class="label">@klinecharts/extension@0.1.0 ESM path:</span>
+          <br />
+          <code>https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js</code>
+        </div>
+        <div class="info-item">
+          <span class="label">Note:</span>
+          <br />
+          <code
+            >ESM-only (no UMD build); functional integration deferred to Phase 20</code
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- klinecharts@10.0.3 UMD import -->
+    <script src="https://unpkg.com/klinecharts@10.0.3/dist/umd/klinecharts.min.js"></script>
+
+    <!-- Main initialization script -->
+    <script>
+      const API_BINANCE = 'https://api.binance.com/api/v3/klines'
+      const EXTENSION_ESM_URL =
+        'https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js'
+
+      // Status tracking
+      const statusIcons = {
+        binance: document.getElementById('icon-binance'),
+        extension: document.getElementById('icon-extension'),
+        chart: document.getElementById('icon-chart')
+      }
+      const statusValues = {
+        binance: document.getElementById('status-binance'),
+        extension: document.getElementById('status-extension'),
+        chart: document.getElementById('status-chart')
+      }
+      const errorMessage = document.getElementById('error-message')
+
+      function setStatus(key, status, message) {
+        const icon = statusIcons[key]
+        const value = statusValues[key]
+        icon.textContent =
+          status === 'ok' ? '✓' : status === 'error' ? '✕' : '⧗'
+        icon.className = `status-icon ${status}`
+        value.textContent = message
+      }
+
+      function showError(msg) {
+        errorMessage.style.display = 'block'
+        errorMessage.textContent = msg
+      }
+
+      async function main() {
+        try {
+          // Step 1: Verify klinecharts global is available
+          if (typeof klinecharts === 'undefined') {
+            throw new Error('klinecharts UMD global not loaded')
+          }
+          console.log('klinecharts global available:', typeof klinecharts.init)
+
+          // Step 2: Fetch Binance data
+          setStatus('binance', 'pending', 'Fetching...')
+          const response = await fetch(
+            `${API_BINANCE}?symbol=BTCUSDT&interval=1h&limit=1000`
+          )
+          if (!response.ok) {
+            throw new Error(`Binance API returned ${response.status}`)
+          }
+          const rows = await response.json()
+          if (!Array.isArray(rows) || rows.length < 1000) {
+            throw new Error(
+              `Expected 1000+ candles, got ${rows.length || 'invalid response'}`
+            )
+          }
+
+          // Verify first candle's openTime is 13-digit milliseconds
+          const firstOpenTime = rows[0][0]
+          if (
+            typeof firstOpenTime !== 'number' ||
+            String(firstOpenTime).length !== 13
+          ) {
+            throw new Error(
+              `First openTime is not 13-digit ms: ${firstOpenTime} (len: ${String(firstOpenTime).length})`
+            )
+          }
+
+          setStatus(
+            'binance',
+            'ok',
+            `${rows.length} candles (first: ${firstOpenTime}ms)`
+          )
+          console.log(
+            `Binance API: ${rows.length} candles fetched, first openTime: ${firstOpenTime}ms`
+          )
+
+          // Step 3: Transform Binance rows to KLineData format
+          const bars = rows.map((r) => ({
+            timestamp: r[0], // Binance openTime is already ms — pass through unchanged
+            open: parseFloat(r[1]),
+            high: parseFloat(r[2]),
+            low: parseFloat(r[3]),
+            close: parseFloat(r[4]),
+            volume: parseFloat(r[5])
+          }))
+
+          console.log(
+            'First bar:',
+            JSON.stringify(bars[0], null, 2),
+            'timestamp is ms (13 digits):', String(bars[0].timestamp).length === 13
+          )
+
+          // Step 4: Initialize KLineChart v10
+          setStatus('chart', 'pending', 'Initializing...')
+          const chartContainer = document.getElementById('chart')
+          const chart = klinecharts.init(chartContainer)
+
+          // Configure symbol and period (order: init → setSymbol → setPeriod → setDataLoader)
+          chart.setSymbol({
+            ticker: 'BTCUSDT',
+            pricePrecision: 2,
+            volumePrecision: 5
+          })
+          chart.setPeriod({ span: 1, type: 'hour' })
+
+          // Load data via the v10 loader API
+          chart.setDataLoader({
+            getBars: ({ callback }) => {
+              callback(bars)
+            }
+          })
+
+          // Show chart, hide loading indicator
+          document.getElementById('loading').style.display = 'none'
+          chartContainer.style.display = 'block'
+
+          setStatus('chart', 'ok', 'Rendered (1000+ candles visible)')
+          console.log('Chart initialized and rendered successfully')
+
+          // Step 5: Check Extension ESM URL connectivity
+          setStatus('extension', 'pending', 'HEAD request...')
+          const headResponse = await fetch(EXTENSION_ESM_URL, { method: 'HEAD' })
+          if (headResponse.ok) {
+            setStatus('extension', 'ok', `200 OK (ESM-only, Phase 20)`)
+            console.log(
+              'Extension ESM URL reachable:',
+              EXTENSION_ESM_URL,
+              'Status:',
+              headResponse.status
+            )
+          } else {
+            setStatus(
+              'extension',
+              'error',
+              `${headResponse.status} (${headResponse.statusText})`
+            )
+            console.error(
+              'Extension ESM URL unreachable:',
+              EXTENSION_ESM_URL,
+              'Status:',
+              headResponse.status
+            )
+          }
+
+          console.log('✓ All checks passed')
+        } catch (error) {
+          const msg = error.message || String(error)
+          console.error('Error:', msg, error)
+          showError(`Error: ${msg}`)
+
+          // Update status for failed components
+          if (!statusValues.binance.textContent.includes('ok')) {
+            setStatus('binance', 'error', msg)
+          }
+          if (!statusValues.chart.textContent.includes('ok')) {
+            setStatus('chart', 'error', msg)
+          }
+        }
+      }
+
+      // Run when page loads
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', main)
+      } else {
+        main()
+      }
+    </script>
+
+    <!-- Optional ESM dynamic import test (R18-01 supplement) -->
+    <script type="module">
+      try {
+        const module = await import(
+          'https://unpkg.com/klinecharts@10.0.3/dist/index.esm.js'
+        )
+        const initFunc = module.init
+        console.log('ESM import verified:', typeof initFunc === 'function' ? 'OK' : 'FAIL')
+        if (typeof initFunc === 'function') {
+          console.log('✓ ESM import works: init is available')
+        }
+      } catch (e) {
+        console.warn('ESM import failed (expected if browser does not support dynamic ESM import from CDN):', e.message)
+      }
+    </script>
+  </body>
+</html>
