@@ -88,13 +88,13 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
   **Done when**: `app.route('/', calculator)` added to src/index.ts (after records route); curl /api/calculator/validate returns 501 (not 404); route order verified in code review
 
 - [ ] 17-01-5: Create `/api/calculator/compute` stub endpoint + contract tests
-  **Done when**: POST /api/calculator/compute returns same 501 envelope; `src/routes/calculator.test.ts` written with ≥5 test cases (valid input, invalid schema, boundary values, auth required, envelope format); all tests passing
+  **Done when**: POST /api/calculator/compute returns same 501 envelope; `src/routes/calculator.test.ts` written with ≥5 test cases (valid input, invalid schema, boundary values, CORS boundary case, envelope format verified); all tests passing (auth is edge-enforced via CF Access, not in-code)
 
 - [ ] 17-01-1.5 (NEW): Create frontend mirror + parity test
   **Done when**: `public/js/calculator-rules.js` exports schema-derived constants (field lists, MAX/MIN_LEVERAGE, error strings) matching backend; parity test in `src/domains/calculator-rules.test.ts` asserts both sides' field lists/constants sync exactly (divergence.js+divergence.test.ts pattern); mirror enables SC2-frozen client.js to reference shared constants in future versions
 
 - [ ] 17-01-6: Write calculator validation unit tests (15+)
-  **Done when**: ≥15 tests passing (field validation, margin/SL rules, liquidation warnings, leverage bounds, direction-dependent rules, parity test); new files meet ≥85% line coverage (repo threshold), global coverage stays ≥85%
+  **Done when**: ≥15 tests passing (field validation, margin/SL rules, liquidation warnings, leverage bounds, direction-dependent rules, parity test); `npm run test:coverage` returns global ≥85% (repo threshold)
 
 - [ ] 17-01-7: Document schemas for future API implementation
   **Done when**: PLAN notes future CalculatorService.ts pattern; access policy stated (email OTP); rate-limit recommendations documented; error message contract documented
@@ -132,11 +132,11 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 - **Parity test (NEW)**: `public/js/calculator-rules.js` field lists sync with backend
 
 ### Endpoint Contract Tests (5+)
-- Valid CalculatorInputs: returns 501 with correct envelope `{ok: false, error}`
-- Invalid schema: returns 400 with zod validation error details
+- Valid CalculatorInputs: returns 501 with correct envelope `{ok: false, error: {code: INTERNAL_ERROR, ...}}`
+- Invalid schema: returns 400 with zod validation error details (missing required fields, wrong types)
 - Boundary values: leverage=1, leverage=125 (limits enforced)
-- Missing required fields: caught by Zod validation (returns 400)
-- CORS boundary: stub does not duplicate CF Access auth (edge-enforced, consistent with client-log.test.ts:95)
+- Envelope format: 501 response matches `{ok: false, error{code, message}}` shape (no raw text)
+- CORS boundary: stub does not duplicate CF Access auth (edge-enforced); request without auth headers still reaches 501 handler (mirroring client-log.test.ts:85-98 pattern)
 
 ### Manual QA
 - None required (no UI changes, stubs only)
@@ -157,7 +157,12 @@ npm test -- calculator.test
 
 # Coverage verification (repo threshold: 85% global)
 npm run test:coverage
-# Expected: new files (calculator-rules.ts, calculator.ts, calculator.test.ts) meet ≥85% line coverage; global aggregate stays ≥85%
+# Expected: global aggregate ≥85% line coverage (new files contribute toward this total)
+
+# SC2 regression verification (calculator.js unchanged)
+npm test -- public/js/calculator
+git diff --stat public/js/calculator.js
+# Expected: calculator.test.ts passes; git diff shows no changes to frozen file
 
 # Manual endpoint test (after deploy)
 curl -X POST http://localhost:8787/api/calculator/validate \
@@ -194,7 +199,7 @@ If issues found:
 | 17-01-1,2,3 (Schemas + edge case validation) | 0.25 days | Revised schema design with longShort field |
 | 17-01-4,4.5,5 (API stubs + registration + tests) | 0.25 days | Includes endpoint contract tests + registration (was missing) |
 | 17-01-1.5 (Frontend mirror + parity test) | 0.15 days | New: ensures SC4 (frontend/backend parity) |
-| 17-01-6,7,8 (Unit tests + docs + review) | 0.1 days | Includes 15+ tests + access policy documentation |
+| 17-01-6,7,8 (Unit tests + docs + review) | 0.1 days | Includes 15+ tests + access policy documentation + W1/W3 fixes |
 | **Total Phase 17** | **0.75 days** | **Revised from 0.5 days; optional, can be skipped** |
 
 ---
