@@ -397,9 +397,9 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
 </acceptance_criteria>
 
 <verify>
-<automated>grep -cE "^#### Phase 1[89]|^#### Phase 2[0-2]" .planning/ROADMAP.md | awk '$1>=5' && grep -qE "Status.*IN PROGRESS|Status.*🚧" .planning/ROADMAP.md && grep -c "| R" .planning/REQUIREMENTS.md | awk '$1>=45' && git ls-remote origin feature/klinechart-migration | grep -q "$(git rev-parse HEAD)"</automated>
-<manual>Verify Task 3.1 manually: (1) ROADMAP.md Phase 18 shows Status: 🚧 IN PROGRESS; (2) ROADMAP.md Phases 19-22 each have Success Criteria section; (3) REQUIREMENTS.md lists 45+ requirements (R18-01 to R22-07); (4) `git log` shows commit with demo-klinechart.html + 18-*.md files; (5) `git ls-remote origin feature/klinechart-migration` returns commit hash.</manual>
-<fails_when>fewer than 5 headings for Phases 18-22 in ROADMAP.md, requirement count < 45 in REQUIREMENTS.md, or remote branch does not match local HEAD (exit code non-zero); manual check: Phase 18 status not marked IN PROGRESS/🚧, or phase 19-22 lack Success Criteria</fails_when>
+<automated>grep -cE "^#### Phase 1[89]|^#### Phase 2[0-2]" .planning/ROADMAP.md | awk '$1>=5' && grep -q "Status.*🚧" .planning/ROADMAP.md && grep -c "| R18-\|| R19-\|| R20-\|| R21-\|| R22-" .planning/REQUIREMENTS.md | awk '$1>=45' && git ls-remote origin feature/klinechart-migration | grep -q "$(git rev-parse HEAD)"</automated>
+<manual>Verify Task 3.1 manually: (1) ROADMAP.md Phase 18 shows Status: 🚧 IN PROGRESS (on line after heading); (2) ROADMAP.md Phases 19-22 each have **Success Criteria** section; (3) REQUIREMENTS.md lists 45+ requirements (R18-01 to R22-07 via `grep -c "| R"`); (4) `git log` shows commit with demo-klinechart.html + 18-*.md files + ROADMAP.md + REQUIREMENTS.md updates; (5) `git ls-remote origin feature/klinechart-migration` returns matching commit hash.</manual>
+<fails_when>fewer than 5 phase headings in ROADMAP.md, no "Status: 🚧" line in ROADMAP.md, requirement count < 45 in REQUIREMENTS.md, or remote branch does not match local HEAD (exit code non-zero)</fails_when>
 </verify>
 
 ---
