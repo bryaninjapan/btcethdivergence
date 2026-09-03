@@ -136,11 +136,6 @@ export class ChartManager {
     this._logger[level](action, message, context);
   }
 
-  _logException(action, error, context) {
-    if (!this._logger) return;
-    this._logger.captureException(action, error, context);
-  }
-
   // Aborts are expected control flow (superseded loads, timeouts); they are
   // logged at debug level so they never spam Workers Logs as exceptions.
   _logLoadError(action, error, context) {
