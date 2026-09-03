@@ -26,7 +26,7 @@ const calculator = new Hono<{ Bindings: Env }>();
 /** Stub response body shared by both endpoints (Phase 11 envelope contract). */
 const NOT_IMPLEMENTED = {
   ok: false,
-  error: { code: ErrorCode.INTERNAL_ERROR, message: 'Not yet implemented' },
+  error: { code: ErrorCode.NOT_IMPLEMENTED, message: 'Not yet implemented' },
 } as const;
 
 /** Parse JSON body and validate against CalculatorInputs, throwing on failure. */

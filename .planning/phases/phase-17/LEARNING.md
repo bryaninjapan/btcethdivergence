@@ -147,8 +147,9 @@ Phase 17 (Calculator Validation, Optional) underwent 3 plan-check iterations to 
 ```typescript
 longShort: z.string()
   .transform(val => {
-    const lower = val.toString().toLowerCase();
-    return (lower === 'short') ? 'short' : 'long';
+    // Exact match only: only 'short', 'Short', 'SHORT' → 'short'
+    // Mixed-case like 'sHoRt' → 'long' (matches frozen calculator.js:66-69)
+    return ['short', 'Short', 'SHORT'].includes(val) ? 'short' : 'long';
   })
   .pipe(z.enum(['long', 'short']))
 ```

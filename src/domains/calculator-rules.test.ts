@@ -180,6 +180,12 @@ describe('CalculatorInputs — longShort normalization (matches normalizeDirecti
     if (result.success) expect(result.data.longShort).toBe('short');
   });
 
+  it("mixed-case 'sHoRt' normalizes to long (exact match only, mirrors frozen client)", () => {
+    const result = CalculatorInputs.safeParse({ ...validLong, longShort: 'sHoRt' });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.longShort).toBe('long');
+  });
+
   it('defaults a missing longShort to long', () => {
     const { longShort: _omit, ...rest } = validLong;
     const result = CalculatorInputs.safeParse(rest);

@@ -9,6 +9,7 @@ export enum ErrorCode {
   SERVICE_ERROR = 'SERVICE_ERROR',
   AUTH_ERROR = 'AUTH_ERROR',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
+  NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
 }
 
 export interface ErrorDetails {
@@ -134,6 +135,7 @@ const statusCodeMap: Record<ErrorCode, number> = {
   [ErrorCode.SERVICE_ERROR]: 502,
   [ErrorCode.AUTH_ERROR]: 401,
   [ErrorCode.INTERNAL_ERROR]: 500,
+  [ErrorCode.NOT_IMPLEMENTED]: 501,
 };
 
 /**

@@ -1,0 +1,17 @@
+The stated range `4a9529a..c610d97` only captures the second commit; the phase's actual code spans `4a9529a` (schemas+mirror), `c610d97` (API stubs), and `8c6c1c1` (review fix). Let me get the full picture.
+The prior review session's soldier log indicates a fix commit (`8c6c1c1`) landed after the SUMMARY was written. Let me verify the final state of all changed files and what the fix changed.
+The fix commit `8c6c1c1` resolved the previous MEDIUM and two LOWs. Let me verify the final current state of the key files and dependencies.
+Let me check the CF Access configuration and any deploy/verification scripts to assess the auth-coverage question for the new routes.
+All verification complete. Writing the review report now, reflecting the final HEAD state including the post-summary fix commit.
+Phase 17 review complete. Report written to `.planning/phases/phase-17/17-REVIEW.md`.
+
+**Scope**: Reviewed `4a9529a..8c6c1c1` (3 commits). Note: `17-SUMMARY.md` states `4a9529a..c610d97`, but a post-summary fix commit `8c6c1c1` is now HEAD — I reviewed the full shipped state. All 6 changed files verified against current working-tree content; typecheck clean, 56/56 phase tests pass, frozen `calculator.js` untouched (SC2), working tree clean.
+
+**Findings**: 0 CRITICAL, 0 HIGH, 0 MEDIUM, 5 LOW.
+
+- The prior review's sole MEDIUM (`normalizeDirection` superset of the frozen client) was genuinely fixed in `8c6c1c1` — it now exact-matches `calculator.js:66-69`. The `any`-in-tests and `parseBody`-discards-result LOWs were also fixed.
+- Remaining 5 LOWs: (1) locked LEARNING.md Option A snippet now diverges from shipped code for `'sHoRt'` with no parity test pinning it; (2) `CalculatorOutputs` omits the input-echo fields the frozen output contains (documented PLAN I3); (3) 501 mapped to `INTERNAL_ERROR` (codebase-consistent with `notFound`); (4) `/api/calculator/*` relies on the CF Access `/api/*` wildcard — no in-code auth, consistent with `/records`/`/client-log` precedent, nil exposure on stubs; (5) mirror `.js` ships unreferenced (deliberate SC4).
+
+**Security**: no sinks, no secrets, no auth bypass, no data exposure — stubs return 400/501 only; 400 envelopes sanitized (raw zod details excluded); CORS boundary tested against `evil.com`.
+
+No CRITICAL/HIGH issues — ready to merge.
