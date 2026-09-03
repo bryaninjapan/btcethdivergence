@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Frontend Data Isolation & UI Enhancement** - Refactor frontend state (charts.js, records.js) from globals to isolated modules; apply TradingView-style K-line colors and MSB indicator ✅
 - [x] **Phase 14: Architecture Foundations (Temporal + Divergence)** ✅ - Consolidate time-domain logic into centralized temporal-api module; unify divergence type definitions across backend and frontend
 - [x] **Phase 15: Frontend State Refactoring (Chart State Machine)** ✅ - Merge chart-state.js, chart-range.js, chart-sync.js into unified ChartManager state machine; 62 tests (49 unit + 13 integration), 81/81 E2E pass
-- [ ] **Phase 16A: Structured Logging System** - Replace console.* with structured logging layer; add ChartManager/charts.js/records.js instrumentation; enable Workers Logs for production observability
+- [ ] **Phase 16.1: Structured Logging System** - Replace console.* with structured logging layer; add ChartManager/charts.js/records.js instrumentation; enable Workers Logs for production observability
 - [ ] **Phase 16: Backend Service Deepening (Records Repository)** - Consolidate records SQL into RecordsRepository; migrate integration tests to MockD1; add listWithStats and findByTimeRange query methods
 - [ ] **Phase 17: Future-Proofing (Calculator Validation, Optional)** - Extract calculator validation rules into schema-driven module, prepare for future API endpoints
 
@@ -310,7 +310,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 14. Architecture Foundations (Temporal + Divergence) | 2/2 | ✅ COMPLETE | 2026-09-02 |
 | 15. Frontend State Refactoring (Chart State Machine) | 3/3 | ✅ COMPLETE | 2026-09-02 |
-| 16A. Structured Logging System | 0/3 | Plan-checked (Needs Clarification) | - |
+| 16.1. Structured Logging System | 0/3 | Plan-checked (Needs Clarification) | - |
 | 16. Backend Service Deepening (Records Repository) | 0/5 | Plan-checked (Ready to Execute) | - |
 | 17. Future-Proofing (Calculator Validation, Optional) | 0/1 | Ready to plan | - |
 
@@ -354,7 +354,7 @@ Plans:
 - [x] 15-02: Refactor charts.js to use ChartManager ✅
 - [x] 15-03: Unit tests + E2E verification ✅
 
-### Phase 16A: Structured Logging System
+### Phase 16.1: Structured Logging System
 **Goal**: Add production-grade observability and error tracking by replacing console.error() with a structured logging layer. Enable ChartManager/charts.js/records.js instrumentation with context correlation and Workers Logs backend observability.
 **Depends on**: Phase 15
 **Requirements**: CODE-06 (Observability), CODE-07 (Production Monitoring)
@@ -369,14 +369,14 @@ Plans:
   8. Workers Logs enabled in wrangler.jsonc, verified on deployed Worker with RUNBOOK.md
   9. Code review: zero HIGH/CRITICAL
   10. Zero raw console.* in production code outside logger sinks
-**Plans**: 16A-01 (logger core + ChartManager integration), 16A-02 (page instrumentation + monitoring), 16A-03 (verification + review)
+**Plans**: 16.1-01 (logger core + ChartManager integration), 16.1-02 (page instrumentation + monitoring), 16.1-03 (verification + review)
 **Status**: Plan-checked (Needs Clarification on 3 blockers — see PLAN.md)
 **Duration**: 1-1.5 days
 
 Plans:
-- [ ] 16A-01: Logger core + ChartManager integration (0.5 days)
-- [ ] 16A-02: Page instrumentation + Workers Logs setup (0.5 days)
-- [ ] 16A-03: Verification + review (0.25 days)
+- [ ] 16.1-01: Logger core + ChartManager integration (0.5 days)
+- [ ] 16.1-02: Page instrumentation + Workers Logs setup (0.5 days)
+- [ ] 16.1-03: Verification + review (0.25 days)
 
 ### Phase 16: Backend Service Deepening (Records Repository)
 **Goal**: Consolidate all records SQL into a rich RecordsRepository class; migrate route integration tests to MockD1; add advanced query methods (listWithStats, findByTimeRange) with proper statistics and overlap semantics.

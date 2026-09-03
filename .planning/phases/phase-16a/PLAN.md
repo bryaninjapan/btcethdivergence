@@ -1,5 +1,5 @@
 ---
-phase: 16a
+phase: 16.1
 name: Structured Logging System
 status: planned
 created: 2026-09-02
