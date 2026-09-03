@@ -241,6 +241,54 @@ All issues identified in code review have been **fixed and tested**:
 
 ---
 
+## Phase 16A — Logging Architecture (delivered 2026-09-03)
+
+### Structured Logger (Option C — custom, dependency-free)
+
+- **Backend**: `src/lib/logger.ts` — record contract, `classifyError()`, `serializeError()`, `redactRecord()`, pluggable sinks, `createLogger()`.
+- **Frontend**: `public/js/logger.js` — mirror of the backend (plain ESM, no bundler). Adds `createBeaconSink()` (fire-and-forget POST `/api/client-log`, 2s timeout) and `installGlobalHandlers()`.
+- **Parity**: `src/lib/logger-parity.test.ts` proves both sides emit identical record shapes.
+
+### Record Contract
+
+```json
+{ "timestamp": "ISO", "level": "error|warn|info|debug",
+  "component": "charts|records|http|client-log", "action": "...",
+  "message": "...", "context": { "record_id": 42, "notes_len": 120, "tags_len": 45 },
+  "error": { "name": "...", "message": "...", "code": "...",
+             "kind": "abort-timeout|abort-superseded|validation|service|database|auth|unknown", "stack": "..." } }
+```
+
+**Redaction rule**: user `notes`/`tags` content is never logged — only lengths (`notes_len`/`tags_len`), enforced at dispatch time by both loggers (blocking tests included).
+
+### Instrumentation
+
+- **ChartManager** (`public/js/managers/ChartManager.js`): optional injected logger; logs state transitions (debug), `initCharts`, `loadRange.start/complete/error` (aborts at debug, never as exceptions), `setLogScale`, sync ops.
+- **charts.js**: abort-cause classification (`abort('superseded')` vs `TimeoutError`), `loadRange.error`, `loadRange.invalidRange`, `init`, global error handlers.
+- **records.js**: `submitForm.*` (create/update/validation), `delete.*`, `loadRecords.error`, `loadRecords.init`, global error handlers — with notes/tags redaction.
+
+### Beacon Endpoint
+
+- **`POST /api/client-log`** (`src/routes/client-log.ts`): validates schema (zod), enforces 64 KB max (413), injects into Workers Logs via the structured logger, returns 202 `{ status: 'accepted', id }`.
+- **Auth**: Cloudflare Access at the edge (Option A — same policy as `/api/records`); CORS boundary as in-code second layer.
+- **Docs**: `phase-16a/BEACON-RUNBOOK.md`, `phase-16a/RUNBOOK.md`.
+
+### Workers Logs
+
+- Enabled in `wrangler.jsonc` (`observability.enabled: true`, `head_sampling_rate: 1`).
+- Stream: `wrangler tail --format pretty`; persisted logs in Cloudflare dashboard.
+- Runbook: `phase-16a/RUNBOOK.md`.
+
+### Verification (16A-03.1)
+
+- Unit: 571/571 (was 492; +79 logging/beacon tests)
+- E2E: 84/84 (81 + 1 beacon integration × 3 browsers)
+- Coverage: 88.02% lines (≥85% gate)
+- Typecheck: clean
+- Zero raw `console.*` outside logger sinks (SC10/SC13)
+
+---
+
 **Related Documentation**:
 - **PLAN.md** — Detailed task breakdown and constraints
 - **16-SUMMARY.md** — Execution summary with file-by-file changes
