@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-09-02)
 
 ## Current Position
 
-**Active Milestone**: v2.0 Architecture Deepening (Phases 14-17)
-**Current Phase**: Phase 17 (Future-Proofing: Calculator Validation) — **COMPLETE** ✅
-**Status**: All v2.0 phases complete. Phase 14-16A-17: all DONE.
-**Last activity**: 2026-09-03 — Phase 17 complete (Calculator schemas + stubs + mirror, 628 tests, 88.42% coverage, all 6 criteria PASS)
+**Active Milestone**: v2.0 Architecture Deepening (Phases 14-17) — **SHIPPED** ✅
+**Current Phase**: Phase 17 (Future-Proofing: Calculator Validation) — **SHIPPED** ✅
+**Status**: v2.0 milestone fully shipped. All 4 phases complete (14, 15, 16/16A, 17).
+**Last activity**: 2026-09-03 13:10 UTC — Phase 17 shipped (9 commits, 628 tests, 88.42% coverage, all 6 criteria PASS)
 
 Progress: [██████████] 100% v2.0 (5/5 phases complete: 14 ✅, 15 ✅, 16 ✅, 16A ✅, 17 ✅)
 
