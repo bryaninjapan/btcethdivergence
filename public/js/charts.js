@@ -6,7 +6,7 @@ import {
   setPickerFromEpoch,
   pickerEpoch,
 } from './datetime-helpers.js';
-import { classifyError, createBeaconSink, createLogger, installGlobalHandlers } from './logger.js';
+import { classifyError, consoleSink, createBeaconSink, createLogger, installGlobalHandlers } from './logger.js';
 
 // Constants
 const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
@@ -15,9 +15,9 @@ const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
 const { createChart, CandlestickSeries } = LightweightCharts;
 const { Normal, Logarithmic } = LightweightCharts.PriceScaleMode;
 
-// Structured logger: console (dev) + client-log beacon (production). The beacon
-// sink is fire-and-forget with a 2s timeout; it never blocks the UI.
-const logger = createLogger('charts', { sinks: [createBeaconSink()] });
+// Structured logger: dev console (structured JSON) + client-log beacon. The
+// beacon sink is fire-and-forget with a 2s timeout; it never blocks the UI.
+const logger = createLogger('charts', { sinks: [consoleSink(), createBeaconSink()] });
 
 const chartManager = new ChartManager({
   priceScaleMode: { linear: Normal, logarithmic: Logarithmic },

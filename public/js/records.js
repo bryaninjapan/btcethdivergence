@@ -9,7 +9,7 @@ import {
 import { recordToRange } from './managers/ChartManager.js';
 import { DIVERGENCE_TYPES, TYPE_LABELS, MSB_LABELS } from './divergence.js';
 import { createRecordsManager } from './records-state.js';
-import { createBeaconSink, createLogger, installGlobalHandlers } from './logger.js';
+import { consoleSink, createBeaconSink, createLogger, installGlobalHandlers } from './logger.js';
 import {
   fillSelect,
   rebuildDays,
@@ -20,8 +20,8 @@ import {
 // Constants
 const FILTER_DEBOUNCE_MS = 250;  // 250ms debounce for filter input
 
-// Structured logger: console (dev) + client-log beacon (production).
-const logger = createLogger('records', { sinks: [createBeaconSink()] });
+// Structured logger: dev console (structured JSON) + client-log beacon.
+const logger = createLogger('records', { sinks: [consoleSink(), createBeaconSink()] });
 
 // Records state factory instance
 const recordsManager = createRecordsManager();
