@@ -32,7 +32,7 @@
 - [ ] klinecharts 可正確 import 和渲染
 - [ ] @klinecharts/extension CDN 連線測試通過
 - [ ] Migration checklist 所有項目理解並標記
-- [ ] Demo HTML 使用假資料正確顯示 K 線
+- [ ] Demo HTML 使用假資料與真實 Binance 數據皆正確顯示 K 線（先假後真）
 - [ ] 性能基準數字已記錄到文件
 - [ ] 5-phase 計劃確認（此 ROADMAP）
 - [ ] 所有高風險 API 差異已識別
@@ -54,9 +54,18 @@
 - 所有現有功能通過測試
 
 **Key Risks**:
-- Timestamp 轉換：Binance `open_time` 是毫秒，KLineChart 需要秒 → `Math.floor(open_time / 1000)`
+- Timestamp 合約：Binance `open_time` 已是毫秒，KLineChart v10 亦需毫秒（`timestamp` 欄位）→ 直通 pass-through，無需轉換
 - 事件 API 變更：`onVisibleLogicalRangeChange` → `subscribeAction`
 - Style config 語法完全不同（物件結構）
+
+**Success Criteria**:
+- [ ] KLineChart init/setSymbol/setPeriod/setDataLoader API correctly mapped and tested
+- [ ] Event system migration (subscribeAction) verified across chart sync scenarios
+- [ ] Data transformation (timestamp ms pass-through) works for all K-line sources
+- [ ] Both BTCUSDT and ETHUSDT charts rendering with correct candles
+- [ ] Timestamp sync between charts no longer uses lightweight-charts API
+- [ ] No API differences from Phase 18 assessment cause runtime errors
+- [ ] All existing Phase 13 E2E tests pass with KLineChart
 
 **Requirements**: R19-01 to R19-10  
 **Status**: ⬜ Not started
@@ -74,6 +83,16 @@
 - 磁吸模式（magnet）啟用後游標吸附 K 線高低點
 - 繪圖物件持久化（切換區間不消失）
 
+**Success Criteria**:
+- [ ] @klinecharts/extension loads without console errors (via ESM CDN or npm)
+- [ ] Drawing toolbar renders and is positioned correctly on page
+- [ ] User can draw trend lines, horizontal lines, rectangles without crashes
+- [ ] Fibonacci retracement tool calculates and displays levels correctly
+- [ ] Magnet mode toggles on/off and cursor snaps to candle wicks when enabled
+- [ ] Drawing objects persist when switching timeframes or symbols
+- [ ] Drawing state clears when user clicks a clear/reset button
+- [ ] No regressions in Phase 19 chart functionality
+
 **Requirements**: R20-01 to R20-09  
 **Status**: ⬜ Not started
 
@@ -89,6 +108,17 @@
 - 副面板指標：MACD, RSI
 - 指標週期和顏色設定
 - BTC/ETH 各自獨立指標管理
+
+**Success Criteria**:
+- [ ] Indicator menu renders and lists available indicators (MA, EMA, BB, MACD, RSI)
+- [ ] User can add/remove indicators from chart without crashes
+- [ ] Main panel indicators (MA, EMA, BB) display candle overlays correctly
+- [ ] Sub-panel indicators (MACD, RSI) render in separate lower pane
+- [ ] Period parameter changes (e.g., MA 20→50) update chart immediately
+- [ ] Color picker works and updates indicator colors on chart
+- [ ] BTC and ETH charts manage indicators independently
+- [ ] Indicators persist when switching timeframes
+- [ ] All Phase 19-20 functionality remains intact
 
 **Requirements**: R21-01 to R21-09  
 **Status**: ⬜ Not started
@@ -106,6 +136,16 @@
 - 現有 E2E 測試全部通過
 - feature/klinechart-migration → main merge
 - ROADMAP.md 更新為 ✅
+
+**Success Criteria**:
+- [ ] KLineChart init time ≤ 60% of lightweight-charts baseline (from Phase 18)
+- [ ] Memory usage with 1000+ candles ≤ 60% of lightweight-charts
+- [ ] Bundle size with extension ≤ 45KB gzip
+- [ ] Responsive layout works on mobile (iPhone, iPad, Android)
+- [ ] All Phase 13 E2E tests pass on production build
+- [ ] Cloudflare Workers deployment successful (both /api/klines and /admin routes)
+- [ ] feature/klinechart-migration merged to main with zero conflicts
+- [ ] ROADMAP.md marked complete; no open issues blocking production
 
 **Requirements**: R22-01 to R22-07  
 **Status**: ⬜ Not started
