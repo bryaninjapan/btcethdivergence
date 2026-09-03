@@ -245,7 +245,7 @@ export function createLogger(
       return component;
     },
     setLevel(level) {
-      if (!(level in LOG_LEVELS)) throw new Error(`Unknown log level: ${level}`);
+      if (typeof LOG_LEVELS[level] !== 'number') throw new Error(`Unknown log level: ${level}`);
       minLevel = level;
       return logger;
     },

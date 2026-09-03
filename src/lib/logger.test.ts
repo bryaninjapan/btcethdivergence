@@ -185,6 +185,7 @@ describe('logger.ts — createLogger dispatch', () => {
   it('rejects unknown levels', () => {
     const logger = createLogger('api', { sinks: [{ log: vi.fn() }] });
     expect(() => logger.setLevel('verbose' as never)).toThrow('Unknown log level');
+    expect(() => logger.setLevel('constructor' as never)).toThrow('Unknown log level');
   });
 
   it('withComponent creates a derived logger bound to a new component', () => {
