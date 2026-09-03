@@ -1,4 +1,4 @@
-import { DatabaseError } from '../lib/errors';
+import { DatabaseError, ValidationError } from '../lib/errors';
 import { TemporalConverter } from '../domains/temporal-api';
 import type { CreateRecordInput, UpdateRecordInput } from '../lib/validate';
 import type { DivergenceRecord } from '../types';
@@ -253,6 +253,10 @@ export class RecordsRepository {
         tags: input.tags ?? existing.tags,
         updated_at: this.now(),
       };
+      // Validate time range: start_time must be before end_time
+      if (merged.start_time >= merged.end_time) {
+        throw new ValidationError('times', 'start_time must be before end_time');
+      }
       const res = await this.db
         .prepare(
           'UPDATE divergence_records SET start_time = ?, end_time = ?, type = ?, msb = ?, notes = ?, tags = ?, updated_at = ? WHERE id = ?',
@@ -274,7 +278,11 @@ export class RecordsRepository {
       }
       return merged;
     } catch (error) {
-      // Re-wrap any failure (including findById's translation) so the
+      // Re-throw validation errors directly (time range validation)
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      // Re-wrap any other failure (including findById's translation) so the
       // caller-visible contract stays "Failed to update record".
       throw new DatabaseError('Failed to update record', { originalError: String(error) });
     }

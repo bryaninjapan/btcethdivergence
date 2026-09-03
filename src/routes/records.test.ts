@@ -195,6 +195,27 @@ describe('records CRUD route contract', () => {
     expect(db.prepares).toHaveLength(0);
   });
 
+  it('PUT with only start_time exceeding existing end_time → 400, partial merge violation (MEDIUM bug)', async () => {
+    const db = createMockD1WithData({ divergence_records: [{ ...EXISTING_RECORD, end_time: 1600003600 }] });
+
+    const res = await callRecordsRoute(
+      '/api/records/1',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_time: 9999999999 }),
+      },
+      makeEnv(db),
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { ok: boolean; error?: { code: string; message: string } };
+    expect(body.ok).toBe(false);
+    expect(body.error?.message).toContain('start_time must be before end_time');
+    // Verify only SELECT was executed, no UPDATE
+    expect(db.prepares.filter((sql) => sql.includes('UPDATE'))).toHaveLength(0);
+  });
+
   it('DELETE /api/records/1 with changes=1 → 200, ok:true, binds id 1', async () => {
     const db = createMockD1WithData({ divergence_records: [{ ...EXISTING_RECORD }] });
 

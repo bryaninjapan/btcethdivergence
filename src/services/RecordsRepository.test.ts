@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMockD1Database, createMockD1WithData } from '../lib/test-db';
 import { RecordsRepository, computeRecordStats } from './RecordsRepository';
-import { ErrorCode } from '../lib/errors';
+import { ErrorCode, ValidationError } from '../lib/errors';
 import type { CreateRecordInput } from '../lib/validate';
 import type { DivergenceRecord } from '../types';
 
@@ -206,6 +206,24 @@ describe('RecordsRepository.update', () => {
     // Critical: msb must stay 'yes', not be reset to 'no' by Zod's .partial() default bug
     expect(record?.msb).toBe('yes');
     expect(record?.type).toBe('btc_hl_eth_ll');
+  });
+
+  it('rejects partial PUT with only start_time when it would exceed existing end_time (MEDIUM time range bug)', async () => {
+    const db = createMockD1WithData({ divergence_records: [EXISTING] });
+
+    await expect(repo(db).update(1, { start_time: 9999999999 })).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+    // Verify no UPDATE was sent to DB (failed before executing)
+    expect(db.prepares).toHaveLength(1); // Only the findById SELECT
+  });
+
+  it('rejects partial PUT with only end_time when it would be less than existing start_time (MEDIUM time range bug)', async () => {
+    const db = createMockD1WithData({ divergence_records: [EXISTING] });
+
+    await expect(repo(db).update(1, { end_time: 100 })).rejects.toBeInstanceOf(ValidationError);
+    // Verify no UPDATE was sent to DB (failed before executing)
+    expect(db.prepares).toHaveLength(1); // Only the findById SELECT
   });
 });
 
