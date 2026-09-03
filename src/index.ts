@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { errorMiddleware, type ApiResponse } from './lib/error-middleware';
 import { ErrorCode } from './lib/errors';
 import admin from './routes/admin';
+import calculator from './routes/calculator';
 import clientLog from './routes/client-log';
 import klines from './routes/klines';
 import records from './routes/records';
@@ -49,6 +50,7 @@ app.route('/', admin);
 app.route('/', clientLog);
 app.route('/', klines);
 app.route('/', records);
+app.route('/', calculator);
 
 app.notFound((c) => {
   const response: ApiResponse<never> = {
