@@ -164,9 +164,13 @@ export class RecordsRepository {
    * @param start Window start in unix seconds
    * @param end Window end in unix seconds
    * @returns Matching records, newest `start_time` first
+   * @throws ValidationError if start >= end
    * @throws DatabaseError if the query fails
    */
   async findByTimeRange(start: number, end: number): Promise<DivergenceRecord[]> {
+    if (start >= end) {
+      throw new ValidationError('time_range', 'start must be before end');
+    }
     try {
       return await this.db
         .prepare(
