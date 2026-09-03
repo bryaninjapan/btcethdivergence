@@ -85,7 +85,7 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
   **Done when**: liquidation threshold tests pass; margin vs leverage × entry validation; SL/TP direction tests (long vs short); leverage bound tests (1–125); all conditions raise appropriate warnings
 
 - [ ] 17-01-4: Create `/api/calculator/validate` stub endpoint
-  **Done when**: POST /api/calculator/validate returns `{ok: false, error: {code: ErrorCode.INTERNAL_ERROR, message: 'Not yet implemented'}}` with HTTP 501 status (follows notFound handler pattern in src/index.ts:53-62); rejects invalid CalculatorInputs schema with 400 + zod error details; respects CF Access gate (email OTP)
+  **Done when**: POST /api/calculator/validate returns `{ok: false, error: {code: ErrorCode.INTERNAL_ERROR, message: 'Not yet implemented'}}` with HTTP 501 status (follows notFound handler pattern in src/index.ts:53-62); rejects invalid CalculatorInputs schema with HTTP 400 + `error.code === 'VALIDATION_ERROR'` + non-empty `error.message` (sanitized envelope; raw zod issues excluded per errorMiddleware); respects CF Access gate (email OTP)
 
 - [ ] 17-01-4.5 (NEW): Register calculator routes in `src/index.ts`
   **Done when**: `app.route('/', calculator)` added to src/index.ts (after records route); curl /api/calculator/validate returns 501 (not 404); route order verified in code review
