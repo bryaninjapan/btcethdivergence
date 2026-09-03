@@ -6,6 +6,7 @@ import {
   setPickerFromEpoch,
   pickerEpoch,
 } from './datetime-helpers.js';
+import { classifyError, createBeaconSink, createLogger, installGlobalHandlers } from './logger.js';
 
 // Constants
 const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
@@ -14,8 +15,13 @@ const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
 const { createChart, CandlestickSeries } = LightweightCharts;
 const { Normal, Logarithmic } = LightweightCharts.PriceScaleMode;
 
+// Structured logger: console (dev) + client-log beacon (production). The beacon
+// sink is fire-and-forget with a 2s timeout; it never blocks the UI.
+const logger = createLogger('charts', { sinks: [createBeaconSink()] });
+
 const chartManager = new ChartManager({
   priceScaleMode: { linear: Normal, logarithmic: Logarithmic },
+  logger,
   toCandle: (row) => ({
     time: row.open_time,
     open: row.open,
@@ -68,16 +74,18 @@ async function loadRange(startMs, endMs) {
   // Supersede any in-flight load before starting a new one so the manager's
   // strict re-entrancy guard never rejects a user-initiated reload.
   if (activeController) {
-    activeController.abort();
+    activeController.abort('superseded');
     activeController = null;
   }
   if (inFlight) {
     const previous = inFlight;
     inFlight = null;
     await previous.catch((error) => {
-      // Only log non-abort errors for debugging
-      if (error?.name !== 'AbortError' && !(error instanceof DOMException)) {
-        console.warn('Superseded load failed:', error);
+      const kind = classifyError(error);
+      if (kind === 'abort-timeout' || kind === 'abort-superseded') {
+        logger.debug('loadRange.superseded', 'Previous load aborted', { startMs, endMs, kind });
+      } else {
+        logger.warn('loadRange.superseded', 'Superseded load failed', { startMs, endMs, kind });
       }
     });
   }
@@ -89,7 +97,12 @@ async function loadRange(startMs, endMs) {
 
   const controller = new AbortController();
   activeController = controller;
-  const timeoutId = setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
+  // Distinguish timeout aborts from supersede aborts so classifyError() can
+  // report the precise cause in logs.
+  const timeoutId = setTimeout(
+    () => controller.abort(new DOMException('Load timed out', 'TimeoutError')),
+    LOAD_TIMEOUT_MS,
+  );
 
   const promise = (async () => {
     try {
@@ -102,8 +115,18 @@ async function loadRange(startMs, endMs) {
         summary.textContent = `${new Date(startMs).toISOString()} ~ ${new Date(endMs).toISOString()} (UTC)`;
       }
     } catch (error) {
-      if (activeController !== controller) return; // superseded by a newer load
+      if (activeController !== controller) {
+        // A newer load superseded this one — expected, not an error.
+        logger.debug('loadRange.superseded', 'Superseded by a newer load', { startMs, endMs });
+        return;
+      }
       if (loadingEl) loadingEl.hidden = true;
+
+      logger.captureException('loadRange.error', error, {
+        startMs,
+        endMs,
+        kind: classifyError(error),
+      });
 
       let message = describeApiError(error, '載入 K 線失敗');
       // For non-ApiError, add fallback prefix
@@ -156,6 +179,7 @@ async function init() {
     const endSec = pickerEpoch(document.querySelector('[data-picker="end"]'));
     const summary = document.getElementById('range-summary');
     if (startSec >= endSec) {
+      logger.warn('loadRange.invalidRange', '開始時間必須早於結束時間', { startSec, endSec });
       summary.textContent = '開始時間必須早於結束時間';
       return;
     }
@@ -173,8 +197,12 @@ if (typeof window !== 'undefined') {
   };
 }
 
+// Capture uncaught exceptions and unhandled rejections into the logger (which
+// also forwards them to the client-log beacon).
+installGlobalHandlers(logger);
+
 init().catch((error) => {
-  console.error('Charts initialization failed:', error);
+  logger.captureException('init', error, {});
   const errorEl = document.getElementById('chart-error');
   if (errorEl) {
     let message = describeApiError(error, '圖表初始化失敗');

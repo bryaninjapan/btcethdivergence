@@ -12,6 +12,8 @@
  * No bundler: plain ESM consumed by charts.js at runtime and by vitest.
  */
 
+import { classifyError } from '../logger.js';
+
 export const PADDING_SECONDS = 24 * 3600;
 export const DEFAULT_WINDOW_SECONDS = 30 * 24 * 3600;
 
@@ -137,6 +139,18 @@ export class ChartManager {
   _logException(action, error, context) {
     if (!this._logger) return;
     this._logger.captureException(action, error, context);
+  }
+
+  // Aborts are expected control flow (superseded loads, timeouts); they are
+  // logged at debug level so they never spam Workers Logs as exceptions.
+  _logLoadError(action, error, context) {
+    if (!this._logger) return;
+    const kind = classifyError(error);
+    if (kind === 'abort-timeout' || kind === 'abort-superseded') {
+      this._logger.debug(action, 'load aborted', { ...context, kind });
+    } else {
+      this._logger.captureException(action, error, context);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -413,7 +427,7 @@ export class ChartManager {
       return this.getState();
     } catch (err) {
       this._transition(ManagerState.ERROR);
-      this._logException('loadRange.error', err, { startMs, endMs });
+      this._logLoadError('loadRange.error', err, { startMs, endMs });
       throw err;
     }
   }

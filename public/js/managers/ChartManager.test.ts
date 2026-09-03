@@ -518,6 +518,18 @@ describe('ChartManager structured logging (16a-01.4)', () => {
     expect(captured[2].message).toBe('network');
   });
 
+  it('logs aborted loads at debug level, never as exceptions', async () => {
+    const logger = spyLogger();
+    const manager = new ChartManager({
+      logger,
+      load: async () => { throw new DOMException('aborted', 'AbortError'); },
+    });
+    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    await expect(manager.loadRange(1000, 2000)).rejects.toThrow('aborted');
+    expect(logger.calls.some(([level, action]) => level === 'captureException' && action === 'loadRange.error')).toBe(false);
+    expect(logger.calls.some(([level, action, , context]) => level === 'debug' && action === 'loadRange.error' && context.kind === 'abort-superseded')).toBe(true);
+  });
+
   it('logs initCharts and setLogScale at info level', () => {
     const logger = spyLogger();
     const manager = new ChartManager({ logger });
