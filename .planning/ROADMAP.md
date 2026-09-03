@@ -422,7 +422,7 @@ Plans:
   1. New `src/domains/calculator-rules.ts` exports Zod schemas: `CalculatorInputs`, `CalculatorOutputs` for validation and type safety.
   2. Client-side calculator logic unchanged (still runs in browser).
   3. Server-side calculator API ready for Phase 17+: `/api/calculator/validate` and `/api/calculator/compute` endpoints (stubs created, tests written, ready for implementation).
-  4. Schemas shared: frontend and backend import from same `calculator-rules.ts`.
+  4. Schemas shared via .js mirror + parity test: `public/js/calculator-rules.js` mirrors backend schemas, sync enforced by parity test (divergence.js precedent).
   5. 15+ unit tests verifying validation rules, edge cases (margin vs. SL, liquidation thresholds).
   6. Code review complete: zero HIGH issues.
 **Plans**: 17-01 (Calculator validation schemas + API stubs)

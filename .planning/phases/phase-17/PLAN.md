@@ -136,7 +136,7 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 
 ### Endpoint Contract Tests (5+)
 - Valid CalculatorInputs: returns 501 with correct envelope `{ok: false, error: {code: INTERNAL_ERROR, ...}}`
-- Invalid schema: returns 400 with zod validation error details (missing required fields, wrong types)
+- Invalid schema: returns 400 with `error.code === 'VALIDATION_ERROR'` + non-empty `error.message` (sanitized; raw zod issues excluded per errorMiddleware)
 - Boundary values: leverage=1, leverage=125 (limits enforced)
 - Envelope format: 501 response matches `{ok: false, error{code, message}}` shape (no raw text)
 - CORS boundary: stub does not duplicate CF Access auth (edge-enforced); request without auth headers still reaches 501 handler (mirroring client-log.test.ts:85-98 pattern)
@@ -226,7 +226,7 @@ Phase 17 is complete when (all success criteria met, or can be deferred):
 3. ✅ SC3: `/api/calculator/validate` and `/api/calculator/compute` stubs registered in src/index.ts; ≥5 contract tests written and passing
 4. ✅ SC4: Frontend mirror (public/js/calculator-rules.js) created; parity test verifies sync
 5. ✅ SC5: Edge case validation (liquidation, leverage bounds 1–125, direction-dependent SL/TP)
-6. ✅ SC6: 15+ unit tests passing (including parity test); coverage ≥80% for new files
+6. ✅ SC6: 15+ unit tests passing (including parity test); global coverage ≥85%
 7. ✅ SC7: Code review complete (zero HIGH/CRITICAL issues); typecheck clean
 8. ✅ SC8: Access policy documented (CF Access email OTP); service layer pattern clarified
 9. ✅ Verification commands (npm run typecheck, npm test, npm run test:coverage) all pass
