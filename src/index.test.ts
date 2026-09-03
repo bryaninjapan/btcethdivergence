@@ -59,7 +59,7 @@ describe('Worker CORS headers', () => {
     });
     const res = await app.fetch(req, mockEnv);
 
-    // Hono cors middleware returns false → browser gets no Allow-Origin header
+    // Hono cors middleware returns null → browser gets no Allow-Origin header
     expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 

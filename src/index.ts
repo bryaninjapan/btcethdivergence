@@ -27,8 +27,8 @@ app.use(
       // Allow production domain
       if (origin === 'https://btcethdivergence.bryanlab.cc') return origin;
 
-      // Reject other origins (Hono cors will omit Access-Control-Allow-Origin header)
-      return false;
+      // Reject other origins (null makes Hono omit Access-Control-Allow-Origin header)
+      return null;
     },
   }),
 );
