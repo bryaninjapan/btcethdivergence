@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 15: Frontend State Refactoring (Chart State Machine)** ✅ - Merge chart-state.js, chart-range.js, chart-sync.js into unified ChartManager state machine; 62 tests (49 unit + 13 integration), 81/81 E2E pass
 - [x] **Phase 16A: Structured Logging System** ✅ - Structured logging layer with beacon endpoint, ChartManager/charts.js/records.js instrumentation, Workers Logs enabled (16 commits, 571 tests, 84/84 E2E)
 - [ ] **Phase 16: Backend Service Deepening (Records Repository)** - Consolidate records SQL into RecordsRepository; migrate integration tests to MockD1; add listWithStats and findByTimeRange query methods
-- [ ] **Phase 17: Future-Proofing (Calculator Validation, Optional)** - Extract calculator validation rules into schema-driven module, prepare for future API endpoints
+- [x] **Phase 17: Future-Proofing (Calculator Validation, Optional)** ✅ - Extract calculator validation rules into schema-driven module, prepare for future API endpoints
 
 ## Phase Details
 

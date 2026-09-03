@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-09-02)
 ## Current Position
 
 **Active Milestone**: v2.0 Architecture Deepening (Phases 14-17)
-**Current Phase**: Phase 16A (Structured Logging System) — **COMPLETE** ✅
-**Status**: Phase 14-16 complete. Phase 16A complete. Phase 17 ready for execution.
-**Last activity**: 2026-09-03 — Phase 16A complete (Structured logging, beacon endpoint, Workers Logs, 571 tests, 84/84 E2E, post-deploy verified)
+**Current Phase**: Phase 17 (Future-Proofing: Calculator Validation) — **COMPLETE** ✅
+**Status**: All v2.0 phases complete. Phase 14-16A-17: all DONE.
+**Last activity**: 2026-09-03 — Phase 17 complete (Calculator schemas + stubs + mirror, 628 tests, 88.42% coverage, all 6 criteria PASS)
 
-Progress: [██████░░░░] 85% v2.0 (4/4 phases complete: 14 ✅, 15 ✅, 16 ✅, 16A ✅)
+Progress: [██████████] 100% v2.0 (5/5 phases complete: 14 ✅, 15 ✅, 16 ✅, 16A ✅, 17 ✅)
 
 ## Performance Metrics
 
