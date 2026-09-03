@@ -205,6 +205,70 @@ All blockers resolved. Remaining 5 warnings are minor clarifications/improvement
 
 ---
 
-**Last Updated**: 2026-09-03 11:53 (after 4th plan-check, post-TDD verification)  
-**Checker**: gsd-plan-checker + TDD-Workflow  
-**Recommendation**: APPROVE. All warnings addressed. Plans verified. Ready to execute.
+## Iteration 5: Validation of 4th Iteration Fixes (2026-09-03 12:03)
+
+**Status**: 0 blockers, 4 warnings, 5 info
+
+**Action**: W1/W2/W4 修復已提交，但 plan-check 基於舊版本 PLAN.md (rev 12:03)，仍報告原始 warnings。
+- commit 1de6605 修了：Handoff #6 coverage、contract test description、ROADMAP SC4
+- 但 plan-check 的 fact-check 仍基於舊狀態
+
+**Decision**: 再跑第六次 plan-check 驗證修復。
+
+---
+
+## Iteration 6: Final Verification After W1/W2/W4 Fixes (2026-09-03 12:26)
+
+**Status**: 0 blockers, **2 warnings** (↓ 4→2), 5 info
+
+### Warnings Resolved (from prior iterations)
+
+✅ **W2 (Auth test)** — ELIMINATED (Iteration 3)
+✅ **W3 (SC2 verification)** — ELIMINATED (Iteration 4)
+✅ **W1 (Coverage wording, original)** — PARTIALLY RESOLVED
+  - Handoff #6, task 17-01-6, Verification Commands 統一為 "≥85% global"
+  - 但 17-01-4 Done when 仍殘留舊文本 "zod error details"
+  - **Final fix**: commit 68f4072 改 17-01-4 Done when 為 "VALIDATION_ERROR + message (sanitized)"
+
+✅ **W2 (ROADMAP SC4 wording, original)** — RESOLVED
+  - ROADMAP.md SC4 改為 "shared via .js mirror + parity test (divergence precedent), parity-enforced"
+  - Plan-check fact-check 驗證 mirror+parity 模式已鎖定且 precedent 可驗證
+
+### Remaining Warnings (2nd Iteration)
+
+**W1 (Iteration 6)** — Residual "zod error details" in 17-01-4 Done when
+- **Root cause**: commit 1de6605 修了 Testing Strategy (line 139)，但 17-01-4 Done when 沒同步改
+- **Fix applied**: commit 68f4072 改為 "error.code === 'VALIDATION_ERROR' + non-empty message (sanitized envelope)"
+- **Status**: Fixed but not yet re-verified
+
+**W2 (Iteration 6)** — 10 subtasks exceeds 2-3 target (borderline)
+- **Status**: Acknowledged in-plan via "Task Granularity Note"
+- **Impact**: non-blocking; optional split into 3 tasks during execution
+- **Learning**: Phase 17 is 0.75-day optional work; granularity is structural preference, not delivery blocker
+
+### Info (Iteration 6 observations)
+
+- **I1**: CODE-03/04 are pre-validated (Phases 11/12); Phase 17 applies them
+- **I2**: Parity precedent verified (`divergence.test.ts` pattern applicable)
+- **I3-I6**: Various verification clarity notes (all non-blocking)
+
+---
+
+## Final Summary (Ready for Execution)
+
+| Iteration | Date | Blockers | Warnings | Status |
+|-----------|------|----------|----------|--------|
+| 1 | 11:40 | 2 | 5 | Initial discovery |
+| 2 | 11:42 | 0 | 6 | B1/B2 fixed |
+| 3 | 11:46 | 0 | 5 | W1-W3 initial fixes |
+| 4 | 11:53 | 0 | 4 | TDD verification, design locked |
+| 5 | 12:03 | 0 | 4 | Validation (pre-re-check) |
+| **6** | **12:26** | **0** | **2** | **Execution-ready** ✅ |
+
+**All critical design decisions locked and verified via TDD. Plan quality: APPROVED.**
+
+---
+
+**Last Updated**: 2026-09-03 12:26 (after 6th plan-check)  
+**Checker**: gsd-plan-checker  
+**Recommendation**: APPROVE. Ready for execution. All blockers resolved. Remaining warnings non-blocking and acknowledged in-plan.
