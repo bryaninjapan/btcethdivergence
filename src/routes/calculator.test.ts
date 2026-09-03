@@ -52,7 +52,7 @@ describe('POST /api/calculator/validate (stub)', () => {
     const body: ApiErrorResponse = await res.json();
     expect(body).toEqual({
       ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Not yet implemented' },
+      error: { code: 'NOT_IMPLEMENTED', message: 'Not yet implemented' },
     });
   });
 
@@ -150,7 +150,7 @@ describe('POST /api/calculator/compute (stub)', () => {
     const body: ApiErrorResponse = await res.json();
     expect(body).toEqual({
       ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Not yet implemented' },
+      error: { code: 'NOT_IMPLEMENTED', message: 'Not yet implemented' },
     });
   });
 

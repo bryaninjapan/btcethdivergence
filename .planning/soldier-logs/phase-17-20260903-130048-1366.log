@@ -1,0 +1,23 @@
+Now let me run the actual verification commands from the plan.
+A test failure appeared. Let me investigate.
+A test regression is present at HEAD. Let me trace which commit introduced it.
+The full suite fails: 3 tests in 2 files. Let me examine the second failing file.
+All checks complete. Writing the verification report.
+Verification complete. Report written to `.planning/phases/phase-17/17-VERIFICATION.md`.
+
+## Summary
+
+**5 of 6 criteria PASS; 1 FAILED (SC3).**
+
+- **SC1 (schemas)** PASS — `calculator-rules.ts` exports `CalculatorInputs`/`CalculatorOutputs`; typecheck clean, 42 unit tests pass.
+- **SC2 (client unchanged)** PASS — `git diff public/js/calculator.js` empty; 33 frozen regression tests pass.
+- **SC3 (API stubs + tests) FAIL** — stubs exist and return 501 (`src/index.ts:53`), but commit `017109e` changed the stub code to `ErrorCode.NOT_IMPLEMENTED` without updating `calculator.test.ts`, which still asserts `INTERNAL_ERROR` (lines 55, 153). `npm test -- calculator.test` → 2 failed. The full suite is red: 3 failures across 2 files — the stale assertions plus the broken `L2-TDD-Schema-Comparison.test.ts` planning artifact (leverage 0 → `parse` throws on Infinity). `npm run test:coverage` also exits non-zero.
+- **SC4 (mirror + parity)** PASS — `public/js/calculator-rules.js` + parity & frozen-client guard tests pass.
+- **SC5 (15+ tests)** PASS — 42 tests cover margin/SL, leverage 1–125, liquidation, direction rules.
+- **SC6 (review zero HIGH)** PASS — review reports 0 HIGH, but its 56/56 claim and LOW#3 are stale post-fix.
+
+No prior-phase regression (650 other tests pass), but the global test gate is now red.
+
+**Fix (small):** update the 2 `calculator.test.ts` assertions to `NOT_IMPLEMENTED`; fix/exclude the L2 planning test; refresh stale REVIEW claims.
+
+1 criterion FAILED — phase not ready.
