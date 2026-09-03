@@ -1,5 +1,5 @@
 ---
-wave: 1
+wave: 1 (tracer); Waves 2-3 gates included
 depends_on: none
 files_modified:
   - public/demo-klinechart.html
@@ -48,6 +48,7 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
      - The UMD global is `klinecharts` (lowercase) — do NOT reference `KLineChart`
    - Create container: `<div id="chart"></div>` (500px × 400px)
    - Initialize — v10 `Options` has NO `kline` key, so pass no options (or only valid keys like `layout`):
+   - **NOTE (I3)**: The demo's `getBars` always returns the full 1000-bar array regardless of the loader's `type` parameter (history/forward/reverse). This is acceptable for a fixed-dataset demo; Phase 19's real `setDataLoader` implementation must support type-aware incremental loading.
      ```javascript
      const chart = klinecharts.init('chart')
      chart.setSymbol({ ticker: 'BTCUSDT', pricePrecision: 2, volumePrecision: 5 })
@@ -86,7 +87,7 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
      ```
      This verifies the ESM path works under zero-build constraint (complements the CDN UMD check).
    - Functional extension integration is deferred to Phase 20 (drawing tools). Note this in the demo doc.
-   - R18-01 note: npm-ESM `import { init } from 'klinecharts'` (RESEARCH.md §5 checklist item) is intentionally OUT OF SCOPE under the locked no-build constraint — R18-01 "`import` 可用" is satisfied via the CDN UMD global; validate the ESM path only if a build step is ever introduced.
+   - R18-01 note: npm-ESM `import { init } from 'klinecharts'` (RESEARCH.md §5 checklist item) is intentionally OUT OF SCOPE under the locked no-build constraint — R18-01 "`import` 可用" is satisfied via the CDN UMD global + optional ESM dynamic import; this substitution must be recorded in `18-COMPATIBILITY-ASSESSMENT.md` under R18-01 so the requirement isn't re-challenged during Phase 19.
 
 3. Verify:
    - Demo loads in Chrome without console errors
@@ -114,7 +115,7 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
 
 <verify>
 <automated>set -o pipefail; curl -sf "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000" | jq -e 'length >= 1000' > /dev/null && curl -sf "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000" | jq -r '.[0][0]' | awk '{ if (length($0) == 13) print "OK ms openTime:", $0; else exit 1 }' && curl -sfI "https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js" -o /dev/null</automated>
-<manual>Open public/demo-klinechart.html in Chrome. In the DevTools Console, verify: (1) no "Invalid time" / "Invalid timestamp" errors; (2) the console logs 'Fake first bar timestamp:' for fake data, then after the real-data swap logs with 2026 dates; console.assert passes silently or logs 'Pass-through failed'; (3) after the real-data swap, the X-axis shows dates in 2026 (not 1970); (4) chart renders visible candles (not empty). These manual checks prove timestamp ms pass-through works correctly in the real demo.</manual>
+<manual>After Task 1.2 completes: Open public/demo-klinechart.html in Chrome. In the DevTools Console, verify: (1) no "Invalid time" / "Invalid timestamp" errors; (2) the console logs 'Fake first bar timestamp:' for fake data, then after the real-data swap logs with 2026 dates; console.assert passes silently or logs 'Pass-through failed'; (3) after the real-data swap, the X-axis shows dates in 2026 (not 1970); (4) chart renders visible candles (not empty). These manual checks prove timestamp ms pass-through works correctly in the real demo.</manual>
 <fails_when>non-zero exit: Binance HTTP error, response length < 1000, openTime not exactly 13 digits (invalid ms), or extension ESM URL not reachable (non-200); OR manual checks: console errors, fake data not rendered, real data shows 1970 dates, or chart empty</fails_when>
 </verify>
 
@@ -181,6 +182,11 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
 ### Task 2.1: Three-Repo Compatibility Assessment + Performance Baseline + Migration Checklist Verification
 
 **Goal**: Document API differences, version matrix, CDN vs npm trade-offs, record the lightweight-charts performance baseline (reference for Phase 19 KLineChart comparison), AND line-by-line verify understanding of the migration checklist (identify gaps/clarifications before Phase 19).
+
+**Sub-tasks** (tracked separately for clarity):
+- **Part A**: Compatibility assessment (10+ API mappings verified against v10.0.3 types)
+- **Part B**: Performance baseline (Chrome + Safari iOS measurements, reject templates)
+- **Part C**: Migration checklist verification (Week 1-3 sections + Critical Data Transform marked)
 
 <read_first>
 - 18-RESEARCH.md § 1, § 2, § 4 (three-repo analysis + corrected API differences + benchmark plan)
@@ -381,9 +387,15 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
 4. Cross-reference all 45 requirements with phases:
    - Phases 18 (10) + 19 (10) + 20 (9) + 21 (9) + 22 (7) = 45 ✓
 
-5. Commit Phase 18 deliverables and push the dev branch (R18-08):
+5. Fix stale requirement before commit:
+   - Edit `.planning/REQUIREMENTS.md` R19-03: change from "Timestamp 轉換：所有 Binance open_time (ms) 正確轉為秒" to "Timestamp pass-through: Binance open_time (ms) 以 `timestamp` 鍵直通，無轉換" (reflects verified v10 ms contract, not ms→s)
+
+6. Optional sanity check (I6 — recommended before push):
+   - Run: `npm test` (sanity check that existing test suite still passes; Phase 18 changes no production code)
+
+7. Commit Phase 18 deliverables and push the dev branch (R18-08):
    - Stage Phase 18 artifacts: `git add public/demo-klinechart.html .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md .planning/ROADMAP.md .planning/REQUIREMENTS.md`
-   - Commit with message referencing phase: `git commit -m "Phase 18: demo + compatibility assessment + performance baseline + migration checklist verified"`
+   - Commit with message referencing phase: `git commit -m "Phase 18: demo + compatibility assessment + performance baseline + migration checklist verified + R19-03 corrected"`
    - Push to remote: `git push -u origin feature/klinechart-migration`
    - Verify: `git ls-remote origin feature/klinechart-migration` returns the local HEAD commit
 </action>
