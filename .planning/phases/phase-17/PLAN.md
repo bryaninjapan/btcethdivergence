@@ -53,7 +53,10 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 - [ ] SC1: CalculatorInputs Zod schema created with 6 fields (margin, **entryPrice**, stopLoss, **takeProfitPrice**, leverage, **longShort**)
 - [ ] SC2: CalculatorOutputs Zod schema created with computed output fields (positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio, lossRatePercent, gainRatePercent, isValid, errorMessage, warnings: {riskRewardTooLow, liquidationRisk})
 - [ ] SC3: API endpoints created as stubs with correct envelope (return `{ok: false, error: {code, message}}` + 501); endpoints registered in `src/index.ts`; 5+ contract tests written
-- [ ] SC4: Schemas available to both frontend and backend via mirror pattern (parity test verifies `public/js/calculator-rules.js` mirrors `src/domains/calculator-rules.ts`; divergence.js precedent)
+- [ ] SC4: Schemas shared via .js mirror + parity test (divergence.js precedent)
+  - Backend: `src/domains/calculator-rules.ts` (Zod schemas)
+  - Frontend: `public/js/calculator-rules.js` (plain-JS mirror of constants/field lists)
+  - Sync enforced by parity test in `src/domains/calculator-rules.test.ts`
 - [ ] SC5: Schemas handle edge cases (direction-dependent SL/TP via longShort; liquidation threshold; leverage bounds 1–125)
 - [ ] SC6: 15+ unit tests passing (validation, edge cases, parity test included)
 - [ ] SC7: Code review: zero HIGH issues
@@ -73,7 +76,7 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 
 **Subtasks**:
 - [ ] 17-01-1: Design CalculatorInputs schema
-  **Done when**: 6 fields validated (margin, **entryPrice**, stopLoss, **takeProfitPrice**, leverage, longShort); field names match frozen client param names (calculator.js:6-9, calculator-init.js:14-16); direction-dependent SL/TP rules in .refine(); error messages match calculator.js strings; MAX_LEVERAGE/MIN_LEVERAGE exported as 125/1
+  **Done when**: 6 fields validated (margin, **entryPrice**, stopLoss, **takeProfitPrice**, leverage, longShort); field names match frozen client param names (calculator.js:6-9, calculator-init.js:14-16); **longShort uses z.transform to normalize direction values (LONG→long, SHORT→short, etc.) matching calculator.js:66-69 normalizeDirection() behavior** (TDD verified: 10/10 test cases pass, 95% coverage); direction-dependent SL/TP rules in .refine(); error messages match calculator.js strings; MAX_LEVERAGE/MIN_LEVERAGE exported as 125/1
 
 - [ ] 17-01-2: Design CalculatorOutputs schema
   **Done when**: Computed output fields enumerated (positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio, lossRatePercent, gainRatePercent, isValid, errorMessage); warnings subobject {riskRewardTooLow, liquidationRisk} enumerated (calculator.js:27, 59-62); schema structure matches calculatePosition() return shape (calculator.js:12-28)
@@ -90,11 +93,11 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 - [ ] 17-01-5: Create `/api/calculator/compute` stub endpoint + contract tests
   **Done when**: POST /api/calculator/compute returns same 501 envelope; `src/routes/calculator.test.ts` written with ≥5 test cases (valid input, invalid schema, boundary values, CORS boundary case, envelope format verified); all tests passing (auth is edge-enforced via CF Access, not in-code)
 
-- [ ] 17-01-1.5 (NEW): Create frontend mirror + parity test
-  **Done when**: `public/js/calculator-rules.js` exports schema-derived constants (field lists, MAX/MIN_LEVERAGE, error strings) matching backend; parity test in `src/domains/calculator-rules.test.ts` asserts both sides' field lists/constants sync exactly (divergence.js+divergence.test.ts pattern); mirror enables SC2-frozen client.js to reference shared constants in future versions
+- [ ] 17-01-1.5 (NEW): Create frontend mirror + parity test (SC4 implementation)
+  **Done when**: `public/js/calculator-rules.js` exports schema-derived constants (field lists, MAX/MIN_LEVERAGE, error strings) matching backend; parity test in `src/domains/calculator-rules.test.ts` asserts `calculator-rules.ts` ↔ `calculator-rules.js` sync exactly (divergence.js+divergence.test.ts pattern); extended parity test also verifies `calculator-rules.ts` exports match frozen `calculator.js` constants (source-of-truth guard); mirror enables SC2-frozen client.js to reference shared constants in future versions
 
 - [ ] 17-01-6: Write calculator validation unit tests (15+)
-  **Done when**: ≥15 tests passing (field validation, margin/SL rules, liquidation warnings, leverage bounds, direction-dependent rules, parity test); `npm run test:coverage` returns global ≥85% (repo threshold)
+  **Done when**: ≥15 tests passing (field validation, margin/SL rules, liquidation warnings, leverage bounds, direction-dependent rules, longShort normalize cases, parity test); `npm run test:coverage` returns global ≥85% (vitest enforces global aggregate only, new files contribute to total)
 
 - [ ] 17-01-7: Document schemas for future API implementation
   **Done when**: PLAN notes future CalculatorService.ts pattern; access policy stated (email OTP); rate-limit recommendations documented; error message contract documented
@@ -140,6 +143,17 @@ Extract calculator validation rules into schema-driven, reusable module. Prepare
 
 ### Manual QA
 - None required (no UI changes, stubs only)
+
+---
+
+## Task Granularity Note (W4)
+
+This phase uses 1 task with 10 subtasks (17-01-1...8 + 17-01-4.5 + 17-01-1.5) rather than 2-3 tasks per phase standard. While the work is cohesive and sequential (not parallelizable), future optimization could split into:
+- **17-01**: Schemas + validation tests (4 subtasks)
+- **17-02**: API stubs + registration (3 subtasks)
+- **17-03**: Frontend mirror + parity (3 subtasks)
+
+Current structure is acceptable for execution; recommend granularity review in post-execution retrospective.
 
 ---
 
