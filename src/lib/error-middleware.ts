@@ -3,7 +3,7 @@
  * Catches all errors (AppError and unknown) and returns structured responses.
  */
 
-import { Context, HonoRequest } from 'hono';
+import { Context } from 'hono';
 import { ZodError } from 'zod';
 import {
   AppError,
@@ -14,11 +14,17 @@ import {
   ValidationError,
   isAppError,
 } from './errors';
+import { createLogger } from './logger';
 import { validationMessage } from './validate';
 import type { ApiResponse, Env } from '../types';
 
 // Re-export ApiResponse for use in tests
 export type { ApiResponse } from '../types';
+
+/**
+ * Structured logger for the HTTP boundary. Sinks to Workers Logs via stdout.
+ */
+const logger = createLogger('http');
 
 /**
  * Centralized error handler middleware for Hono.
@@ -56,7 +62,11 @@ export async function errorMiddleware(
   }
 
   // Log full error context server-side (with all details)
-  logError(appError, c.req);
+  logger.captureException('errorMiddleware', appError, {
+    path: c.req.path,
+    method: c.req.method,
+    details: appError.details,
+  });
 
   // Return sanitized response to client
   const statusCode = appError.statusCode() as 400 | 401 | 404 | 500 | 502;
@@ -66,25 +76,4 @@ export async function errorMiddleware(
   };
 
   return c.json(response, statusCode);
-}
-
-/**
- * Server-side logging with full error context.
- * Logs are structured for easy parsing and monitoring.
- */
-function logError(error: AppError, req: HonoRequest): void {
-  const logPayload = {
-    timestamp: new Date().toISOString(),
-    severity: 'ERROR',
-    code: error.code,
-    message: error.message,
-    path: req.path,
-    method: req.method,
-    details: error.details,
-    stack: error.stack,
-  };
-
-  // Use console.error for now (Wrangler captures this)
-  // In production, this would be sent to a logging service (Sentry, CloudFlare Logs, etc.)
-  console.error(JSON.stringify(logPayload));
 }
