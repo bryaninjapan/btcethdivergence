@@ -255,6 +255,119 @@ All blockers resolved. Remaining 5 warnings are minor clarifications/improvement
 
 ---
 
+---
+
+## L2 Deep Dive: CalculatorOutputs Schema Design (TDD Comparison)
+
+**Investigation**: Three design options for Phase 18+ `/api/calculator/compute` response schema.
+
+**Method**: TDD approach — simulate Phase 18 implementation + write test suites for each option, measure:
+1. Test code complexity (redundancy %, maintainability)
+2. Test suite size (# of meaningful vs. redundant tests)
+3. Future extensibility (cost to add new fields)
+
+### Option A: Replicate frozen client (15 fields: 6 echo + 9 results)
+
+```typescript
+{ margin, entryPrice, stopLoss, takeProfitPrice, leverage, longShort, // echo
+  positionSize, stopLossAmount, takeProfitAmount, ... } // 9 results
+```
+
+**Test Suite:**
+- 11 tests total
+- 6 tests validate input echo (redundant: client already knows margin, entryPrice, etc.)
+- 5 tests validate computed results
+- **Redundancy: 55%**
+
+**Analysis:**
+- ✅ 100% parity with frozen `calculatePosition()` return
+- ❌ 55% redundant test assertions (echo fields)
+- ❌ Bloated schema (15 fields for 9 computed values)
+- ❌ Future extension costly: adding new computed field means re-validate all echoes
+
+**Verdict**: Over-engineered for API contract. Client doesn't need server to repeat its own inputs.
+
+---
+
+### Option B: Layered Schema (structured inputs + results)
+
+```typescript
+{
+  inputs: { margin, entryPrice, stopLoss, takeProfitPrice, leverage, longShort },
+  results: { positionSize, stopLossAmount, ..., warnings }
+}
+```
+
+**Test Suite:**
+- 6 tests total
+- 2 tests for input layer (echo validation, but structured)
+- 4 tests for results layer
+- **Redundancy: ~33%**
+
+**Analysis:**
+- ✅ Clear intent separation (inputs vs. results)
+- ✅ Schema structure is explicit
+- ⚠️ Still carries echo overhead (inputs layer)
+- ⚠️ Payload still contains redundancy
+- ⚠️ Future extension: input changes cascade
+
+**Verdict**: Better than A, but echo layer is still unnecessary for API contract.
+
+---
+
+### Option C: Results Only (clean responsibility) ⭐ **RECOMMENDED**
+
+```typescript
+{ positionSize, stopLossAmount, takeProfitAmount, riskRewardRatio,
+  lossRatePercent, gainRatePercent, isValid, errorMessage, warnings }
+```
+
+**Test Suite:**
+- 7 tests total
+- 3 tests for core metrics
+- 2 tests for validity + warnings
+- 2 tests for future extension scenarios
+- **Redundancy: 0%**
+
+**Analysis:**
+- ✅ Clean API responsibility: "API computes and returns results" (not "repeats inputs")
+- ✅ Compact payload (9 fields vs. 15, ~40% smaller)
+- ✅ All tests are meaningful (zero redundancy)
+- ✅ Future-proof: adding new computed field = add 1 test, extend schema
+- ✅ Aligns with REST/GraphQL best practices
+
+**Verdict**: Superior design. Best testability, lowest maintenance, best extensibility.
+
+---
+
+### Comparison Table
+
+| Aspect | A (15-field) | B (Layered) | C (Results) |
+|--------|--------------|-------------|------------|
+| **Test Count** | 11 | 6 | 7 |
+| **Redundancy Rate** | 55% | 33% | 0% ✅ |
+| **Schema Complexity** | High | Medium | Low ✅ |
+| **Payload Size** | Large (15 fields) | Large (13 fields) | Small (9 fields) ✅ |
+| **Test Clarity** | Muddled | Clear | Crystal ✅ |
+| **Future: Add Field** | Cascade changes | Input layer + results | Results only ✅ |
+| **REST Alignment** | Poor | Medium | Excellent ✅ |
+
+---
+
+### Decision: **Option C (Results Only)**
+
+**Rationale:**
+1. **Responsibility**: Server = "compute", not "echo". Client already knows what it sent.
+2. **Testability**: 0% redundant assertions. Every test validates new information.
+3. **Extensibility**: Future `/compute` enhancements (add liquidation price, etc.) require minimal schema/test changes.
+4. **Industry Standard**: Modern APIs (Stripe, OpenAI, etc.) return computed data, not input echo.
+
+**If client needs to validate "Server didn't mutate my inputs":**
+- Use alternative: HTTP header `X-Input-Hash: sha256(input)` + client-side verification
+- Or: client state management (React/Vue) handles input tracking independently
+
+---
+
 ## Final Summary (Ready for Execution)
 
 | Iteration | Date | Blockers | Warnings | Status |
