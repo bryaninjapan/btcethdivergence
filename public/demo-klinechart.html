@@ -269,6 +269,8 @@
           // Step 2: Fetch Binance data
           setStatus('binance', 'pending', 'Fetching...')
           const binanceController = new AbortController()
+          let rows
+          let firstOpenTime
           const binanceTimeout = setTimeout(() => binanceController.abort(), FETCH_TIMEOUT_MS)
           try {
             const response = await fetch(
@@ -279,7 +281,7 @@
             if (!response.ok) {
               throw new Error(`Binance API returned ${response.status}`)
             }
-            const rows = await response.json()
+            rows = await response.json()
             if (!Array.isArray(rows) || rows.length < 1000) {
               throw new Error(
                 `Expected 1000+ candles, got ${rows.length || 'invalid response'}`
@@ -287,7 +289,7 @@
             }
 
             // Verify first candle's openTime is 13-digit milliseconds
-            const firstOpenTime = rows[0][0]
+            firstOpenTime = rows[0][0]
             if (
               typeof firstOpenTime !== 'number' ||
               String(firstOpenTime).length !== 13
