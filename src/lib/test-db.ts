@@ -62,6 +62,7 @@ export interface MockD1Database {
   failNext(method: 'all' | 'first' | 'run' | 'batch'): void;
   rowsOf(table: TableName): Row[];
   setRows(table: TableName, rows: unknown[]): void;
+  setNextRunMetaChanges(changes: number): void;
 }
 
 function emptyMeta(changes = 0): D1Result['meta'] {
@@ -274,6 +275,7 @@ export function createMockD1Database(): MockD1Database {
   const prepares: string[] = [];
   const calls: unknown[][] = [];
   const failures: string[] = [];
+  let nextRunMetaChanges: number | null = null;
 
   function nextFailure(method: 'all' | 'first' | 'run' | 'batch'): string | null {
     if (failures.length === 0) return null;
@@ -392,7 +394,12 @@ export function createMockD1Database(): MockD1Database {
       params,
       run: async () => {
         throwIfFailed('run');
-        const changes = mutate(sql, params, tables);
+        let changes = mutate(sql, params, tables);
+        // Override with test-set value if provided (e.g., to simulate concurrent delete)
+        if (nextRunMetaChanges !== null) {
+          changes = nextRunMetaChanges;
+          nextRunMetaChanges = null;
+        }
         return success(changes);
       },
       first: async <T>(colName?: string) => {
@@ -465,6 +472,9 @@ export function createMockD1Database(): MockD1Database {
       // Clone rows so mutations (UPDATE/DELETE) never leak into the caller's
       // fixtures or shared across tests.
       tables[table] = rows.map((r) => ({ ...(r as Row) }));
+    },
+    setNextRunMetaChanges(changes) {
+      nextRunMetaChanges = changes;
     },
   };
 }
