@@ -93,6 +93,8 @@ export class ChartManager {
    * @param {object} [options.priceScaleMode] map of ScaleMode -> LWC PriceScaleMode
    * @param {Function} [options.load] async (startMs, endMs, signal) -> [{id, rows}]
    * @param {Function} [options.toCandle] optional (row) -> candle normalizer
+   * @param {object} [options.logger] optional structured logger (createLogger from logger.js);
+   *   when absent, no logs are emitted (state machine stays dependency-free).
    */
   constructor(options = {}) {
     this._charts = {};
@@ -100,6 +102,7 @@ export class ChartManager {
     this._priceScaleMode = options.priceScaleMode || DEFAULT_PRICE_SCALE_MODE;
     this._loader = options.load || null;
     this._toCandle = options.toCandle || null;
+    this._logger = options.logger || null;
 
     // Validate required scale modes
     if (!Number.isFinite(this._priceScaleMode.linear)) {
@@ -120,6 +123,20 @@ export class ChartManager {
     this._subscriptions = new Map();
     this._listeners = new Map();
     this._chartIds = [];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Structured logging (optional injected logger; no-op without one)
+  // ---------------------------------------------------------------------------
+
+  _log(level, action, message, context) {
+    if (!this._logger) return;
+    this._logger[level](action, message, context);
+  }
+
+  _logException(action, error, context) {
+    if (!this._logger) return;
+    this._logger.captureException(action, error, context);
   }
 
   // ---------------------------------------------------------------------------
@@ -169,6 +186,7 @@ export class ChartManager {
       this._series[entry.id] = entry.series;
       this._chartIds.push(entry.id);
     }
+    this._log('info', 'initCharts', `registered ${charts.length} charts`, { chartIds: this._chartIds });
     this._transition(ManagerState.READY);
     return this;
   }
@@ -211,6 +229,7 @@ export class ChartManager {
         sourceId: sourceId ?? null,
         origin: 'set',
       });
+      this._log('debug', 'setVisibleRange', 'applied range', { from: range.from, to: range.to, sourceId });
       return true;
     } finally {
       this._syncState = SyncState.IDLE;
@@ -247,6 +266,7 @@ export class ChartManager {
         sourceId,
         origin: 'sync',
       });
+      this._log('debug', 'syncRanges', 'synced range', { from: resolved.from, to: resolved.to, sourceId });
       return true;
     } finally {
       this._syncState = SyncState.IDLE;
@@ -279,14 +299,14 @@ export class ChartManager {
 
     const chart = this._charts[sourceId];
     if (!chart) {
-      console.warn(`unsubscribe: no chart for ${sourceId}`);
+      this._log('warn', 'unsubscribe', `no chart for ${sourceId}`, { sourceId });
       this._subscriptions.delete(sourceId);
       return;
     }
 
     const ts = chart.timeScale();
     if (!ts || typeof ts.unsubscribeVisibleLogicalRangeChange !== 'function') {
-      console.warn(`unsubscribe: chart ${sourceId} has no unsubscribable timeScale`);
+      this._log('warn', 'unsubscribe', `chart ${sourceId} has no unsubscribable timeScale`, { sourceId });
       this._subscriptions.delete(sourceId);
       return;
     }
@@ -331,6 +351,7 @@ export class ChartManager {
       if (scale) scale.applyOptions({ mode: priceMode });
     }
     this._emit('scalechange', { mode });
+    this._log('info', 'setLogScale', `scale mode → ${mode}`, { mode });
     return mode;
   }
 
@@ -373,6 +394,7 @@ export class ChartManager {
       throw new Error('loadRange: a load is already in progress');
     }
     if (!this._loader) throw new Error('loadRange: no loader configured');
+    this._log('info', 'loadRange.start', 'loading range', { startMs, endMs });
     this._transition(ManagerState.LOADING);
     try {
       const results = await this._loader(startMs, endMs, options.signal);
@@ -383,9 +405,15 @@ export class ChartManager {
       this._loadedRange = { startMs, endMs };
       this._transition(ManagerState.READY);
       this._emit('rangechange', { range: { startMs, endMs }, origin: 'load' });
+      this._log('info', 'loadRange.complete', 'range loaded', {
+        startMs,
+        endMs,
+        symbols: (results || []).map((entry) => entry.id),
+      });
       return this.getState();
     } catch (err) {
       this._transition(ManagerState.ERROR);
+      this._logException('loadRange.error', err, { startMs, endMs });
       throw err;
     }
   }
@@ -424,6 +452,7 @@ export class ChartManager {
     }
     this._managerState = next;
     this._emit('statechange', { from: prev, to: next });
+    this._log('debug', 'transition', `${prev} → ${next}`, { from: prev, to: next });
     return this;
   }
 }

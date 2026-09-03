@@ -474,3 +474,77 @@ describe('ChartManager setVisibleRange & state snapshot', () => {
     expect(Object.keys(globalThis)).toEqual(before);
   });
 });
+
+describe('ChartManager structured logging (16a-01.4)', () => {
+  function spyLogger() {
+    const calls = [];
+    const logger = {
+      calls,
+      info: (...args) => calls.push(['info', ...args]),
+      warn: (...args) => calls.push(['warn', ...args]),
+      debug: (...args) => calls.push(['debug', ...args]),
+      error: (...args) => calls.push(['error', ...args]),
+      captureException: (...args) => calls.push(['captureException', ...args]),
+    };
+    return logger;
+  }
+
+  it('logs state transitions at debug level', () => {
+    const logger = spyLogger();
+    const manager = new ChartManager({ logger });
+    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    expect(logger.calls.some(([level, action]) => level === 'debug' && action === 'transition')).toBe(true);
+  });
+
+  it('logs loadRange start/complete at info level', async () => {
+    const logger = spyLogger();
+    const manager = new ChartManager({ logger, load: async () => [{ id: 'BTCUSDT', rows: [] }] });
+    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    await manager.loadRange(1000, 2000);
+    const actions = logger.calls.map(([, action]) => action);
+    expect(actions).toContain('loadRange.start');
+    expect(actions).toContain('loadRange.complete');
+    const complete = logger.calls.find(([, action]) => action === 'loadRange.complete');
+    expect(complete[2]).toContain('range loaded');
+  });
+
+  it('captures loadRange failures as exceptions', async () => {
+    const logger = spyLogger();
+    const manager = new ChartManager({ logger, load: async () => { throw new TypeError('network'); } });
+    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    await expect(manager.loadRange(1000, 2000)).rejects.toThrow('network');
+    const captured = logger.calls.find(([level, action]) => level === 'captureException' && action === 'loadRange.error');
+    expect(captured).toBeDefined();
+    expect(captured[2].message).toBe('network');
+  });
+
+  it('logs initCharts and setLogScale at info level', () => {
+    const logger = spyLogger();
+    const manager = new ChartManager({ logger });
+    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    manager.setLogScale(ScaleMode.LOGARITHMIC);
+    const actions = logger.calls.map(([, action]) => action);
+    expect(actions).toContain('initCharts');
+    expect(actions).toContain('setLogScale');
+  });
+
+  it('warns via the injected logger when unsubscribing a chart with no timeScale', () => {
+    const logger = spyLogger();
+    const manager = new ChartManager({ logger });
+    const chart = makeChart('BTCUSDT');
+    manager.initCharts([{ id: 'BTCUSDT', chart, series: makeSeries() }]);
+    manager.subscribe('BTCUSDT');
+    chart.timeScale = () => null;
+    manager.unsubscribe('BTCUSDT');
+    expect(logger.calls.some(([level, action]) => level === 'warn' && action === 'unsubscribe')).toBe(true);
+  });
+
+  it('emits no logs when no logger is injected (dependency-free default)', async () => {
+    const manager = new ChartManager({ load: async () => [{ id: 'BTCUSDT', rows: [] }] });
+    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    await manager.loadRange(1000, 2000);
+    manager.setVisibleRange({ from: 1, to: 2 });
+    manager.unsubscribe('NOPE');
+    expect(manager._logger).toBeNull();
+  });
+});
