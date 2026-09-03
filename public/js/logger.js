@@ -212,7 +212,8 @@ export function createLogger(component, options = {}) {
       emit('error', action, message, context);
     },
     captureException(action, error, context, level) {
-      emit(level || 'error', action, (error && error.message) || 'Unhandled error', context, serializeError(error));
+      const serialized = serializeError(error);
+      emit(level || 'error', action, serialized.message, context, serialized);
     },
   };
   return logger;
