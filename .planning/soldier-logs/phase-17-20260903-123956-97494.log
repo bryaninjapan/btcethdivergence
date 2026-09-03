@@ -1,0 +1,13 @@
+All verification done. Writing the review report.
+Phase 17 code review complete. Report written to `.planning/phases/phase-17/17-REVIEW.md`.
+
+**Summary** — Reviewed commits `4a9529a..c610d97` (6 files: `calculator-rules.ts`, `public/js/calculator-rules.js`, `src/routes/calculator.ts`, 2 test files, `src/index.ts` route registration). Verified typecheck clean and all 56 new tests passing.
+
+**Findings**: 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW.
+
+- MEDIUM: `calculator-rules.ts:70` `normalizeDirection` is a superset of frozen `calculator.js` — `'sHoRt'` maps to `short` in the schema but `long` in the client, contradicting its own comment. Benign for the validate stub, but it's the flagship "single source of truth" module and would produce divergent math if `/compute` is later implemented.
+- LOW: 501 mapped to `INTERNAL_ERROR` code (codebase-consistent); `parseBody` discards parsed result; `any` in tests; mirror `.js` currently unreferenced by any page.
+
+Security check: no sinks, no secrets, no auth bypass — CF Access edge + app-level CORS tested, 400 envelopes sanitized (raw zod details excluded), frozen client untouched.
+
+No CRITICAL/HIGH issues — ready to merge.

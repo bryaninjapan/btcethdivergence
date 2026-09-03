@@ -13,6 +13,7 @@
  * /api/records and /api/client-log), not in Worker code.
  */
 
+import { z } from 'zod';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { CalculatorInputs } from '../domains/calculator-rules';
@@ -29,7 +30,7 @@ const NOT_IMPLEMENTED = {
 } as const;
 
 /** Parse JSON body and validate against CalculatorInputs, throwing on failure. */
-async function parseBody(c: Context): Promise<void> {
+async function parseBody(c: Context): Promise<z.infer<typeof CalculatorInputs>> {
   let body: unknown;
   try {
     body = await c.req.json();
@@ -38,6 +39,7 @@ async function parseBody(c: Context): Promise<void> {
   }
   const parsed = CalculatorInputs.safeParse(body);
   if (!parsed.success) throw new ValidationError('body', validationMessage(parsed.error));
+  return parsed.data;
 }
 
 calculator.post('/api/calculator/validate', async (c) => {

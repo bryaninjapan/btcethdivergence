@@ -1,0 +1,36 @@
+This phase already has execution history. Let me verify the current state of the code and confirm all success criteria are genuinely met before deciding what remains to be done.
+The code is already in the target state. Now let me verify the phase gates: the zero-`FakeD1Database` gate, `records.service` deletion, and run the full verification suite.
+Zero `FakeD1Database`, `records.service` deleted, no DEV_* flags/secrets. Now running the full verification suite.
+Found a real regression: `npm run typecheck` fails on the CORS fix in `src/index.ts:21` (returns `false` where the type requires `null`/`undefined`). Let me inspect and fix.
+The CORS origin callback must return `null` (not `false`) to reject — Hono's type only allows `string | undefined | null`. Fixing the regression:
+Typecheck is clean. Let me check if a CORS test exists and run the full suite.
+All 492 tests pass. Let me verify the "rejects untrusted origins" test still validates the correct behavior with `null`:
+The test passes with `null` (header is null either way). Let me update the stale comment that references the old `false` return:
+Now committing the typecheck fix, then running coverage and E2E:
+Coverage: global lines 87.5% (≥85% ✓), `RecordsRepository.ts` 97.01% (≥95% ✓). Now the E2E suite:
+All gates green. Let me verify the stats integration tests and check STATE.md / ROADMAP status (16-05 deliverable):
+6 `/stats` integration tests confirmed. Let me verify the MockD1 overlap predicate (16-01 Part A deliverable) and its tests:
+All 4 overlap tests confirmed. Every SC is verified. The existing `16-SUMMARY.md` predates the review-fix commits and my typecheck fix, so its numbers are stale (480→492 tests, coverage 87.1→87.5). Let me update it to the final verified state.
+Now committing the summary update and collecting the phase commit range:
+All verification complete. Final report:
+
+## Phase 16 Execution Report
+
+**Status**: Phase 16 was already implemented across 20 prior commits (`44204ef..a0948a7`). I verified the final state against all 8 success criteria, fixed one regression, and refreshed the summary docs.
+
+**Verification run (all green):**
+- `npm test` — 492/492 (36 files)
+- `npm run typecheck` — zero errors (after fix)
+- `npm run test:coverage` — lines 87.5% global (≥85% gate); RecordsRepository 97.01% (≥95%)
+- `npx vitest run src/services/RecordsRepository.test.ts` — 47 pass (target 41)
+- `npx playwright test` — 81/81
+
+**SC check**: 8 methods exported ✓ · record SQL consolidated in `RecordsRepository`, `db.ts` klines-only ✓ · `constructor(db, now?)` ✓ · 5 handlers ≤10 lines ✓ · 47 unit tests ✓ · 6 `/stats` integration tests ✓ · coverage gates ✓ · review zero HIGH/CRITICAL (MEDIUM + 4 LOW follow-ups all fixed in later commits) ✓ · zero `FakeD1Database`, `records.service.ts` deleted, no DEV_* flags/secrets.
+
+**Commits this session**:
+- `2f58334` **fix(typecheck)**: CORS origin callback returned `false`, which the Hono type rejects → changed to `null` (identical rejection behavior); stale test comment updated.
+- `73fcab3` **docs(16)**: refreshed `16-SUMMARY.md` with post-review fixes and final verified numbers (492/492, 87.5%/97.01%, 81/81).
+
+**Phase range**: `e762d6d..HEAD` = 22 commits.
+
+**Blockers/checkpoints**: none. No security or dead-code fixes required beyond the typecheck fix.

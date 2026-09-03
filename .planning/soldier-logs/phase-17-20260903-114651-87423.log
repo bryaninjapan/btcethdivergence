@@ -1,0 +1,20 @@
+All source claims verified. Now writing the plan check report.
+Plan check complete — report written to `.planning/phases/phase-17/17-PLAN-CHECK.md`.
+
+**Summary**: Verified Phase 17 (17-01) goal-backward against ROADMAP, PROJECT.md, and current source.
+
+- **Requirement coverage**: CODE-03/CODE-04 both have concrete tasks (both are already-validated requirements being applied).
+- **Success criteria**: all 6 ROADMAP SCs have covering, wired tasks — including route registration (`src/index.ts`) that SC3 depends on.
+- **Fact-checking**: every cited line number verified accurate (`calculator.js:6-9/12-28/27/59-62`, `calculator-init.js:14-16`, `src/index.ts:53-62`, `client-log.test.ts:95`); `ErrorCode.INTERNAL_ERROR` exists; divergence.js/logger-parity precedents are real and the parity test is viable.
+- **Locked decisions**: no-build frontend respected (mirror, not TS import), single-Worker deployment respected, calculator stays frozen, CF Access policy consistent with Phase 16A DECISION.md.
+
+**Issues**: 0 blockers, 5 warnings, 5 info.
+- W1: coverage threshold mismatch (80% vs 85%) and the per-file claim isn't enforced by the global-only vitest config.
+- W2: "auth required" contract test is unimplementable in-code (auth is edge-only) and contradicts the plan's own testing strategy.
+- W3: verification commands can't prove SC2 (frozen `calculator.js` unchanged) — no unfiltered `npm test` run.
+- W4: 10 subtasks under one task.
+- W5: SC4 literal wording (shared import) substituted with mirror+parity (justified, but record it in ROADMAP).
+
+No scope reduction on in-scope work; "stub/501" is the ROADMAP-required deliverable. Resolve W1-W3 during sign-off; W4/W5 are record-keeping.
+
+**Plans verified. Ready to execute.**

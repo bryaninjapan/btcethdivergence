@@ -1,0 +1,84 @@
+Now let me look at the ROADMAP phase section, the existing codebase structure, and the existing docs for phase-16a.
+Now let me examine the codebase structure and conventions.
+Let me look at the routes, test conventions, and existing tests.
+Let me establish the current test baseline and check E2E structure.
+Let me check test conventions around console usage, the phase-16 docs, and E2E specs.
+I have a full picture now. Let me set up the task list and check a few remaining details (E2E count, wrangler observability schema, phase-16 README structure).
+Let me check the error-middleware test to ensure my refactor won't break it.
+Good — middleware tests only assert response shape, so the logger refactor is safe. Let me start with 16A-01.1 (DECISION.md) and 16A-01.2 (frontend logger).
+Now the frontend logger (16A-01.2).
+Now the frontend logger tests:
+The consoleSink test block has leftover garbage. Let me fix it properly:
+Two test failures — `Error` instances always carry a stack in Node. Let me fix the test expectations:
+`classifyError` should fall back to reading `error.code` when no code param is passed — more robust for ApiError call sites:
+Frontend logger passes 34/34. Let me check pre-existing uncommitted changes before committing.
+Pre-existing doc renames (16A→16.1) — I'll leave those untouched. Now committing tasks 16A-01.1 and 16A-01.2 separately:
+Now 16A-01.3: backend logger (`src/lib/logger.ts`).
+Now the backend logger tests plus a frontend↔backend parity test (SC4):
+Now the parity test (frontend↔backend record contract, SC4):
+Let me align the frontend `captureException` message logic with the backend for exact parity:
+Now refactor error-middleware to use the logger (16A-01.3):
+Typecheck clean, all logger tests green. Let me run the full suite before committing 16A-01.3:
+Now 16A-01.4: instrument ChartManager. Let me check existing test expectations around `unsubscribe`/console first:
+Now instrument the lifecycle/state transitions:
+Now the `unsubscribe` warnings and `setLogScale`:
+Now `loadRange` and `_transition`:
+Now let me add logging tests to ChartManager.test.ts. Let me check the existing loadRange test setup:
+Now let me add a logging describe block at the end of ChartManager.test.ts:
+Let me clean up the awkward first test:
+The warn only fires when a handler exists but the chart is missing. Let me fix the test to set up that state:
+16A-01 complete. Moving to 16A-02 instrumentation.
+Now instrument charts.js. This covers 16A-02.1, 16A-02.3 (global handlers), and 16A-02.6 (beacon):
+Now the loadRange function with abort classification and beacon logging:
+Now the init() load-range validation log and global handlers + init catch:
+I need to prevent superseded-load aborts from becoming error-level beacons in the manager. Let me update ChartManager to classify aborts as debug logs:
+Now instrument records.js (16A-02.2):
+Now instrument loadRecords (centralized error logging), submitForm, and delete:
+Now the init error handler (16A-02.3 global handlers + init catch):
+Let me check the records tests still pass and run the full suite:
+All 564 tests pass. Let me verify the console.* sweep (SC10):
+Only the logger sinks remain. Let me run the E2E suite now to confirm no behavioral regression from the charts.js/records.js changes:
+81/81 E2E pass. Let me commit the instrumentation tasks:
+Now 16A-02.5: the beacon endpoint.
+Now the 4 unit tests for the beacon endpoint:
+The CORS test needs the full app (CORS middleware lives in index.ts). Let me fix:
+Now 16A-02.4: Workers Logs enablement + RUNBOOK.
+wrangler config validates. Now the RUNBOOK.md:
+Now 16A-03.2: the beacon E2E integration test.
+The first beacon is the `initCharts` info record. Let me poll for the specific error beacon:
+Beacon E2E passes on all 3 browsers. Committing:
+Now 16A-03.1: full verification sweep.
+Coverage at 88.02% lines (gate ≥85%). Let me check the uncovered branch in client-log.ts:
+Coverage gate passes (88.02% lines). Now the full E2E suite:
+84/84 E2E pass. Final console sweep (SC10):
+SC10 satisfied — only sink comments reference console.*. Now 16A-03.3: docs. Let me add the logging architecture to the phase-16 README and create IMPLEMENTATION-NOTES:
+Now let me do a code-review pass over the full diff of production files (16A-03.3):
+Let me check for dead code in ChartManager (the `_logException` helper may now be unused):
+`_logException` is dead code now (replaced by `_logLoadError`). Removing it as a [cleanup] fix:
+Let me review the remaining diffs (logger, client-log, error-middleware):
+`validationMessage` is imported but unused in client-log.ts. Let me fix:
+Let me add the console sink alongside the beacon in the page loggers (matches the DECISION.md contract — dev console + beacon):
+Now commit the docs (README + IMPLEMENTATION-NOTES):
+One robustness fix: backend `setLevel` guard should reject prototype-inherited keys like `constructor`:
+Final full verification sweep (unit + coverage + full E2E):
+Let me do the final curl verification against wrangler dev for the beacon endpoint:
+All endpoint checks pass locally (202/400/413 + Workers Logs injection visible in wrangler dev output). Let me write the SUMMARY:
+Let me update the wiki hot.md per the cross-project memory protocol:
+Phase 16.1 complete. Final summary:
+
+## Summary
+
+**Phase 16.1 (Structured Logging) — 15/15 tasks complete** (16 commits, `73fcab3..HEAD`)
+
+**Built**: a dependency-free structured logging layer (Option C) with frontend↔backend parity, plus a client-log beacon for production observability.
+
+- **`src/lib/logger.ts` / `public/js/logger.js`** — record contract `{timestamp, level, component, action, message, context?, error?}`, `classifyError()` (7 kinds), `serializeError()`, `redactRecord()` (notes/tags → lengths only), pluggable sinks (`consoleSink`, `createBeaconSink` with 2s timeout), `installGlobalHandlers()`
+- **Instrumentation** — ChartManager (state transitions, abort-aware `loadRange` logging), charts.js (abort-superseded vs abort-timeout classification), records.js (form/delete/filter with redaction)
+- **Beacon endpoint** `POST /api/client-log` (202/400/413, zod validation, 64KB limit, Workers Logs injection via logger) + **Workers Logs** enabled in `wrangler.jsonc`
+- **Docs**: DECISION.md, RUNBOOK.md, IMPLEMENTATION-NOTES.md, 16A-SUMMARY.md, README update
+
+**Verification**: 571/571 unit (was 492), 84/84 E2E (81 + 1 beacon spec × 3 browsers), coverage 88.13% lines (gate ≥85%), typecheck clean, zero raw `console.*` outside logger sinks. Local curls: 202/400/413 confirmed, log line visible in `wrangler dev`.
+
+**Fixes applied**: `[cleanup]` ×2 (dead `_logException`, unused `validationMessage` import), `[fix]` ×2 (captureException parity, `setLevel` prototype-key guard). No `[security]` issues found.
+
+**Human checkpoint remaining**: post-deploy Workers Logs verification (SC8/SC11/SC12) — run `npm run deploy`, then `wrangler tail --format pretty` and trigger a chart error on the live site to confirm the beacon record appears ≤5s. This is the only step I can't perform (requires production deploy).

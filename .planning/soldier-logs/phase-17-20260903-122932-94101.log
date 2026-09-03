@@ -1,0 +1,42 @@
+Let me check the LEARNING.md and the latest soldier log to understand prior attempts and any known pitfalls.
+The prior soldier logs are empty (0 lines) — no code was produced by previous attempts. Let me check the vitest config and then start building.
+Baseline established. Let me verify the current test suite passes before making changes, and set up the task list.
+Baseline: 571 tests pass. Now creating the core schemas module.
+Now the frontend mirror:
+Now the stub route endpoints:
+Now register the routes in `src/index.ts`:
+Let me typecheck what we have so far before writing tests:
+Typecheck clean. Now the unit + parity tests:
+The short-normalization tests used the long-shaped base input (wrong SL/TP for short). Fixing to use the short-shaped base:
+Leverage 1.5 is actually accepted by the frozen client (it only bounds-checks, no integer check) — my test asserted stricter behavior than parity allows. Fixing the test to match the frozen client:
+All 41 unit tests pass. Now the endpoint contract tests:
+The direct sub-router tests bypass the app-level `onError` middleware. Let me check how records.test.ts handles this:
+Following the established records.test.ts pattern — wrap the sub-router in a test-local app with errorMiddleware:
+All 38 pass (both route tests and the frozen calculator regression suite, per I5). Now full typecheck + full suite + coverage:
+Full suite passes (627 tests). But typecheck has an error — let me see it:
+The helper's path type is too narrow for zod v4's `PropertyKey[]`. Fixing:
+Typecheck clean, coverage 88.42% (≥85% threshold). Let me verify the new files' individual coverage:
+All new files are at 100% coverage (vitest's text reporter omits fully-covered files). Now verifying SC2 — the frozen calculator.js must be untouched:
+`git diff public/js/calculator.js` is empty — frozen file untouched. Running the frozen calculator regression suite explicitly (SC2):
+All green. Committing in two logical commits matching the plan's subtask groups:
+Now let me do the final code-review scan (Section A: security/dead-code) and finalize:
+Clean — all exports consumed, no security issues. Finalizing todos and writing the SUMMARY:
+Final verification of the commit range and clean state:
+Phase 17 complete. All 10 subtasks of plan 17-01 executed, all 6 ROADMAP success criteria met.
+
+**Built:**
+- `src/domains/calculator-rules.ts` — `CalculatorInputs`/`CalculatorOutputs` Zod schemas, `longShort` z.transform normalization, direction-dependent SL/TP rules, `MAX/MIN_LEVERAGE`, field lists, verbatim error strings
+- `public/js/calculator-rules.js` — plain-JS frontend mirror (no-build preserved)
+- `src/routes/calculator.ts` — `/api/calculator/validate` + `/api/calculator/compute` stubs (501 envelope; invalid input → sanitized 400 `VALIDATION_ERROR`)
+- `src/routes/calculator.test.ts` (15 contract tests) + `src/domains/calculator-rules.test.ts` (41 unit + parity tests)
+- `src/index.ts` — route registration; `calculator.js` frozen untouched
+
+**Verification:** typecheck clean; full suite **627 tests pass** (571 baseline + 56 new); coverage **88.42% lines** (≥85%); new files at 100%; frozen `calculator.js` `git diff` empty.
+
+**Security/Cleanup fixes:** none needed — no DEV_* flags, secrets, auth bypass, or dead code found.
+
+**Checkpoints/conflicts:** none. Summary written to `.planning/phases/phase-17/17-SUMMARY.md` with 3 minor logged deviations (optional `longShort` default, fractional leverage accepted to match frozen client, two-commit split).
+
+**Commits:** `git log --oneline 68f4072..HEAD` →
+- `4a9529a` feat(phase-17): calculator validation schemas + frontend mirror + parity tests
+- `c610d97` feat(phase-17): calculator API stubs (/validate, /compute) + registration + contract tests

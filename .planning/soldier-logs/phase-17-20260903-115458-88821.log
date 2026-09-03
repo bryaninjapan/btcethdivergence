@@ -1,0 +1,19 @@
+All source claims verified. Now writing the check report.
+Plan check complete. Report written to `.planning/phases/phase-17/17-PLAN-CHECK.md` (overwrote prior iteration).
+
+**Summary** (Phase 17, PLAN.md rev 2026-09-03 11:53): independently re-verified all 10 dimensions against ROADMAP/PROJECT.md and the actual source tree.
+
+- **Requirement coverage**: CODE-03 (schemas) and CODE-04 (thin stubs + service placeholder) both covered.
+- **SC traceability**: all 6 ROADMAP SCs have covering, wired tasks. The 11:53 revision resolved the prior check's W2 (auth test) and W3 (SC2 proof now includes `npm test -- public/js/calculator` + `git diff --stat`).
+- **Fact-checks**: every cited claim verified accurate — `calculator.js:6-9, 12-28, 27, 59-62, 66-69`, `calculator-init.js:14-16`, `src/index.ts:53-62`, `ErrorCode.INTERNAL_ERROR`, `client-log.test.ts:85-98` CORS/edge-auth pattern, divergence/logger parity precedent, `test:coverage` global 85% threshold.
+
+**Issues**: 0 blockers, 4 warnings, 5 info.
+- W1: coverage wording still inconsistent (Handoff "≥80% per-file" vs "≥85% global", per-file unenforceable).
+- W2: `longShort` normalization ambiguity — strict `z.enum` would reject `'Short'/'SHORT'` the frozen client accepts; decision unpinned.
+- W3: ROADMAP SC4 literal "import from same .ts" unmet (mirror+parity, phase-14 precedent).
+- W4: 10 subtasks under one task.
+- Info: constants exist in 3 places (extend parity to frozen calculator.js), filtered-test overlaps, stale Phase 16 tracker, curl label.
+
+No scope reduction on in-scope work; no locked-decision conflicts.
+
+**Plans verified. Ready to execute.**

@@ -1,0 +1,18 @@
+All source claims verified. I have enough to complete the check. Let me write the report.
+**Phase 17 plan check complete** → `.planning/phases/phase-17/17-PLAN-CHECK.md` (supersedes the stale 11:40 check).
+
+Result: **0 blockers, 6 warnings, 6 info.**
+
+The revised PLAN.md fixed both prior blockers (verified against source):
+- SC4 now has a covering task — `public/js/calculator-rules.js` mirror + parity test (17-01-1.5), following the established divergence.js precedent.
+- SC3 is fully wired — stub files + `app.route('/', calculator)` registration in `src/index.ts:48-51` (17-01-4.5) + ≥5 contract tests (17-01-5).
+
+Key fact-checks passed: `MAX_LEVERAGE=125`/`MIN_LEVERAGE=1` (calculator.js:1-2), the Chinese error strings, `longShort` direction field, and the divergence parity-test pattern all match real source.
+
+Key warnings:
+1. **W1** — schema fields (`entry`/`takeProfit`) don't match frozen client params (`entryPrice`/`takeProfitPrice`, calculator.js:6-9) — undermines the SSoT goal.
+2. **W3** — `ErrorCode` has no `NOT_IMPLEMENTED` value; the curl example expects it — enum/statusCodeMap must be extended or use `INTERNAL_ERROR` + manual 501.
+3. **W4** — plan targets 80% per-module coverage; repo enforces 85% global lines (package.json:13).
+4. **W5** — "auth required" test isn't implementable in-process (access is edge-enforced, per client-log.ts:9-11).
+
+**Plans verified. Ready to execute.**

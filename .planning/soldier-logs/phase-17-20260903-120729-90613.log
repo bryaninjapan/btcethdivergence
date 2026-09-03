@@ -1,0 +1,12 @@
+All fact-checks pass. Writing the verification report.
+Report written to `.planning/phases/phase-17/17-PLAN-CHECK.md`.
+
+**Phase 17 Plan Check summary:**
+- **Status**: 0 blockers, 4 warnings, 6 info
+- **Requirement coverage**: CODE-03 (DRY Validation) and CODE-04 (Service Layer) both covered by concrete tasks.
+- **SC traceability**: All 6 ROADMAP success criteria have wired covering tasks (schemas → stubs → route registration → mirror+parity → tests → review).
+- **Fact-check**: All load-bearing claims verified against source — field names (`calculator.js:6-9`), warnings shape (`:27,59-62`), `normalizeDirection()` (`:66-69`), notFound/route patterns (`src/index.ts:48-62`), edge-auth stance (`client-log.ts:9-11`), CORS boundary precedent (`client-log.test.ts:85-98`), global 85% coverage flag, and the divergence/logger backend↔frontend parity precedent.
+- **Warnings**: W1 coverage threshold wording (handoff "≥80% per-file" vs "≥85% global"), W2 ROADMAP SC4 literal wording vs mirror approach, W3 1-task/10-subtask granularity, W4 "zod error details" contract-test wording (errorMiddleware sanitizes `details` out of the 400 response).
+- **Locked decisions**: compliant — no-build (JS mirror), single Worker (routes in `src/index.ts`), frozen client (SC2), edge-enforced auth, Phase 11 envelope respected even for stubs.
+
+Plans verified. Ready to execute.

@@ -62,12 +62,12 @@ export const ERROR_MESSAGES = {
 
 /**
  * Normalizes a raw direction value to the canonical 'long' | 'short'.
- * Mirrors frozen calculator.js:66-69 normalizeDirection(): only explicit
- * short variants map to 'short'; everything else (including missing) is
- * 'long'.
+ * Mirrors frozen calculator.js:66-69 normalizeDirection(): only the exact
+ * short variants ('short', 'Short', 'SHORT') map to 'short'; everything else
+ * (including case mismatches like 'sHoRt') is 'long'.
  */
 function normalizeDirection(value: string): 'long' | 'short' {
-  return value.toLowerCase() === 'short' ? 'short' : 'long';
+  return ['short', 'Short', 'SHORT'].includes(value) ? 'short' : 'long';
 }
 
 /**

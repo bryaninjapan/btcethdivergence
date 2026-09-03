@@ -1,0 +1,15 @@
+I have enough evidence. Let me write the plan-check report.
+Plan check written to `.planning/phases/phase-17/17-PLAN-CHECK.md`.
+
+**Summary** — verified `17-01` against ROADMAP SCs, PROJECT.md, and the actual source tree. Schemas (SC1), tests (SC5), review (SC6), and the "calculator.js unchanged" constraint (SC2) all have concrete, factually-valid covering tasks. Two success criteria fail as planned:
+
+- **B1 (SC4)** — no task makes the frontend import the schemas. Browser loads raw ESM from `public/` (no build step); `calculator.js` is frozen; the codebase's own pattern (divergence.ts ↔ divergence.js + sync test) is not followed. No frontend mirror or parity test is planned.
+- **B2 (SC3)** — stubs are created but never registered (`src/index.ts` mounts routes explicitly via `app.route('/')`), so both endpoints return 404; SC3's "tests written" clause is also uncovered (schema tests only, no endpoint tests).
+
+Warnings: stub would return raw "not yet implemented" text, violating the locked `{ok, data?, error?}` envelope (W1); `CalculatorInputs` omits the `longShort` field the plan's own direction-dependent rules require (W2); CODE-04 only partially covered, no home for compute math (W3); no typecheck/test/coverage commands or per-subtask verification (W4/W5).
+
+Info: 8-subtask single task, unspecified Access policy, stale Phase 16 ROADMAP row, abbreviated output-field list, vague docs.
+
+Both blockers are one-edit fixes (JS mirror + parity test; index.ts registration + stub tests). Recommend revising PLAN.md before execution.
+
+**2 blocker(s) found — plan needs revision before execution.**

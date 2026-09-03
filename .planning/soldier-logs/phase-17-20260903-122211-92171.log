@@ -1,0 +1,20 @@
+I'll start by reading the required planning files in order.
+Let me find the phase directory structure.
+A PLAN-CHECK.md already exists. Let me read the PLAN.md, the existing check, and PROJECT.md.
+Now let me verify the plan's load-bearing claims against the actual source. Let me look at the source tree and key files.
+An existing PLAN-CHECK.md exists but the PLAN.md was modified at 12:17 after the previous check (12:03). I'll re-verify all load-bearing claims independently against the current source.
+Let me check the phase-17 LEARNING.md (cited by the plan) and confirm no CONTEXT/RESEARCH files exist.
+All load-bearing claims verified against source. I have everything needed to write the fresh check report.
+Fresh goal-backward check of Phase 17's PLAN.md (rev 12:17, commit `1de6605`) written to `.planning/phases/phase-17/17-PLAN-CHECK.md`.
+
+**Findings**: 0 blockers, 2 warnings, 5 info.
+
+All 10 dimensions verified. Both requirements (CODE-03/04) and all 6 ROADMAP success criteria have concrete, wired covering subtasks. Every load-bearing claim fact-checked against source: `calculator.js` field names (1-10), `normalizeDirection` (66-69), `warnings` subobject (27, 59-62), `validateInput` strings (71-86), `calculator-init.js:14-16`, `index.ts` notFound (53-62) + route registration (48-51), `errors.ts:11`, sanitized `errorMiddleware` (details excluded), `client-log.test.ts:85-98` CORS pattern, divergence.js parity precedent, and `package.json` coverage semantics — all accurate. No locked decision contradicted (no-build mirror, single Worker, frozen calculator, edge-auth, envelope contract); no scope reduction on in-scope work.
+
+Prior check's W1 (coverage wording), W2 (ROADMAP SC4), and W4 (testing-strategy wording) were resolved by commit `1de6605`. Two residuals remain, both non-blocking:
+- **W1**: 17-01-4 "Done when" still says "400 + zod error details"; `toResponse()` strips zod details — reword to the sanitized contract.
+- **W2**: 1 task / 10 subtasks exceeds the 2-3 tasks/plan target; acknowledged in-plan, time-boxed at 0.75 days.
+
+Info items: pin the 400-path mechanism (throw, not direct `c.json`), document `CalculatorOutputs` subset intent, extended parity guard limited to `MAX/MIN_LEVERAGE`, run unfiltered `npm test` at sign-off, and note the JS mirror isn't typechecked.
+
+**Plans verified. Ready to execute.**

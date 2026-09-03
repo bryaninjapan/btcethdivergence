@@ -5,6 +5,15 @@ import calculator from './calculator';
 import app from '../index';
 import type { Env } from '../types';
 
+type ApiErrorResponse = {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+};
+
 const mockEnv: Env = {
   DB: {} as D1Database,
   INGEST_TOKEN: 'unused',
@@ -40,7 +49,7 @@ describe('POST /api/calculator/validate (stub)', () => {
   it('returns 501 with the not-implemented envelope for valid input', async () => {
     const res = await post('/api/calculator/validate', validInput);
     expect(res.status).toBe(501);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body).toEqual({
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Not yet implemented' },
@@ -50,7 +59,7 @@ describe('POST /api/calculator/validate (stub)', () => {
   it('rejects invalid CalculatorInputs with 400 + sanitized VALIDATION_ERROR envelope', async () => {
     const res = await post('/api/calculator/validate', { ...validInput, margin: -100 });
     expect(res.status).toBe(400);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
     expect(body.error.message.length).toBeGreaterThan(0);
@@ -61,7 +70,7 @@ describe('POST /api/calculator/validate (stub)', () => {
   it('rejects non-numeric margin (string) with 400', async () => {
     const res = await post('/api/calculator/validate', { ...validInput, margin: 'abc' });
     expect(res.status).toBe(400);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
@@ -75,7 +84,7 @@ describe('POST /api/calculator/validate (stub)', () => {
       body: '{not valid json',
     }, mockEnv);
     expect(res.status).toBe(400);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
@@ -112,13 +121,13 @@ describe('POST /api/calculator/validate (stub)', () => {
   it('rejects long with stopLoss above entry (direction rule → 400)', async () => {
     const res = await post('/api/calculator/validate', { ...validInput, stopLoss: 105 });
     expect(res.status).toBe(400);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('envelope format is exactly { ok, error: { code, message } } — no raw text', async () => {
     const res = await post('/api/calculator/validate', validInput);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(Object.keys(body).sort()).toEqual(['error', 'ok']);
     expect(Object.keys(body.error).sort()).toEqual(['code', 'message']);
   });
@@ -138,7 +147,7 @@ describe('POST /api/calculator/compute (stub)', () => {
   it('returns 501 with the same not-implemented envelope for valid input', async () => {
     const res = await post('/api/calculator/compute', validInput);
     expect(res.status).toBe(501);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body).toEqual({
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Not yet implemented' },
@@ -148,7 +157,7 @@ describe('POST /api/calculator/compute (stub)', () => {
   it('rejects invalid CalculatorInputs with 400 + VALIDATION_ERROR', async () => {
     const res = await post('/api/calculator/compute', { ...validInput, takeProfitPrice: 95 });
     expect(res.status).toBe(400);
-    const body: any = await res.json();
+    const body: ApiErrorResponse = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
     expect(body.error.message.length).toBeGreaterThan(0);
