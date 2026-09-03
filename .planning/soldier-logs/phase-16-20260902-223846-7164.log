@@ -1,0 +1,57 @@
+Let me look at the remaining relevant files and establish a test baseline.
+I have a full picture now. Let me set up the task list and begin execution.
+**16-01 Part A** — Add a 4th overlap test covering strict boundary semantics.
+Part A done. **16-01 Part B** — Migrate `records.test.ts` to MockD1.
+records.test.ts migrated (19 pass). Now migrate `klines.test.ts` and `admin.test.ts` to MockD1 to satisfy the plan's grep gate.
+Now migrate `admin.test.ts` to MockD1.
+Now run the full suite and the grep gate for 16-01.
+16-01 verification green (447 tests, typecheck clean, zero `FakeD1Database` references). Committing 16-01.
+**16-02 Part A** — Create `RecordsRepository.ts`.
+**16-02 Part B** — Remove moved record helpers from `lib/db.ts`.
+**16-02 Part C** — Create `RecordsRepository.test.ts` (migrating error cases from `records.service.test.ts`), then delete the old service.
+Now swap `records.ts` to use `RecordsRepository` so the tree compiles (full ≤10-line refactor comes in 16-04).
+All green (451). Committing 16-02.
+The pre-existing `test-db.ts` overlap support (MockD1 extension from 16-01 Part A) is still uncommitted — I'll fold it into the 16-02 commit since `findByTimeRange` depends on it.
+**16-03** — Check current repository coverage, then expand tests to 41 cases.
+Repository coverage is 66.1% with 19 tests. Now expanding to 41 tests. Adding `findById`, `listWithStats`, `findByTimeRange`, `findByType`, `computeRecordStats` coverage plus SQL-safety/immutability cases.
+Now add the `computeRecordStats` pure-function describe block at the end of the file.
+42 tests pass. Checking repository coverage.
+Repository coverage is 96.6% lines (≥95% gate met). The 2 uncovered lines are defensive branches (`INSERT returned no row` guard, non-DatabaseError catch). Now verify global coverage and full suite.
+**16-04** — Rewrite route handlers (≤10 lines each) and add the `/stats` endpoint.
+Now add the 6 integration tests for `/stats` to `records.test.ts`.
+Now attempting E2E verification. Starting a local `wrangler dev` server.
+Records E2E: 24/24 passed. Let me run the full E2E suite (the 81-run target includes charts + calculator specs).
+Full E2E suite: **81/81 passed**. Stopping the dev server and committing 16-04.
+**16-05** — Code review + docs. First, run security/dead-code scans across my changes.
+Let me do a final review pass on the changed route file and check for unused imports.
+Routes clean, all handlers ≤10 lines, imports used. Let me check doc conventions from prior phases, then run final verification.
+All green (480 tests, coverage 87.1% global / 96.6% repository). Let me check the phase-15 review doc format, then write Phase 16 docs.
+Now updating ROADMAP.md Phase 16 status.
+Now update STATE.md.
+Now write `16-REVIEW.md` and `IMPLEMENTATION-NOTES.md`.
+Committing 16-05 docs.
+All tasks complete. Final end-to-end verification per the plan's Verification Commands.
+All gates pass. Writing the phase summary.
+Phase 16 complete — all 5 tasks done, all 8 success criteria met.
+
+**Built:**
+- `src/services/RecordsRepository.ts` — single owner of records SQL: `findAll`, `findById`, `listWithStats` (JS-computed stats), `findByTimeRange` (overlap semantics), `findByType`, `create`, `update`, `delete`; `constructor(db, now?)` with injectable clock; parameterized SQL throughout; `delete()` = 1 statement.
+- `GET /api/records/stats` endpoint; all 5 route handlers ≤10 lines.
+- All route tests migrated to MockD1 (`records`/`klines`/`admin`); `records.service.ts` + its test deleted.
+- `src/services/RecordsRepository.test.ts` — 42 unit tests.
+
+**Verification:** `npm test` 480/480, typecheck clean, coverage 87.1% global (≥85%) / 96.6% repository (≥95%), E2E 81/81. CF Access Policy 1 (`/api/records*`) already covers `/stats`.
+
+**Fixes:** none required (no [SECURITY]/[CLEANUP] — scans clean). **Checkpoints:** none.
+
+**Deviations logged in SUMMARY/IMPLEMENTATION-NOTES:** 16-01 scope widened to migrate `klines`/`admin` tests (plan's own grep gate demanded zero `FakeD1Database`); duplicated "/stats works" line deferred to 16-04; MockD1 full-row return tweaked klines assertion; `test-db.ts` overlap predicate committed under 16-02.
+
+**Commit range (`git log --oneline e762d6d..HEAD`):**
+```
+4a3e072 docs(16): add execution summary
+d13d4ca docs(16-05): Phase 16 code review clean; update ROADMAP/STATE
+dce9120 feat(16-04): refactor records routes to <=10-line handlers; add GET /api/records/stats
+740eacf test(16-03): expand RecordsRepository suite to 42 cases, coverage >=95%
+227b311 feat(16-02): add RecordsRepository with 8 query methods; delete records.service layer
+44204ef test(16-01): migrate route integration tests to MockD1; add overlap boundary test
+```

@@ -1,0 +1,14 @@
+Bug confirmed. Now let me review the remaining changed files and the app wiring.
+Let me check the D1 schema for the msb column and how old records handle it, plus the error middleware.
+All checks pass (480/480, typecheck clean). I have a complete picture. Writing the review report.
+Review complete. Report written to `.planning/phases/phase-16/16-REVIEW.md`.
+
+**Summary** — Reviewed commits `44204ef..4a3e072` (Phase 16, Records Repository). Verified green: 480/480 tests, zero typecheck errors. The refactor is solid: parameterized SQL throughout, single-statement `delete()`, LIKE escaping, JS-computed stats, pure-HTTP handlers, and the new `/api/records/stats` endpoint rides the existing CF Access wildcard. No CRITICAL, no security findings (no injection, no secret leakage, sanitized error envelopes).
+
+**1 HIGH found** — `RecordsRepository.update()` (src/services/RecordsRepository.ts:242-277) + `validate.ts:32`: a partial `PUT` omitting `msb` silently flips the stored value to `'no'`. Root cause: `baseFields.msb = msbStatus.default('no')` and Zod v4 `.partial()` injects the default on missing keys (confirmed empirically: `parse({notes:'x'})` → `{msb:'no', notes:'x'}`), defeating the merge's `input.msb ?? existing.msb` preservation. The method's JSDoc promises "omitted fields are preserved — never cleared"; the route regression test exercises this exact path on a `msb:'yes'` fixture but never asserts `msb`, and the unit fixture uses `msb:'no'`, so the suite masks it. Fix: move the default off `baseFields`, apply it only in `createRecordSchema`, add a `msb:'yes'` partial-PUT regression test. (Pre-existing, but re-authored and left untested in this phase.)
+
+**4 LOW** — POST/PUT handlers exceed the SC4 10-line claim; MockD1 lacks SELECT projection (masks klines query shape); `update()` read-then-write ignores `run().changes`; `findByTimeRange`/`findByType` unused (required API surface).
+
+**Recommendation**: fix the HIGH (one-line schema change + regression test) before merge; LOWs are optional.
+
+1 CRITICAL/HIGH issue(s) found — must fix before merge.

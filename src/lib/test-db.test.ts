@@ -301,3 +301,82 @@ describe('createMockD1Database — smoke test wiring', () => {
     expect(res).toEqual({ inserted: 1, skipped: 1 });
   });
 });
+
+describe('createMockD1Database — SELECT column projection', () => {
+  it('SELECT specific columns returns only those columns (not full row)', async () => {
+    const db = createMockD1WithData({
+      klines: [{ symbol: 'BTCUSDT', open_time: 100, open: 10, high: 12, low: 9, close: 11, volume: 1 }],
+    });
+
+    const res = await db
+      .prepare('SELECT open_time, close FROM klines WHERE symbol = ?')
+      .bind('BTCUSDT')
+      .all<{ open_time: number; close: number }>();
+
+    expect(res.results).toHaveLength(1);
+    // ✅ Only open_time and close should be present
+    expect(Object.keys(res.results![0])).toEqual(['open_time', 'close']);
+    expect(res.results![0]).toEqual({ open_time: 100, close: 11 });
+  });
+
+  it('SELECT * returns all columns (no projection)', async () => {
+    const db = createMockD1WithData({
+      klines: [{ symbol: 'BTCUSDT', open_time: 100, open: 10, high: 12, low: 9, close: 11, volume: 1 }],
+    });
+
+    const res = await db
+      .prepare('SELECT * FROM klines WHERE symbol = ?')
+      .bind('BTCUSDT')
+      .all<any>();
+
+    expect(res.results).toHaveLength(1);
+    // ✅ All columns should be present
+    expect(res.results![0]).toEqual({
+      symbol: 'BTCUSDT',
+      open_time: 100,
+      open: 10,
+      high: 12,
+      low: 9,
+      close: 11,
+      volume: 1,
+    });
+  });
+
+  it('first() applies projection correctly for SELECT with columns', async () => {
+    const db = createMockD1WithData({
+      klines: [
+        { symbol: 'BTCUSDT', open_time: 100, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+        { symbol: 'BTCUSDT', open_time: 200, open: 11, high: 13, low: 10, close: 12, volume: 2 },
+      ],
+    });
+
+    const row = await db
+      .prepare('SELECT open_time, open FROM klines WHERE symbol = ? ORDER BY open_time DESC')
+      .bind('BTCUSDT')
+      .first<{ open_time: number; open: number }>();
+
+    // ✅ Should only have open_time and open, and should be the last (DESC) row
+    expect(row).toEqual({ open_time: 200, open: 11 });
+    expect(Object.keys(row!)).toEqual(['open_time', 'open']);
+  });
+
+  it('SELECT projection with ORDER BY DESC', async () => {
+    const db = createMockD1WithData({
+      divergence_records: [
+        { ...RECORD, id: 1, start_time: 1000, type: 'type_a' },
+        { ...RECORD, id: 2, start_time: 2000, type: 'type_b' },
+        { ...RECORD, id: 3, start_time: 3000, type: 'type_a' },
+      ],
+    });
+
+    const res = await db
+      .prepare('SELECT id, type FROM divergence_records WHERE type = ? ORDER BY start_time DESC')
+      .bind('type_a')
+      .all<{ id: number; type: string }>();
+
+    expect(res.results).toHaveLength(2);
+    // ✅ Only id and type; ordered DESC by start_time
+    expect(res.results!.map((r) => r.id)).toEqual([3, 1]);
+    expect(res.results!.every((r) => Object.keys(r).sort().join(',') === 'id,type')).toBe(true);
+  });
+});

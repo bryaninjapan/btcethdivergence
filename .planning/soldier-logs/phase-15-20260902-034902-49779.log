@@ -1,0 +1,28 @@
+Now let me explore the existing codebase state.
+Let me check what imports the old chart modules and establish the baseline test state.
+Task 15-01 done. Now task 15-02 — refactor charts.js to use ChartManager.
+Now delete the old chart modules and their tests:
+Now task 15-03 — integration tests.
+The charts E2E tests need kline data in the local D1. Let me seed it with synthetic hourly candles, then start the dev server.
+Local D1 is seeded. Now start the dev server and run the charts E2E spec.
+The seeded data is ~30 days stale. Let me reseed around the current time.
+The "sync zoom" test has a pre-existing race: it zooms before data loads. Let me make it wait for the visible range.
+All 6 charts tests pass consistently. Now run the full E2E suite to verify no regressions elsewhere.
+All 27 E2E tests pass on chromium. Let me verify across all configured browsers too.
+The firefox/webkit failures are just missing browser binaries (environment), not test failures. Let me install them to verify fully.
+All 81 E2E tests pass across chromium, firefox, and webkit. Let me stop the dev server and run final verification.
+The `playwright-report/` and `test-results/` build artifacts were accidentally committed in prior phases. Let me stop tracking them as a cleanup commit.
+Let me verify the coverage threshold still passes and do a final code-review scan.
+All checks pass. Now let me write the phase summary.
+Phase 15 complete. All tasks done, no checkpoints blocking.
+
+**Delivered** (`c239e64..HEAD`):
+- `13fae73` — ChartManager state machine (`public/js/managers/ChartManager.js`): encapsulates visible range, log/linear scale, sync-lock re-entrancy, and data cache; exports `initCharts`/`setVisibleRange`/`toggleLogScale`/`syncRanges`; lifecycle machine `INIT→READY→LOADING→READY/ERROR`.
+- `d8ef03b` — charts.js refactored to use ChartManager exclusively (2 direct LWC calls, ≤5); deleted `chart-state.js`/`chart-range.js`/`chart-sync.js` + their tests; records.js imports `recordToRange` from ChartManager.
+- `998490f` — **[cleanup]** stopped tracking accidentally-committed `playwright-report/`/`test-results/` artifacts.
+- `e37e3f1` — 13 integration tests + hardened the pre-existing "sync zoom" E2E race.
+- `docs(phase-15)` — 15-SUMMARY.md.
+
+**Verification**: 443 unit/integration tests pass (62 ChartManager tests, exceeding the 40+ target), typecheck clean, coverage 87.91% lines (≥85%), and **81/81 E2E tests pass across chromium + firefox + webkit** (zoom/pan/sync workflow verified). Section A scan found no security issues; one dead `fillSelect` import removed during the refactor.
+
+**Deviations (logged in SUMMARY)**: no `index.html` change was needed (old modules were ESM imports, not script tags); `chart-state.test.ts` replaced by `chart-manager.test.ts`; plan's "8 E2E tests" count was stale (27 exist). No `[CONFLICT]`/`[PLAN-GATE]` items — ready for Phase 16.

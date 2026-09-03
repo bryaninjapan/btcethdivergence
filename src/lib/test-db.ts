@@ -251,10 +251,50 @@ function applyOrderBy(sql: string, rows: Row[]): Row[] {
   });
 }
 
+/**
+ * Extract SELECT column list from SQL.
+ * Returns null if SELECT * or if no SELECT found.
+ * Example: "SELECT open_time, open FROM ..." → ["open_time", "open"]
+ */
+function extractSelectColumns(sql: string): string[] | null {
+  const match = /^SELECT\s+(.*?)\s+FROM/i.exec(sql);
+  if (!match) return null;
+
+  const columnList = match[1];
+
+  // If it's SELECT *, don't filter
+  if (/^\s*\*\s*$/.test(columnList)) return null;
+
+  return columnList
+    .split(',')
+    .map((col) => col.trim())
+    .filter((col) => col.length > 0 && col !== '*');
+}
+
+/**
+ * Apply SELECT column projection to rows.
+ * If projectedCols is provided, only those columns are kept.
+ */
+function applyProjection(rows: Row[], projectedCols: string[] | null): Row[] {
+  if (!projectedCols || projectedCols.length === 0) return rows;
+
+  return rows.map((row) => {
+    const projected: Row = {};
+    projectedCols.forEach((col) => {
+      projected[col] = row[col];
+    });
+    return projected;
+  });
+}
+
 function selectRows(sql: string, params: unknown[], tables: Record<string, Row[]>): Row[] {
   const table = tableOf(sql);
   const rows = (table ? tables[table] ?? [] : []) as Row[];
-  return applyOrderBy(sql, applyWhere(sql, params, rows));
+  const filtered = applyOrderBy(sql, applyWhere(sql, params, rows));
+
+  // Apply column projection if SELECT specifies columns
+  const projectedCols = extractSelectColumns(sql);
+  return applyProjection(filtered, projectedCols);
 }
 
 function insertColumns(sql: string): string[] {
@@ -412,8 +452,11 @@ export function createMockD1Database(): MockD1Database {
           const table = tableOf(sql);
           const rows = table ? tables[table] : [];
           const row = rows[rows.length - 1];
-          if (colName !== undefined) return (row[colName] as T) ?? null;
-          return row as T;
+          // Apply projection for INSERT ... RETURNING * with SELECT columns
+          const projectedCols = extractSelectColumns(sql);
+          const projectedRow = applyProjection([row], projectedCols)[0];
+          if (colName !== undefined) return (projectedRow[colName] as T) ?? null;
+          return projectedRow as T;
         }
         const rows = selectRows(sql, params, tables);
         const firstRow = rows[0];

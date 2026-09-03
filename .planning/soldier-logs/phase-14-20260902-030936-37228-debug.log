@@ -1,0 +1,26 @@
+timestamp=2026-09-01T18:09:37.011Z level=INFO run=9ca13182 message="creating instance" directory=/Users/bryan/Documents/btcethdivergence
+timestamp=2026-09-01T18:09:37.012Z level=INFO run=9ca13182 message=fromDirectory directory=/Users/bryan/Documents/btcethdivergence
+timestamp=2026-09-01T18:09:37.063Z level=INFO run=9ca13182 message=bootstrapping directory=/Users/bryan/Documents/btcethdivergence
+timestamp=2026-09-01T18:09:37.066Z level=INFO run=9ca13182 message=loading path=/Users/bryan/.config/opencode/config.json
+timestamp=2026-09-01T18:09:37.066Z level=INFO run=9ca13182 message=loading path=/Users/bryan/.config/opencode/opencode.json
+timestamp=2026-09-01T18:09:37.069Z level=INFO run=9ca13182 message=loading path=/Users/bryan/.config/opencode/opencode.jsonc
+timestamp=2026-09-01T18:09:37.075Z level=DEBUG run=9ca13182 message="loading config from /Users/bryan/.opencode/opencode.json"
+timestamp=2026-09-01T18:09:37.075Z level=INFO run=9ca13182 message=loading path=/Users/bryan/.opencode/opencode.json
+timestamp=2026-09-01T18:09:37.075Z level=DEBUG run=9ca13182 message="loading config from /Users/bryan/.opencode/opencode.jsonc"
+timestamp=2026-09-01T18:09:37.075Z level=INFO run=9ca13182 message=loading path=/Users/bryan/.opencode/opencode.jsonc
+timestamp=2026-09-01T18:09:37.109Z level=INFO run=9ca13182 message="all LSPs are disabled"
+timestamp=2026-09-01T18:09:37.109Z level=INFO run=9ca13182 message="all formatters are disabled"
+timestamp=2026-09-01T18:09:37.110Z level=INFO run=9ca13182 message=init
+timestamp=2026-09-01T18:09:37.173Z level=INFO run=9ca13182 message=created id=ses_fa1d6706affec7I5tTi906JBJ2 slug=curious-circuit version=1.18.20 projectID=10bd102ac7e63cb30252732a09c5a59a737fa724 directory=/Users/bryan/Documents/btcethdivergence path="" workspaceID=undefined parentID=undefined title="New session - 2026-09-01T18:09:37.173Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1788286177173 time.updated=1788286177173
+timestamp=2026-09-01T18:09:37.181Z level=INFO run=9ca13182 message="event connected"
+timestamp=2026-09-01T18:09:37.453Z level=ERROR run=9ca13182 message="share subscriber failed" type=message.updated cause="Cause([Fail(ProviderModelNotFoundError: Model not found: mode=check/.)])"
+timestamp=2026-09-01T18:09:37.461Z level=INFO run=9ca13182 message=loop session.id=ses_fa1d6706affec7I5tTi906JBJ2 step=0
+timestamp=2026-09-01T18:09:37.463Z level=ERROR run=9ca13182 message=failed ref=err_a1e25afd error="ProviderModelNotFoundError: Model not found: mode=check/." cause="ProviderModelNotFoundError: Model not found: mode=check/.\n    at <anonymous> (/$bunfs/root/chunk-a53jbypk.js:439:90561)\n    at SessionPrompt.getModel (/$bunfs/root/chunk-904er73a.js:1096:11490)\n    at SessionPrompt.getModel (definition) (/$bunfs/root/chunk-904er73a.js:1096:908)\n    at SessionPrompt.run (/$bunfs/root/chunk-904er73a.js:1096:15306)\n    at SessionPrompt.run (definition) (/$bunfs/root/chunk-904er73a.js:1096:10498)\n    at SessionRunState.ensureRunning (/$bunfs/root/chunk-904er73a.js:1096:15275)\n    at SessionRunState.ensureRunning (definition) (/$bunfs/root/chunk-904er73a.js:2:8182)\n    at SessionPrompt.loop (/$bunfs/root/chunk-904er73a.js:1096:10220)\n    at SessionPrompt.loop (definition) (/$bunfs/root/chunk-904er73a.js:1096:15211)\n    at SessionPrompt.prompt (/$bunfs/root/chunk-gnk0naes.js:4:13297)\n    at SessionPrompt.prompt (definition) (/$bunfs/root/chunk-904er73a.js:1096:9838)"
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_a1e25afd"
+  }
+}
+timestamp=2026-09-01T18:09:37.463Z level=INFO run=9ca13182 message="disposing instance" directory=/Users/bryan/Documents/btcethdivergence

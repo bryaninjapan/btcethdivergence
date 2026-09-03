@@ -1,0 +1,31 @@
+I'll start by reading the planning docs to understand what Phase 16 delivered.
+Now let me read the PLAN.md and SUMMARY.md for phase-16.
+Now let me read PROJECT.md and check for CONTEXT.md, plus look at the git log to determine the commit range.
+No CONTEXT.md exists for phase-16. Let me establish the commit range and read the supporting docs.
+The previous review found 1 HIGH (msb partial-PUT) plus the 16-fix commits that addressed it. My review covers the full range including those fixes. Let me confirm the base commit and read all changed source files in the working tree.
+Now the route handlers, validate.ts, db.ts, and test-db.ts.
+Now the test files and remaining changed files.
+Now the repository tests, types, errors, and remaining test files.
+Now the remaining changed test files and error middleware, plus verify the fix commits' diffs.
+Let me review the fix commits' diffs and the error infrastructure.
+Let me verify the deleted files, run typecheck and tests, and check for stale imports.
+Now let me run typecheck and the test suite to verify the claimed green state.
+Typecheck clean, 87/87 targeted tests pass. Let me run the full suite to confirm no regressions.
+481/481 pass (one more than the documented 480, from the added regression test). Let me verify the fix-1 regression tests are substantive.
+Let me check whether the partial start_time/end_time update edge is pre-existing or introduced here.
+The partial-update semantics are verbatim ports from the old code. Let me confirm the UI always sends `msb` (making the partial-PUT path API-only), then check the wrangler config.
+Let me verify the old SQL was ported verbatim and check the temporal-api.
+Let me check the D1 schema for the msb column constraints and the CORS setup.
+Schema confirms `msb` has a column default, so stats can't produce undefined keys. I have everything I need. Let me verify no secrets are tracked, then write the review.
+All verification complete. Writing the review report.
+Phase 16 review complete — full range `44204ef..6d567ac` (12 commits), verified against current working-tree files plus a fresh run of `typecheck` (clean) and `npm test` (481/481).
+
+What I checked: `RecordsRepository.ts` (8 methods, parameterized SQL, overlap semantics, JS stats, 1-statement `delete()`), `validate.ts`, the 5 route handlers (all ≤10 lines, `/stats` before `/:id`), MockD1 overlap predicate, and the migrated `records/klines/admin` tests.
+
+Key outcome: the prior HIGH (partial `PUT` resetting `msb:'yes'` via Zod v4 `.partial()` injecting the baseFields default) is genuinely fixed by `e66251f` and locked in by regression tests `83205ec` + `7f7bf54` — both pass. The `update()` concurrent-delete guard (fix-3) is present but untested.
+
+Findings in the final state: **0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW**. The MEDIUM is a pre-existing latent bug now owned by the repository: a `PUT` sending only `start_time` (or only `end_time`) bypasses the refine (which checks only when both are present) and can persist `start_time >= end_time`, breaking overlap queries. API-level trigger only — the UI always sends both times. LOWs: fix-3 `changes===0` branch untested, MockD1 lacks column projection (masks `queryKlines` projection bugs, test-only), `findByTimeRange` doesn't validate `start <= end`, and a pre-existing permissive CORS default now also covers `/stats`.
+
+Report written to `.planning/phases/phase-16/16-REVIEW.md`. No source files modified.
+
+No CRITICAL/HIGH issues — ready to merge.

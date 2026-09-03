@@ -52,10 +52,10 @@ describe('GET /api/klines — timestamp conversion (Phase 1 CR-01)', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; data: Kline[] };
     expect(body.ok).toBe(true);
-    // MockD1 stores full rows (incl. the symbol column used for filtering),
-    // so compare against the kline projection fields rather than the seed.
     expect(body.data).toHaveLength(1);
-    expect(body.data[0]).toMatchObject(SAMPLE_ROW);
+    // MockD1 now supports SELECT column projection, so we can assert exact equality
+    // (no extra columns like 'symbol' that are used in filtering)
+    expect(body.data[0]).toEqual(SAMPLE_ROW);
 
     // The critical assertion: DB must receive SECONDS, not the raw ms input.
     expect(db.calls).toHaveLength(1);

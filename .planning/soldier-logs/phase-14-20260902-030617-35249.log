@@ -1,0 +1,60 @@
+Now let me establish the baseline: run typecheck and tests.
+Baseline is green: typecheck passes, 401 tests pass. Let me read the modules to migrate.
+Let me check the existing tests for the modules I'll migrate.
+I have full context now. Let me set up the task list and start executing.
+Task 14-01-01/02 verified: `temporal-api.ts` (131 lines, all 5 methods + 2 batch utils, full JSDoc) and `temporal-api.test.ts` (36 tests) are committed and passing. Now migrating backend modules.
+Migrating `src/lib/db.ts` — the three `Timestamp.now().toSeconds()` sites produce seconds; replace with `TemporalConverter.dateToSec(new Date())` and drop the now-unused `Timestamp` import.
+Now `src/lib/binance.ts`:
+Now `src/routes/klines.ts`:
+Now let me verify the migrated modules pass their tests.
+Typecheck passes. Committing the migration as one atomic commit for task 14-01-03.
+Task 14-01-04: audits are clean (binance parseKline UTC-safe, db BETWEEN in seconds, klines conversion timezone-agnostic). Now add the spike-test regression assertion that `startTime` stays in milliseconds.
+Task 14-01-04 done. Now 14-01-05: full test suite, typecheck, and coverage.
+14-01 complete. Task 14-02-01/02: verify backend and frontend divergence imports.
+14-02-01/02 verified — only imports, no local definitions. Now 14-02-03: remove hardcoded divergence strings and generate options at runtime.
+Applying B3 fix: remove hardcoded values from `index.html` and generate options at runtime from `DIVERGENCE_TYPES`/`TYPE_LABELS`.
+Now update `records.js` to populate both the filter select and dialog radios at runtime:
+Found the bug: dynamically-added radios have `defaultChecked=false`, so `form.reset()` in `openForm(null)` unchecks all type radios and `submitForm` reads a null checked radio. Fix: set `defaultChecked` on the first radio.
+All pass. Committing 14-02-03.
+Task 14-02-04: create the backend↔frontend type sync test. Let me check tsconfig first (B2 concern about TS7016).
+`allowJs` is on, so importing the frontend JS from a TS test should type-check cleanly. Creating the sync test:
+Task 14-02-05: architecture documentation. Let me check README structure.
+Now link it from README's Documentation section:
+Task 14-02-06: enhance JSDoc. `temporal-api.ts` already has complete JSDoc. Let me expand `divergence.ts` type explanations and complete `timestamp.ts` method JSDoc.
+Now complete the `timestamp.ts` method JSDoc:
+Committing documentation and JSDoc work (14-02-05 + 14-02-06):
+Something's off — the commit only captured 2 files and `14-PLAN-CHECK.md` shows as deleted. Let me investigate.
+There's a concurrent process also committing to this repo (commits `ad16578`, `46d597d` aren't mine — a parallel executor made the sync test and docs first, so my follow-up commits captured only the diffs). The `14-PLAN-CHECK.md` deletion was not mine. Let me restore it and verify state.
+The docs are correct, but README now has duplicate links (mine + concurrent agent's). Let me dedupe.
+Task 14-02-07: final verification. Running the plan's verification commands.
+The remaining matches are only in test fixtures and the SSoT definitions themselves — production code (`records.js`, `validate.ts`, routes, services) no longer hardcodes divergence strings, and `index.html` is clean. Now coverage and import-centralization checks:
+All verification passes. Now task 14-03: code review. Let me review the phase-14 diff.
+The diff is clean and correct. Let me complete the review checks (console.log/debugger, lint config) and write PHASE-14-REVIEW.md.
+No eslint config (N/A), no `console.log`/`debugger` in production code. Writing the code review document following the repo's convention (REVIEW.md in the phase dir):
+Now the final end-to-end verification (14-02-07). Let me confirm the working tree is stable and run the complete verification suite.
+All green, my sync test version is in place. Writing the final summary.
+Phase 14 complete. All tasks executed, verified, and committed.
+
+**Tasks completed**: 14-01 (TemporalConverter verified/committed, migration of db/binance/klines, spike-test ms regression, full test suite), 14-02 (divergence imports verified, runtime option generation in index.html, backend↔frontend sync test, TIMESTAMP-GUIDE + README, JSDoc completion, final verification), 14-03 (code review — zero HIGH/CRITICAL).
+
+**No security fixes needed** (no DEV_* flags, no secrets, no auth bypass). No dead-code removals required.
+
+**Checkpoints**: none blocking. Note: a parallel executor interleaved two identical-scope commits (`ad16578`, `46d597d`) mid-run — both correct, preserved; my follow-up commits captured the residual diffs and the final state was re-verified green.
+
+**Deviations (logged in SUMMARY)**: SC2's "8+ modules" is really 4 active conversion modules (per plan-check W2); performance wording reconciled to the implemented `<500ms` assertion; review file named `14-REVIEW.md` per repo convention.
+
+**Verification**: `npm test` 405/405 pass, `npm run typecheck` exit 0, coverage 86.78% lines (temporal-api 100%), zero hardcoded divergence strings in `index.html`, zero scattered `Math.floor(ms/1000)` outside the SSoT.
+
+**Commits** (`git log --oneline 235c9b6..HEAD`):
+```
+2b0df24 docs(phase-14): add execution summary
+8d1154f docs(14-03): Phase 14 code review — zero HIGH/CRITICAL issues
+c8a6100 docs(14-02): dedupe duplicate TIMESTAMP-GUIDE links in README
+e97c220 docs(14-02): add TIMESTAMP-GUIDE and complete JSDoc
+46d597d docs(14-02): add TIMESTAMP-GUIDE and link from README
+1f23f55 test(14-02): add automated backend-frontend divergence type sync test
+10d2349 refactor(14-02): generate divergence type options at runtime
+ad16578 test(14-02): add backend↔frontend divergence type sync test
+8db3fc0 test(14-01): add spike-test regression that startTime stays in ms
+d5db51a refactor(14-01): migrate db.ts, binance.ts, klines.ts to TemporalConverter
+```
