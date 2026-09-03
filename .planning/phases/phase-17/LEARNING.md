@@ -368,6 +368,67 @@ All blockers resolved. Remaining 5 warnings are minor clarifications/improvement
 
 ---
 
+---
+
+## Code Review Findings & Resolutions (Post-Execution)
+
+**First Code Review** (commit range `4a9529a..c610d97`): 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW
+**Second Code Review** (commit range `4a9529a..8c6c1c1` after fixes): 0 CRITICAL, 0 HIGH, 0 MEDIUM, 5 LOW
+
+### Findings Resolved in This Session
+
+**L1 — LEARNING.md Option A vs Shipped Code (RESOLVED)**
+- **Issue**: LEARNING.md recorded `val.toString().toLowerCase() === 'short'` (Option A from TDD)
+  - But shipped code uses `['short','Short','SHORT'].includes(value)` (exact match)
+  - Missing test case: `'sHoRt' → 'long'` (edge case parity)
+- **Resolution**: 
+  - ✅ Updated LEARNING.md Option A snippet to exact-match form
+  - ✅ Added test case: `'sHoRt' normalizes to 'long'` 
+  - ✅ Commit `017109e`
+
+**L3 — 501 Error Code Semantics (RESOLVED)**
+- **Issue**: `501 "Not yet implemented"` mapped to `ErrorCode.INTERNAL_ERROR`
+  - Semantic mismatch: 501 = capability gap, not internal failure
+  - Codebase-consistent with `notFound` pattern (404 also uses INTERNAL_ERROR)
+- **Resolution**:
+  - ✅ Introduced `ErrorCode.NOT_IMPLEMENTED` enum
+  - ✅ Mapped to 501 HTTP status (semantic clarity)
+  - ✅ Updated stub to use NOT_IMPLEMENTED
+  - ✅ Commit `017109e`
+
+### Findings Recorded for Future (Phase 18+)
+
+**L2 — CalculatorOutputs Input Echo Strategy (ANALYZED & DOCUMENTED)**
+- **Issue**: Future `/compute` response design: should it echo inputs?
+  - Option A: Echo all 15 fields (100% parity, 55% test redundancy)
+  - Option B: Layered (inputs + results, 33% redundancy)
+  - Option C: Results only (0% redundancy, clean responsibility) ✅ **CHOSEN**
+- **Resolution**:
+  - ✅ TDD comparison: 3 mock implementations with full test suites
+  - ✅ Artifact: `L2-TDD-Schema-Comparison.test.ts` (533 lines, empirical evidence)
+  - ✅ Added to LEARNING.md "L2 Deep Dive" section
+  - ✅ Phase 17 already implements Option C (9 fields, no echo)
+  - ✅ Documented design choice in `CalculatorOutputs` JSDoc
+  - ✅ Commit `9979008` + `7beac28`
+
+**L4 — CF Access Auth Verification (NOTED FOR DEPLOY)**
+- **Status**: Cannot verify locally (CF Access is edge gateway, not local `wrangler dev`)
+- **Action**: At deploy time, verify with: `curl -H "Origin: evil.com" https://api/calculator/validate` → expect 401/403
+
+**L5 — calculator-rules.js Unused Mirror (NOTED AS DELIBERATE)**
+- **Status**: Ships unused but test-synced with backend (SC4 future-facing)
+- **Action**: When unfreezing client, reference this mirror
+
+### Security & Quality Verdict
+
+- ✅ **0 CRITICAL/HIGH** issues after all fixes
+- ✅ **Security**: no sinks, no secrets, no auth bypass, CORS tested
+- ✅ **Code Quality**: typecheck clean, 42/42 tests pass, coverage 88.42%
+- ✅ **Frozen Client**: SC2 verified (calculator.js unchanged, `git diff` empty)
+- ✅ **Design**: Locked decision on output schema (Option C, documented)
+
+---
+
 ## Final Summary (Ready for Execution)
 
 | Iteration | Date | Blockers | Warnings | Status |
