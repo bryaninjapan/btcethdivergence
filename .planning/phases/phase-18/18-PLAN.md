@@ -114,7 +114,7 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
 
 <verify>
 <automated>set -o pipefail; curl -sf "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000" | jq -e 'length >= 1000' > /dev/null && curl -sf "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000" | jq -r '.[0][0]' | awk '{ if (length($0) == 13) print "OK ms openTime:", $0; else exit 1 }' && curl -sfI "https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js" -o /dev/null</automated>
-<manual>Open public/demo-klinechart.html in Chrome. In the DevTools Console, verify: (1) no "Invalid time" / "Invalid timestamp" errors; (2) the console.assert message shows "VERIFIED" or "OK" for the fake data render; (3) after the real-data swap, the X-axis shows dates in 2026 (not 1970); (4) chart renders visible candles (not empty). These manual checks prove timestamp ms pass-through works correctly in the real demo.</manual>
+<manual>Open public/demo-klinechart.html in Chrome. In the DevTools Console, verify: (1) no "Invalid time" / "Invalid timestamp" errors; (2) the console logs 'Fake first bar timestamp:' for fake data, then after the real-data swap logs with 2026 dates; console.assert passes silently or logs 'Pass-through failed'; (3) after the real-data swap, the X-axis shows dates in 2026 (not 1970); (4) chart renders visible candles (not empty). These manual checks prove timestamp ms pass-through works correctly in the real demo.</manual>
 <fails_when>non-zero exit: Binance HTTP error, response length < 1000, openTime not exactly 13 digits (invalid ms), or extension ESM URL not reachable (non-200); OR manual checks: console errors, fake data not rendered, real data shows 1970 dates, or chart empty</fails_when>
 </verify>
 
@@ -143,8 +143,8 @@ A single, thin, end-to-end tracer validates the core path: **Binance data → KL
    chart.resetData()
    chart.setDataLoader({ getBars: ({ callback }) => callback(fakeBars) })  // renders fake data (R18-05)
    // then swap to the real Binance data fetched in Task 1.1:
-chart.resetData()
-    chart.setDataLoader({ getBars: ({ callback }) => callback(bars) })      // renders real 1000+ candles (CONTEXT decision)
+   chart.resetData()
+   chart.setDataLoader({ getBars: ({ callback }) => callback(bars) })      // renders real 1000+ candles (CONTEXT decision)
     ```
     - If the chart clears without re-rendering after `resetData()`, re-call `chart.setPeriod({ span: 1, type: 'hour' })` (or `setSymbol`) to force an init load.
     - Note in the demo doc: fake-data render = R18-05 check; real-data render = CONTEXT "完整真實數據" check.
@@ -223,12 +223,12 @@ Sections:
    
    **Event System**:
    - `onVisibleLogicalRangeChange()` → `chart.subscribeAction('onVisibleRangeChange', callback)` (verified in v10; full observer pattern)
-   - `unsubscribeAction(id)` → unsubscribe from specific action (v10 tracks subscription IDs)
+   - `unsubscribeAction(type, callback?)` → unsubscribe by action type (optionally scoped to callback)
    - Available actions: `onVisibleRangeChange`, `onCrosshairChange`, `onCandleBarClick`, etc.
    
    **Chart Navigation & Viewport**:
    - `timeScale().scrollToTimestamp(timestamp)` → `chart.scrollToTimestamp(timestamp)` (v10 direct method)
-   - `timeScale().zoomAtTimestamp(scale, timestamp)` → use `subscribeAction` to track zoom + re-render (v10 uses different zoom model)
+   - `timeScale().zoomAtTimestamp(scale, timestamp)` → `chart.zoomAtTimestamp(scale, timestamp, animationDuration?)` (direct; use subscribeAction for range-sync only)
 
 3. **CDN vs npm Trade-offs**
    - CDN: Pros (zero build setup, cache), Cons (size, no tree-shake, extension is ESM-only)
@@ -236,7 +236,7 @@ Sections:
    - Recommendation: **CDN for demo + Phase 19-21 (keep no-build constraint); extension loaded via ESM `<script type="module">` (Phase 20); npm only if a build step is introduced**
 
 4. **Known Limitations**
-   - Built-in indicators: KLineChart base has no built-in indicator overlays — indicators are configured via the indicator engine and overlays come from @klinecharts/extension (verify exact capabilities during assessment)
+   - Built-in indicators: KLineChart base ships built-in engine — MA, EMA, MACD, RSI, BOLL, VOL, SMA, KDJ, WR, DMI via `createIndicator`; @klinecharts/extension adds drawing overlays (Phase 20) and can register further indicators (verify via `getSupportedIndicators()` during assessment)
    - @klinecharts/data-aggregator: **deferred to v3.1, NOT in scope (R18-10)** — user is a post-analysis trader, REST API sufficient
    - Cross-browser: All major browsers supported (Chrome, Firefox, Safari, Edge)
    - Mobile: Touch events supported, gesture API compatible
@@ -253,6 +253,7 @@ Sections:
 Measure and record lightweight-charts performance as the reference for Phase 19's comparison.
 
 **Prerequisite**: Ensure `wrangler dev` is running and D1 database is seeded with kline data before starting measurements. The charts page makes HTTP requests to `/api/klines` (Worker route), which requires the local dev server to be active. Without it, the page will timeout or error.
+   - **Pre-check**: Verify dev server + D1 seeded: `curl -sf "http://localhost:8787/api/klines?symbol=BTCUSDT&limit=5" | jq -e 'length > 0'` (should return successfully with row count)
 
 1. **Initialization Time** (Chrome DevTools)
    - Open `public/charts.html` (the page that actually renders charts — `index.html` is the records page with NO charts)
@@ -343,7 +344,7 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
 </acceptance_criteria>
 
 <verify>
-<automated>test -f .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md && grep -c "klinecharts@10.0.3" .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md && test -f .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md && ! grep -qE "180ms|11MB|50KB|58fps|250ms|8MB|50fps" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md && grep -cE "^\\| Chrome" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md | awk '$1>=4' && grep -cE "^\\| Safari iOS" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md | awk '$1>=3' && grep -q "Source" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md && test -f .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md && [ "$(grep -cE "✓ (Understand|VERIFIED)" .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md)" -ge 4 ]</automated>
+<automated>test -f .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md && grep -c "klinecharts@10.0.3" .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md && test -f .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md && ! grep -qE "180ms|11MB|50KB|58fps|250ms|8MB|50fps" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md && [ "$(grep -cE "^\\| Chrome" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md)" -ge 4 ] && [ "$(grep -cE "^\\| Safari iOS" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md)" -ge 3 ] && grep -q "Source" .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md && test -f .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md && [ "$(grep -cE "✓ (Understand|VERIFIED)" .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md)" -ge 4 ]</automated>
 <fails_when>assessment file missing, no klinecharts@10.0.3 mention, baseline file missing, any template placeholder value still present (180ms/11MB/50KB/58fps/250ms/8MB/50fps), fewer than 4 Chrome or 3 Safari iOS measurement rows, no Source column in the baseline table, checklist file missing, or fewer than 4 marked items (3 Week sections + Critical Data Transform) (exit code non-zero)</fails_when>
 </verify>
 
@@ -381,7 +382,7 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
    - Phases 18 (10) + 19 (10) + 20 (9) + 21 (9) + 22 (7) = 45 ✓
 
 5. Commit Phase 18 deliverables and push the dev branch (R18-08):
-   - Stage Phase 18 artifacts: `git add public/demo-klinechart.html .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md .planning/ROADMAP.md`
+   - Stage Phase 18 artifacts: `git add public/demo-klinechart.html .planning/phases/phase-18/18-COMPATIBILITY-ASSESSMENT.md .planning/phases/phase-18/18-BASELINE-LIGHTWEIGHT.md .planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md .planning/ROADMAP.md .planning/REQUIREMENTS.md`
    - Commit with message referencing phase: `git commit -m "Phase 18: demo + compatibility assessment + performance baseline + migration checklist verified"`
    - Push to remote: `git push -u origin feature/klinechart-migration`
    - Verify: `git ls-remote origin feature/klinechart-migration` returns the local HEAD commit
@@ -397,7 +398,7 @@ Mark all items **✓** or list clarifications. If any item is unclear, escalate 
 </acceptance_criteria>
 
 <verify>
-<automated>grep -cE "^#### Phase 1[89]|^#### Phase 2[0-2]" .planning/ROADMAP.md | awk '$1>=5' && grep -q "Status.*🚧" .planning/ROADMAP.md && grep -c "| R18-\|| R19-\|| R20-\|| R21-\|| R22-" .planning/REQUIREMENTS.md | awk '$1>=45' && git ls-remote origin feature/klinechart-migration | grep -q "$(git rev-parse HEAD)"</automated>
+<automated>[ "$(grep -cE "^#### Phase 1[89]|^#### Phase 2[0-2]" .planning/ROADMAP.md)" -ge 5 ] && grep -q "Status.*🚧" .planning/ROADMAP.md && [ "$(grep -c "| R18-\|| R19-\|| R20-\|| R21-\|| R22-" .planning/REQUIREMENTS.md)" -ge 45 ] && git ls-remote origin feature/klinechart-migration | grep -q "$(git rev-parse HEAD)"</automated>
 <manual>Verify Task 3.1 manually: (1) ROADMAP.md Phase 18 shows Status: 🚧 IN PROGRESS (on line after heading); (2) ROADMAP.md Phases 19-22 each have **Success Criteria** section; (3) REQUIREMENTS.md lists 45+ requirements (R18-01 to R22-07 via `grep -c "| R"`); (4) `git log` shows commit with demo-klinechart.html + 18-*.md files + ROADMAP.md + REQUIREMENTS.md updates; (5) `git ls-remote origin feature/klinechart-migration` returns matching commit hash.</manual>
 <fails_when>fewer than 5 phase headings in ROADMAP.md, no "Status: 🚧" line in ROADMAP.md, requirement count < 45 in REQUIREMENTS.md, or remote branch does not match local HEAD (exit code non-zero)</fails_when>
 </verify>
