@@ -36,6 +36,18 @@
 | 16-03 Unit tests (42 cases, coverage ≥95%) | ✅ |
 | 16-04 Route refactor + /stats endpoint | ✅ |
 | 16-05 Code review + docs | ✅ |
+| 16-fix-1..3 + 16-06 + review follow-ups (LOW-1..3) | ✅ |
+
+### Post-review fixes (all verified)
+- `e66251f` fix(16-fix-1) msb default → `createRecordSchema` only (partial PUT no longer resets `msb`)
+- `225ac8c` refactor(16-fix-2) `parseBody` helper → POST/PUT ≤10 lines
+- `6d567ac` fix(16-fix-3) concurrent-delete guard in `update()` (`changes === 0` → null)
+- `aea4c0d` fix(16-06) merged-row time validation in `update()` (closes review MEDIUM: lone-time partial PUT)
+- `1d3416b` + `c24c8fe` fix/test(16-LOW-3) `findByTimeRange` start<end validation + tests
+- `b3c3e17` + `c24c8fe` test(16-LOW-2) MockD1 `setNextRunMetaChanges` + concurrent-delete branch test
+- `ebe9c80` feat(test-db) SELECT column projection in MockD1 (16-LOW-3 fidelity)
+- `bd25735` fix(cors) restrict origins to trusted hosts (16-LOW-4)
+- `2f58334` fix(typecheck) CORS origin callback returns `null` not `false` (Hono type) — re-verified typecheck green
 
 ## Success Criteria (all met)
 
@@ -43,9 +55,9 @@
 - **SC2** All records SQL + `escapeLikeWildcards` moved from routes/db.ts ✅
 - **SC3** `constructor(db: D1Database, now?: () => number)` ✅
 - **SC4** All handlers ≤10 lines; `findById` internal only (no HTTP endpoint) ✅
-- **SC5** 42 unit tests (target 41); zero existing tests deleted ✅
+- **SC5** 42 unit tests (target 41); zero existing tests deleted — **47 final** ✅
 - **SC6** All integration tests pass incl. 6 `/stats` tests; E2E 81/81 ✅
-- **SC7** Coverage: global lines 87.1% (≥85%); repository 96.6% (≥95%, manual) ✅
+- **SC7** Coverage: global lines 87.5% (≥85%); repository 97.01% (≥95%, manual) ✅
 - **SC8** Code review: zero HIGH/CRITICAL ✅
 
 ## Security & Cleanup Fixes
@@ -77,10 +89,10 @@ None requiring user input.
 ## Verification Commands (run green)
 
 ```bash
-npm test                                     # 480/480 (36 files)
+npm test                                     # 492/492 (36 files)
 npm run typecheck                            # zero errors
-npm run test:coverage                        # Lines 87.1% (>=85%); repo 96.6%
-npx vitest run src/services/RecordsRepository.test.ts   # 42 pass
+npm run test:coverage                        # Lines 87.5% (>=85%); repo 97.01%
+npx vitest run src/services/RecordsRepository.test.ts   # 47 pass
 npx playwright test e2e/records.spec.ts      # 24 pass
 npx playwright test                          # 81/81 full suite
 ```
