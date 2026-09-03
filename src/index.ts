@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { errorMiddleware, type ApiResponse } from './lib/error-middleware';
 import { ErrorCode } from './lib/errors';
 import admin from './routes/admin';
+import clientLog from './routes/client-log';
 import klines from './routes/klines';
 import records from './routes/records';
 import type { Env } from './types';
@@ -45,6 +46,7 @@ app.get('/api/health', (c) => {
 });
 
 app.route('/', admin);
+app.route('/', clientLog);
 app.route('/', klines);
 app.route('/', records);
 
