@@ -44,12 +44,12 @@ KLineChart 生態系統遷移前的環境驗證 + 三倉庫相容性評估 + 性
 - 檢查 @klinecharts/pro 作為參考（雖然不用，但有助理解完整生態）
 
 ### 遷移風險優先級
-**Decision**: Timestamp 轉換首先驗證  
-**Why**: 最關鍵的阻塞風險。Binance `open_time` 是毫秒，KLineChart 需要秒。轉換錯誤 → 圖表無法渲染。  
+**Decision**: Timestamp 合約首先驗證  
+**Why**: 最關鍵的阻塞風險。Binance `open_time` 是毫秒；KLineChart **v10 亦需毫秒**（`timestamp` 欄位）→ 無需轉換，直接 pass-through。（更正 2026-09-03 plan-check：早期「KLineChart 需要秒」為 v9 時代誤解，v10 與 lightweight-charts 同為毫秒。）  
 **How**:
-1. Demo 中首先測試 `Math.floor(open_time / 1000)` 轉換
-2. 驗證 KLineChart 是否正確解析秒級時間戳
-3. 再驗證其他 API 差異（Event、Style）
+1. Demo 中首先驗證 ms pass-through：Binance `open_time` 不經轉換、以 `timestamp` 鍵餵入 `setDataLoader`
+2. 驗證 KLineChart v10 正確渲染毫秒時間戳（不做 `Math.floor(open_time / 1000)`）
+3. 再驗證其他 API 差異（Event、Style、loader API）
 
 ---
 

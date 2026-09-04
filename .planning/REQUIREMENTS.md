@@ -36,7 +36,7 @@
 |----|-------------|----------|--------|
 | R19-01 | 從 charts.html 移除 lightweight-charts CDN，加入 KLineChart UMD | HIGH | ⬜ |
 | R19-02 | ChartManager.js 遷移到 KLineChart API（init、destroy、dispose） | HIGH | ⬜ |
-| R19-03 | Timestamp 轉換：所有 Binance open_time (ms) 正確轉為秒 | CRITICAL | ⬜ |
+| R19-03 | Timestamp pass-through: Binance open_time (ms) 以 `timestamp` 鍵直通，無轉換 | CRITICAL | ⬜ |
 | R19-04 | 雙圖表時間同步功能正常（左右滾動連動） | HIGH | ⬜ |
 | R19-05 | Log scale 切換功能正常 | HIGH | ⬜ |
 | R19-06 | 從記錄表「查看K線」跳轉功能正常 | HIGH | ⬜ |

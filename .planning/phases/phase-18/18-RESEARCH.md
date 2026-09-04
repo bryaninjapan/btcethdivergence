@@ -46,7 +46,7 @@ All core research completed in prior session. This document aggregates findings 
 
 ## 2. Technical Assessment: API Differences & Risks
 
-**Source**: `.planning/technical-assessment.md`
+**Source**: `.planning/technical-assessment.md` (⚠️ this source encodes v9-era API claims; re-verified against the installed v10.0.3 package and official v10 docs below)
 
 ### Performance Benchmarks (Baseline Target)
 
@@ -60,12 +60,13 @@ All core research completed in prior session. This document aggregates findings 
 
 ### Critical API Differences
 
-#### 1. **Timestamp Format** 🔴 CRITICAL
+#### 1. **Timestamp Contract** 🔴 CRITICAL (CORRECTED for v10)
 - **lightweight-charts**: milliseconds (`1693526400000`)
-- **KLineChart**: **seconds** (`1693526400`)
-- **Migration risk**: HIGH — wrong conversion → empty chart
-- **Mitigation**: `Math.floor(open_time / 1000)`
-- **Verification**: Must test in Phase 18 demo
+- **KLineChart v10**: **milliseconds** too — same unit. KLineData field is `timestamp: number` (ms)
+- **Binance `open_time`**: already milliseconds
+- **Migration risk**: NONE for unit conversion — pass `open_time` through unchanged. The real risks are the key name (`timestamp`, NOT `time`) and the loader API (`setDataLoader`/`getBars`; v9 `applyNewData`/`updateData`/`applyMoreData` were REMOVED)
+- **Mitigation**: pass-through `{ timestamp: open_time, ... }` — do NOT apply `Math.floor(open_time / 1000)` (would render 1970 bars)
+- **Verification**: Phase 18 demo (Task 1.2) — confirmed ms pass-through renders correctly
 
 #### 2. **Event/Subscription API** 🟡 HIGH
 - **lightweight-charts**: `onVisibleLogicalRangeChange()` (single callback)
@@ -85,16 +86,18 @@ All core research completed in prior session. This document aggregates findings 
 - **Change**: Complete syntax overhaul
 - **Impact**: Affects `charts.js` style initialization
 
-#### 4. **Chart Instance & Methods**
-- **lightweight-charts**: `chart.createSeries(SeriesType.Candlestick, {})`
-- **KLineChart**: `KLineChart.init(container, { kline: {...} })`
-- **Difference**: KLineChart returns chart instance directly, no separate series
+#### 4. **Chart Instance & Methods** (CORRECTED for v10)
+- **lightweight-charts**: `chart.createChart(container, opts)` + `chart.addCandlestickSeries()` then `series.setData(candles)`
+- **KLineChart v10**: `klinecharts.init(container, options)` — UMD global is lowercase `klinecharts`; `Options` has NO `kline` key. No explicit series creation (built-in). Data loads via `setSymbol` → `setPeriod` → `setDataLoader({ getBars })`; v9 `applyNewData`/`updateData`/`applyMoreData`/`setLoadMoreData` were REMOVED
+- **Difference**: KLineChart returns chart instance directly, no separate series; data writing goes through the loader API
 
 ### Risk Matrix (Priority Ranking)
 
 | Risk | Severity | Phase Detection | Mitigation |
 |------|----------|-----------------|-----------|
-| Timestamp ms→s conversion | CRITICAL | Phase 18 demo | Math.floor test + unit test |
+| Timestamp contract (ms pass-through + `timestamp` key) | CRITICAL | Phase 18 demo (Task 1.2) | Pass-through, no conversion; assert 13-digit ms unchanged |
+| Data loader API (`setDataLoader`/`getBars`, removed v9 APIs) | HIGH | Phase 18 demo (Task 1.1) | Follow order init → setSymbol → setPeriod → setDataLoader |
+| Extension ESM-only (no UMD build) | HIGH | Phase 18 connectivity + Phase 20 | Use `<script type="module">` or npm; never plain `<script src>` |
 | Event API changes | HIGH | Phase 18 + Phase 19 | Study docs, test in demo |
 | Style config syntax | HIGH | Phase 19 | Reference guide + trial |
 | CDN vs npm loading | MEDIUM | Phase 18 | Both approaches validated |
@@ -117,10 +120,14 @@ const chart = createChart(container, options)
 const series = chart.createSeries(SeriesType.Candlestick, {})
 series.setData(data)
 
-// AFTER (KLineChart)
+// AFTER (KLineChart v10)
 import { init } from 'klinecharts'
 const chart = init(container, { ...options })
-chart.applyNew({ candles: data })
+chart.setSymbol({ ticker: 'BTCUSDT', pricePrecision: 2, volumePrecision: 5 })
+chart.setPeriod({ span: 1, type: 'hour' })
+chart.setDataLoader({
+  getBars: ({ callback }) => callback(bars)
+})
 ```
 
 #### Week 2-3: Event Synchronization
@@ -135,7 +142,7 @@ chart.subscribeAction('onVisibleRangeChange', (data) => { /* sync */ })
 #### Critical Data Transformation (applies to all K-line sources)
 ```javascript
 const toCandle = (row) => ({
-  time: Math.floor(row.open_time / 1000),  // 🔴 CRITICAL: ms → seconds
+  timestamp: row.open_time,             // ✅ v10: pass-through ms (key is `timestamp`, NOT `time`)
   open: parseFloat(row.open),
   high: parseFloat(row.high),
   low: parseFloat(row.low),
@@ -190,13 +197,13 @@ const toCandle = (row) => ({
 ### Dev Environment
 - [ ] `npm install klinecharts@10.0.3` successful
 - [ ] `import { init } from 'klinecharts'` resolves in browser console
-- [ ] @klinecharts/extension CDN URL returns 200 OK
+- [ ] @klinecharts/extension ESM URL returns 200 OK (`https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` — ESM-only, NO UMD build; cannot use plain `<script src>`)
 - [ ] Git branch `feature/klinechart-migration` exists and is tracking
 
 ### Demo Prerequisites
 - [ ] Binance API accessible from Cloudflare Workers (test with spike request)
 - [ ] 1000+ K-lines fetchable (BTCUSDT 1h, ~1 month data)
-- [ ] Timestamp conversion tested: `Math.floor(ms / 1000)` produces valid Unix seconds
+- [ ] Timestamp contract tested: Binance `open_time` (ms) passes through unchanged under the `timestamp` key (NO ms→s conversion)
 - [ ] HTML demo page can be opened in Chrome + Safari iOS without errors
 
 ### Compatibility Assessment (Deep Level)
@@ -217,11 +224,11 @@ const toCandle = (row) => ({
 5. **Cost**: Open-source (Apache-2.0)
 
 ### ⚠️ Challenges to Prepare For
-1. **Timestamp conversion** — Must be milliseconds → seconds
+1. **Timestamp contract** — v10 requires ms under the `timestamp` key; Binance `open_time` is already ms → pass-through, no conversion
 2. **Event system rewrite** — Callback-based → subscriber pattern
 3. **Style config** — Completely different syntax
 4. **Documentation** — Less abundant than TradingView-native tools (but functional docs exist)
-5. **drawing tools CDN** — extension must load separately or bundled
+5. **drawing tools CDN** — @klinecharts/extension@0.1.0 is ESM-only (no UMD build); load via `<script type="module">` or npm in Phase 20
 
 ### 🎯 Phase 18 Success Metrics
 - [ ] Demo renders BTCUSDT (1000+ candles) correctly in Chrome + iOS

@@ -38,7 +38,7 @@
 - [ ] 所有高風險 API 差異已識別
 
 **Requirements**: R18-01 to R18-10  
-**Status**: ⬜ Not started
+**Status**: 🚧 IN PROGRESS
 
 ---
 
