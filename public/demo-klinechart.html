@@ -1,3 +1,8 @@
+<!--
+  DISPOSITION: This demo file currently ships to production as a static asset.
+  Status: Harmless (public Binance data + CDN scripts only).
+  Action: Gate behind Cloudflare Access or remove/rename during Phase 22 hardening.
+-->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -424,10 +429,9 @@
               })
 
               // Verify that actual bars[0] timestamp matches Binance openTime (regression guard)
-              console.assert(
-                bars[0].timestamp === firstOpenTime,
-                `Pass-through regression: mapped timestamp ${bars[0].timestamp} does not match Binance openTime ${firstOpenTime}`
-              )
+              if (bars[0].timestamp !== firstOpenTime) {
+                throw new Error(`Pass-through regression: mapped timestamp ${bars[0].timestamp} does not match Binance openTime ${firstOpenTime}`)
+              }
               console.log('✓ Real-data swap complete (CONTEXT decision "完整真實數據" check)')
               console.log(`Chart now displays ${bars.length} real candles from Binance (2026 dates)`)
 

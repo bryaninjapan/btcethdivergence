@@ -27,7 +27,7 @@
 - ✓ API differences documentation: understood (documented in 18-RESEARCH.md §2, re-verified against v10.0.3 types)
 
 #### Existing Project Structure Review (Day 1-2)
-- ✓ Identify all lightweight-charts usage: understood (scope: public/charts.html + public/index.html + src/public/chart-manager.ts)
+- ✓ Identify all lightweight-charts usage: understood (scope: public/charts.html + public/index.html + public/js/managers/ChartManager.js)
 - ✓ Code line counting: understood
 - ✓ ChartManager complexity analysis: understood (event system is the high-risk area)
 - ✓ Migration backlog creation: understood
@@ -110,8 +110,7 @@
   - OLD: `chart.priceScale('right').applyOptions({ mode: Logarithmic })`
   - **NEW (v10.0.3 API)**: Use `chart.overrideYAxis(yAxisOverride)` with custom `createRange` callback for logarithmic scaling
   - **Implementation pattern**: `chart.overrideYAxis({ createRange: (params) => customLogScale(params) })`
-  - Alternatively: `chart.setPriceScale()` if available in your v10 build; verify with `node_modules/klinecharts/dist/index.d.ts` line 1171
-  - Consult `18-RESEARCH.md §2` for exact AxisOverride/createRange implementation details
+  - **Log scale reference**: Verified in v10.0.3 d.ts (lines 1171: `overrideYAxis`, 658: `AxisOverride.createRange`)
 - ✓ Linear vs. logarithmic display difference understood
 - ✓ Y-axis label formatting for exponential data: understood (custom `displayValueToText` callback in AxisTemplate)
 - ✓ Verification methodology: toggle test, visual inspection, performance stress test (100 toggles)

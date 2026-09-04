@@ -13,16 +13,16 @@
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| R18-01 | klinecharts@10.0.3 已安裝並驗證（`import` 可用） | HIGH | ⬜ |
-| R18-02 | @klinecharts/extension CDN 連線測試通過 | HIGH | ⬜ |
-| R18-03 | 三倉庫相容性評估文件完成（版本衝突、API 差異、timestamp 格式） | HIGH | ⬜ |
-| R18-04 | Migration Checklist 逐條確認（所有項目已理解） | HIGH | ⬜ |
-| R18-05 | 獨立 KLineChart demo HTML 可以渲染 BTCUSDT K 線（使用假資料） | HIGH | ⬜ |
-| R18-06 | 性能基準已記錄：lightweight-charts 初始化時間、記憶體用量、bundle size | MEDIUM | ⬜ |
-| R18-07 | 5 個 phase 詳細計劃已最終確認（此 ROADMAP 文件） | HIGH | ⬜ |
-| R18-08 | 開發分支 `feature/klinechart-migration` 已建立並推送 | HIGH | ⬜ |
-| R18-09 | 已識別所有高風險 API 差異（timestamp ms→s、事件名稱、style config） | HIGH | ⬜ |
-| R18-10 | 已確認 data-aggregator 延後至 v3.1（使用者為事後分析交易者） | LOW | ⬜ |
+| R18-01 | klinecharts@10.0.3 已安裝並驗證（`import` 可用） | HIGH | ✅ |
+| R18-02 | @klinecharts/extension CDN 連線測試通過 | HIGH | ✅ |
+| R18-03 | 三倉庫相容性評估文件完成（版本衝突、API 差異、timestamp 格式） | HIGH | ✅ |
+| R18-04 | Migration Checklist 逐條確認（所有項目已理解） | HIGH | ✅ |
+| R18-05 | 獨立 KLineChart demo HTML 可以渲染 BTCUSDT K 線（使用假資料） | HIGH | ✅ |
+| R18-06 | 性能基準已記錄：lightweight-charts 初始化時間、記憶體用量、bundle size | MEDIUM | ✅ |
+| R18-07 | 5 個 phase 詳細計劃已最終確認（此 ROADMAP 文件） | HIGH | ✅ |
+| R18-08 | 開發分支 `feature/klinechart-migration` 已建立並推送 | HIGH | ✅ |
+| R18-09 | 已識別所有高風險 API 差異（timestamp ms→s、事件名稱、style config） | HIGH | ✅ |
+| R18-10 | 已確認 data-aggregator 延後至 v3.1（使用者為事後分析交易者） | LOW | ✅ |
 
 **Success Criteria (充分準備版)**: 所有 R18-0x 完成，demo 可正確渲染，基準數據記錄完整。
 
