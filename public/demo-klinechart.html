@@ -148,6 +148,11 @@
           <span class="status-value" id="status-extension">Checking...</span>
         </div>
         <div class="status-item">
+          <span class="status-icon pending" id="icon-esm-import">⧗</span>
+          <span class="status-text">Extension ESM dynamic import</span>
+          <span class="status-value" id="status-esm-import">Checking...</span>
+        </div>
+        <div class="status-item">
           <span class="status-icon pending" id="icon-chart">⧗</span>
           <span class="status-text">Chart Render</span>
           <span class="status-value" id="status-chart">Initializing...</span>
@@ -228,6 +233,19 @@
           <code
             >ESM-only (no UMD build); functional integration deferred to Phase 20</code
           >
+        </div>
+        <div class="info-item">
+          <span class="label">Verified ESM import URL (jsDelivr +esm bundle):</span>
+          <br />
+          <code
+            >https://cdn.jsdelivr.net/npm/@klinecharts/extension@0.1.0/dist/index.js/+esm</code
+          >
+          <br />
+          <span style="font-size: 11px; color: #666; margin-top: 4px; display: block;">
+            Raw dist/index.js overlays use bare `from "klinecharts"` imports (no import
+            map) — the +esm bundle rewrites them to resolvable CDN paths. Check console
+            for "extension ESM dynamic import OK" log.
+          </span>
         </div>
       </div>
     </div>
@@ -485,6 +503,55 @@
         document.addEventListener('DOMContentLoaded', main)
       } else {
         main()
+      }
+    </script>
+
+    <!-- ESM dynamic import verification (R18-01 supplement / Phase 20 path).
+         Independent of the UMD chart above: proves the ESM CDN path executes. -->
+    <script type="module">
+      const KCHART_ESM_URL = 'https://cdn.jsdelivr.net/npm/klinecharts@10.0.3/+esm'
+      const EXTENSION_ESM_IMPORT_URL =
+        'https://cdn.jsdelivr.net/npm/@klinecharts/extension@0.1.0/dist/index.js/+esm'
+
+      const esmIcon = document.getElementById('icon-esm-import')
+      const esmValue = document.getElementById('status-esm-import')
+
+      function setEsmStatus(status, message) {
+        esmIcon.textContent =
+          status === 'ok' ? '✓' : status === 'error' ? '✕' : '⧗'
+        esmIcon.className = `status-icon ${status}`
+        esmValue.textContent = message
+      }
+
+      try {
+        const kchartMod = await import(KCHART_ESM_URL)
+        console.log(
+          '✅ klinecharts ESM dynamic import OK (R18-01 supplement):',
+          typeof kchartMod.init === 'function'
+            ? 'init is a function'
+            : 'init missing'
+        )
+      } catch (e) {
+        console.error(
+          '❌ klinecharts ESM dynamic import FAILED:',
+          e.message || String(e),
+          e
+        )
+      }
+
+      try {
+        const extMod = await import(EXTENSION_ESM_IMPORT_URL)
+        const overlayCount = Object.keys(extMod).length
+        setEsmStatus('ok', `OK (${overlayCount} overlay exports)`)
+        console.log(
+          '✅ extension ESM dynamic import OK (Phase 20 path):',
+          EXTENSION_ESM_IMPORT_URL,
+          `overlays: ${overlayCount}`
+        )
+      } catch (e) {
+        const msg = `ESM import failed: ${e.message || String(e)}`
+        setEsmStatus('error', msg)
+        console.error('❌ extension ESM dynamic import FAILED:', msg, e)
       }
     </script>
   </body>

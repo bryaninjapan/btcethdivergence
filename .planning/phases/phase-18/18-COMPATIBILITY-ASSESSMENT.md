@@ -35,7 +35,7 @@
 |--------|-------|--------|
 | **Latest Version** | v0.1.0 | ✅ Available |
 | **Build Format** | ESM-only (no UMD) | ⚠️ Must use `<script type="module">` |
-| **CDN ESM URL** | `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` | ✅ Verified reachable |
+| **CDN ESM URL** | `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` | ✅ Reachable (HTTP 200); NOT directly importable (bare `from "klinecharts"` imports, no import map). Working import URL: jsDelivr `+esm` bundle `https://cdn.jsdelivr.net/npm/@klinecharts/extension@0.1.0/dist/index.js/+esm` — verified executing in demo |
 | **npm Import** | `import { registerOverlay } from '@klinecharts/extension'` | ✅ ESM native |
 | **Drawing Tools** | 20+ tools (lines, fibonacci, gann, waves, shapes) | ✅ Phase 20 feature |
 | **Compatibility** | Works on v10.0.3 base | ✅ Verified in types |
@@ -519,12 +519,12 @@ klinecharts.init(container, { styles })
 - ⚠️ Bundle size monitoring harder (must check Network tab at runtime)
 - ⚠️ Version updates require HTML edit (not package.json)
 
-**CDN URLs (Verified Reachable):**
-- KLineChart UMD: `https://unpkg.com/klinecharts@10.0.3/dist/umd/klinecharts.min.js`
-- KLineChart ESM: `https://unpkg.com/klinecharts@10.0.3/dist/index.esm.js`
-- Extension ESM: `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js`
+**CDN URLs (Verified Reachable + Importable):**
+- KLineChart UMD: `https://unpkg.com/klinecharts@10.0.3/dist/umd/klinecharts.min.js` — ✅ importable (classic script, used by demo)
+- KLineChart ESM: `https://cdn.jsdelivr.net/npm/klinecharts@10.0.3/+esm` — ✅ dynamic import verified executing in demo (`init` is a function). ⚠️ Raw `https://unpkg.com/klinecharts@10.0.3/dist/index.esm.js` is HTTP 200 but NOT browser-importable (`ReferenceError: process is not defined` — references `process.env`); jsDelivr `+esm` shims it.
+- Extension ESM: `https://cdn.jsdelivr.net/npm/@klinecharts/extension@0.1.0/dist/index.js/+esm` — ✅ dynamic import verified executing in demo (18 overlay exports). ⚠️ Raw `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` is HTTP 200 but NOT directly importable (overlays use bare `from "klinecharts"` imports, no import map).
 
-**Recommendation**: **Use CDN for Phases 18-21**. Maintains zero-build constraint. ESM dynamic import (Phase 20, Task 1.2 supplement) validates CDN ESM availability without build step.
+**Recommendation**: **Use CDN for Phases 18-21**. Maintains zero-build constraint. ESM dynamic import of the jsDelivr `+esm` bundles is verified executing in `public/demo-klinechart.html` (module block, Phase 20 path) — CDN ESM availability proven without build step.
 
 ---
 
@@ -601,7 +601,7 @@ klinecharts.init(container, { styles })
 | **Data loader API (`setDataLoader`/`getBars`, v9 methods removed)** | HIGH | ✅ VERIFIED | v10 `setDataLoader()` API works via CDN UMD. Order: init → setSymbol → setPeriod → setDataLoader. v9 `applyNewData`, `updateData`, `applyMoreData`, `setLoadMoreData` confirmed absent from index.d.ts. | Follow order init → setSymbol → setPeriod → setDataLoader. Type-aware loading (init/forward/backward/update) documented but not required for Phase 18 demo. | 18 (Task 1.1) |
 | **Event API changes (callback → subscribeAction)** | HIGH | Ready for Phase 19 | v10 `subscribeAction()` signature confirmed (line 1184 index.d.ts). ActionType enum includes `onVisibleRangeChange`, `onZoom`, `onScroll`, `onCandleBarClick`, etc. | Study docs. Implement subscriber pattern in Phase 19. Chart sync logic must query visible range via subscribeAction callback (not direct timeScale property). | 19 |
 | **Style config syntax overhaul (flat → nested)** | HIGH | Ready for Phase 19 | v10 Styles interface (line 502-511 index.d.ts) confirms nested structure: grid, candle, xAxis, yAxis, crosshair, overlay, indicator, separator. | Create style migration guide. Reference sample styles in RESEARCH.md. Trial styling on demo chart. Phase 19 implementation includes style refactor. | 19 |
-| **Extension ESM-only (no UMD build)** | HIGH | ✅ VERIFIED | @klinecharts/extension@0.1.0 ESM URL tested: `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` returns 200. No UMD build available. | CDN UMD for base library (✅). Extension loaded via `<script type="module">` dynamic import (Phase 20, Task 1.2 supplement verified). ESM path works under no-build constraint. | 18 (verified), 20 (implementation) |
+| **Extension ESM-only (no UMD build)** | HIGH | ✅ VERIFIED | Extension is ESM-only (no UMD/IIFE build). Raw `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` returns 200 but is NOT directly importable (bare `from "klinecharts"` imports). jsDelivr `+esm` bundle (`https://cdn.jsdelivr.net/npm/@klinecharts/extension@0.1.0/dist/index.js/+esm`) dynamic-imported successfully in demo — 18 overlay exports. | CDN UMD for base library (✅). Extension loaded via `<script type="module">` dynamic import of the jsDelivr `+esm` bundle (verified executing in demo, Phase 20 path). ESM path works under no-build constraint. | 18 (verified), 20 (implementation) |
 | **Indicator engine (`createIndicator`, built-in vs custom)** | MEDIUM | Ready for Phase 21 | v10 `createIndicator()` (line 1163 index.d.ts) and `getSupportedIndicators()` (line 1233 index.d.ts) confirmed. 50+ built-in indicators present (MA, EMA, MACD, RSI, BOLL, VOL, KDJ, WR, DMI, etc.). Custom registration API ready for exploration Phase 21. | Built-in indicators sufficient for MVP (Phase 21). If custom indicators needed, test `registerIndicator()` API in Phase 21 spike. | 21 |
 | **Zoom model (`zoomAtTimestamp` on dual charts)** | MEDIUM | Ready for Phase 19 | v10 `zoomAtTimestamp()` (line 1180 index.d.ts) signature identical to lightweight-charts. Range sync via `subscribeAction('onZoom', callback)` + counter-zoom on peer chart (Phase 19 implementation detail). | Implement zoom-sync logic in Phase 19 ChartManager rewrite. Test dual-chart zoom interaction. | 19 |
 | **MS→S timestamp conversion (WRONG example in migration-checklist.md)** | CRITICAL | ✅ FLAGGED & CORRECTED | Migration checklist §3 shows WRONG pattern: `timestamp: Math.floor(row.open_time / 1000)`. v10 contract verified: **milliseconds** required (Task 1.2 proves fake 1693526400000ms renders 2023-09-01, not 1970). Flagged in this doc. | Use correct pattern: `{ timestamp: row.open_time, ... }` (pass-through, no conversion). Update migration-checklist.md before Phase 19. | 18 (this doc) |
@@ -628,13 +628,14 @@ klinecharts.init(container, { styles })
 2. **CDN ESM Dynamic Import** (Phases 18-21 optional, Phase 20 required for extension):
    ```html
    <script type="module">
-     import { init } from 'https://unpkg.com/klinecharts@10.0.3/dist/index.esm.js'
+     import { init } from 'https://cdn.jsdelivr.net/npm/klinecharts@10.0.3/+esm'
      console.log('ESM import verified:', typeof init === 'function' ? 'OK' : 'FAIL')
    </script>
    ```
-   - ✅ Verified functional (Task 1.1 supplement)
+   - ✅ Verified — ESM dynamic import executed successfully in demo (`public/demo-klinechart.html` `<script type="module">` block): klinecharts `+esm` → `init` is a function; extension `+esm` bundle → 18 overlay exports, page status line "OK (18 overlay exports)" + console "✅ extension ESM dynamic import OK (Phase 20 path)". Core UMD rendering unaffected.
+   - ⚠️ Must use jsDelivr `+esm` bundles, NOT raw dist files. Raw `https://unpkg.com/klinecharts@10.0.3/dist/index.esm.js` fails in browser (`ReferenceError: process is not defined` — references `process.env`); raw `https://unpkg.com/@klinecharts/extension@0.1.0/dist/index.js` has bare `from "klinecharts"` imports (no import map). jsDelivr `+esm` rewrites both (klinecharts `+esm` shims `process.env`; extension `+esm` rewrites bare imports to `/npm/klinecharts@10.0.0/+esm`).
    - ✅ No build required (native browser ESM)
-   - ✅ Enables Phase 20 extension loading: `import { registerOverlay } from '...extension.js'`
+   - ✅ Enables Phase 20 extension loading: `import { registerOverlay } from '@klinecharts/extension'`
 
 **Substitute Rationale**:
 - **Purpose of R18-01**: Ensure imports/module loading works. ✅ Both CDN approaches satisfy this (global + ESM dynamic).

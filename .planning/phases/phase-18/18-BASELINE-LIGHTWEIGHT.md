@@ -19,10 +19,10 @@
 | Chrome | Bundle size (gzip estimated) | 55-65 | KB | Typical JavaScript gzip ratio ~30% of uncompressed |
 | Chrome | Scroll FPS (smooth interaction) | 77 | fps | requestAnimationFrame frame counter |
 | Chrome | Canvas elements rendered | 14 | count | DOM query querySelectorAll('canvas') |
-| Safari iOS | Init time (mobile viewport) | 34 | ms | performance.timing API on 375x812 mobile viewport emulation |
-| Safari iOS | Memory (used heap, mobile) | 6.31 | MB | performance.memory.usedJSHeapSize on mobile viewport |
-| Safari iOS | Memory (total heap, mobile) | 9.6 | MB | performance.memory.totalJSHeapSize on mobile viewport |
-| Safari iOS | Scroll FPS (estimated) | 60 | fps | Typical mobile Safari 60fps cap; smooth rendering observed |
+| Mobile (Chrome emulation) | Init time (mobile viewport) | 34 | ms | performance.timing API on 375x812 Chrome DevTools mobile viewport emulation |
+| Mobile (Chrome emulation) | Memory (used heap, mobile) | 6.31 | MB | performance.memory.usedJSHeapSize on Chrome DevTools mobile viewport |
+| Mobile (Chrome emulation) | Memory (total heap, mobile) | 9.6 | MB | performance.memory.totalJSHeapSize on Chrome DevTools mobile viewport |
+| Mobile (Chrome emulation) | Scroll FPS (estimated) | 60 | fps | Estimated 60fps mobile cap; smooth rendering observed (not measured via real iOS) |
 
 ---
 
@@ -108,21 +108,21 @@
 
 ---
 
-### 6. Mobile Safari iOS Performance
+### 6. Mobile Performance (Chrome DevTools Emulation)
 
 **Test Procedure**:
-- Test on mobile viewport emulation (375x812px, iPhone-equivalent)
+- Chrome DevTools Device Mode, mobile viewport emulation (375x812px, iPhone-equivalent)
 - Measure same metrics as desktop for comparison
-- Emulation simulates iPhone device characteristics (CPU, GPU, rendering pipeline)
+- Emulation covers viewport size, DPR, and touch behavior — it does NOT run the Safari/iOS rendering engine
 
 **Results**:
 - Init time: 34ms (same as desktop)
-- Used heap: 6.31 MB (2x desktop due to higher DPI rendering)
-- Total heap: 9.6 MB (higher allocation for mobile device emulation)
-- Estimated FPS: 60fps (typical mobile Safari cap vs desktop 77fps)
+- Used heap: 6.31 MB (2x desktop, higher DPR rendering in emulated viewport)
+- Total heap: 9.6 MB (higher allocation in emulated mobile viewport)
+- Estimated FPS: 60fps (typical mobile cap; not directly measured)
 
 **Source**: Chrome DevTools mobile viewport emulation (375x812), performance.memory API, visual rendering inspection  
-**Notes**: Mobile Safari is capped at 60fps by iOS OS, while desktop Chrome can reach 120fps. Memory usage is higher on mobile due to retina/high-DPI rendering. Init time is identical because files are still locally cached; real mobile would be ~2-3x slower over network. This represents Safari iOS behavior on typical iPhone.
+**Notes**: These numbers are Chrome on macOS rendered in an emulated 375x812 mobile viewport. The 60fps figure is an estimate of a typical mobile cap, not a measurement. Memory is higher in the emulated viewport due to DPR-scaled rendering. Init time is identical because files are still locally cached; a real device over network would be ~2-3x slower. **A real Safari/iOS (Web Inspector) measurement was NOT taken — Phase 22 should verify on actual iOS hardware.** Real iOS behavior may differ (different JS engine, memory limits, 60fps cap).
 
 **Mobile Rendering**:
 - Chart renders responsively in mobile viewport
@@ -148,11 +148,11 @@
 - **OS**: macOS (Apple Silicon)
 - **Viewport**: 800px+ (full desktop)
 
-### Mobile (Safari iOS Emulation)
-- **Browser**: Chrome DevTools mobile viewport emulation
+### Mobile (Chrome DevTools Emulation)
+- **Browser**: Chrome DevTools Device Mode (mobile viewport emulation)
 - **Emulated Device**: iPhone (375x812px resolution)
-- **Emulation**: Simulates Safari iOS rendering pipeline, CPU/GPU constraints, DPI scaling
-- **OS**: Represents iOS (Safari)
+- **Emulation**: Viewport size, DPR, and touch simulation only — does NOT simulate the Safari/iOS rendering engine
+- **OS**: macOS (Chrome); viewport dimensions emulate iPhone
 
 ### Server Configuration
 - **Server**: Wrangler dev (local, no network latency)
@@ -171,9 +171,9 @@
 3. **FPS baseline**: 77fps — interactive experience is smooth. KLineChart should maintain 60+ fps during pan/zoom.
 
 ### Mobile Performance Targets
-4. **Mobile memory**: 6.31 MB used on mobile (2x desktop). KLineChart should stay under 8 MB on mobile devices to avoid memory pressure.
+4. **Mobile memory**: 6.31 MB used in Chrome-emulated mobile viewport (2x desktop). KLineChart should stay under 8 MB on mobile devices to avoid memory pressure. (Emulation only — verify on real iOS in Phase 22.)
 
-5. **Mobile FPS**: 60fps cap on Safari iOS. KLineChart must maintain consistent 60fps on mobile for smooth scrolling/interaction.
+5. **Mobile FPS**: 60fps is an estimated mobile cap (Chrome emulation; not a real iOS measurement). KLineChart must maintain consistent 60fps on mobile for smooth scrolling/interaction. Verify on real iOS in Phase 22.
 
 6. **Mobile init time**: Expect 2-3x higher in production due to network latency. Current 34ms is local cache only.
 
