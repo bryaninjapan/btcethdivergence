@@ -1,5 +1,9 @@
 # KLineChart 遷移檢查清單
 
+> ⚠️ **SUPERSEDED** — this checklist's timestamp guidance is WRONG (v9-era ms→s conversion).
+> The verified v10 contract (Phase 18 Task 1.2): Binance `open_time` (ms) passes through under the `timestamp` key, NO `Math.floor(/1000)` conversion.
+> Use `.planning/phases/phase-18/18-MIGRATION-CHECKLIST-VERIFIED.md` instead.
+
 > 用於確保遷移過程不遺漏任何關鍵步驟  
 > 預計時間：72-95 小時（3-4 週）
 
@@ -64,12 +68,12 @@
   □ 準備轉換函數
     ├─ 編寫 toKLineChartCandle 函數
     ├─ 測試轉換結果
-    ├─ 檢查時間戳（必須是秒，不是毫秒！）
+    ├─ 檢查時間戳（必須是秒，不是毫秒！）      ⚠️ WRONG — v10 requires ms (see banner / verified doc)
     └─ 寫單元測試
        └─ test('轉換函數應該正確處理毫秒時間戳', () => {
             const input = { open_time: 1234567890000, ... }
             const output = toKLineChartCandle(input)
-            expect(output.time).toBe(1234567890)
+            expect(output.time).toBe(1234567890)   ⚠️ WRONG — expect(output.timestamp).toBe(1234567890000) (ms pass-through, key is `timestamp`)
           })
 
 □ 驗證瀏覽器相容性 (1h)
@@ -434,7 +438,7 @@
 ```
 □ 遷移時間範圍選擇邏輯 (4-6h)
   ├─ 查找所有的時間戳轉換代碼
-  ├─ 確保所有轉換都正確（毫秒 → 秒）
+  ├─ 確保所有轉換都正確（毫秒 → 秒）  ⚠️ WRONG — v10 passes Binance ms through under `timestamp`, NO ms→s conversion (see banner / verified doc)
   ├─ 驗證邊界情況
   │  ├─ □ 最早可能的時間 (1970-01-01)
   │  ├─ □ 未來時間
