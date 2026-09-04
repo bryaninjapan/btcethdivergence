@@ -27,7 +27,7 @@
 - ✓ API differences documentation: understood (documented in 18-RESEARCH.md §2, re-verified against v10.0.3 types)
 
 #### Existing Project Structure Review (Day 1-2)
-- ✓ Identify all lightweight-charts usage: understood (scope: public/charts.html + public/index.html + src/chart-manager.ts)
+- ✓ Identify all lightweight-charts usage: understood (scope: public/charts.html + public/index.html + src/public/chart-manager.ts)
 - ✓ Code line counting: understood
 - ✓ ChartManager complexity analysis: understood (event system is the high-risk area)
 - ✓ Migration backlog creation: understood
@@ -35,7 +35,7 @@
 #### Data Format Validation (Day 3-4)
 - ✓ Binance API data fetch: verified (1000-bar limit works; 13-digit ms timestamps confirmed in Task 1.1 automated verify)
 - ✓ open_time, open, high, low, close, volume field mapping: understood
-- ✓ **⚠️ CORRECTION FLAGGED** (see Critical Data Transform section below)
+- ✓ **⚠️ CORRECTION FLAGGED** (timestamp must be ms, not converted to seconds; see Critical Data Transform section below)
 
 #### Browser Compatibility Check (Day 3-4)
 - ✓ Chrome latest: understood (ES2020+ support confirmed; v10 requires modern browser)
@@ -108,10 +108,12 @@
 #### Log Scale Migration (Day 4-5)
 - ✓ Log scale toggle logic understood:
   - OLD: `chart.priceScale('right').applyOptions({ mode: Logarithmic })`
-  - NEW: `chart.setPriceScale({ mode: 'logarithmic' })` or similar v10 API
-  - Verify exact API in v10.0.3 types (18-RESEARCH.md §2 has reference)
+  - **NEW (v10.0.3 API)**: Use `chart.overrideYAxis(yAxisOverride)` with custom `createRange` callback for logarithmic scaling
+  - **Implementation pattern**: `chart.overrideYAxis({ createRange: (params) => customLogScale(params) })`
+  - Alternatively: `chart.setPriceScale()` if available in your v10 build; verify with `node_modules/klinecharts/dist/index.d.ts` line 1171
+  - Consult `18-RESEARCH.md §2` for exact AxisOverride/createRange implementation details
 - ✓ Linear vs. logarithmic display difference understood
-- ✓ Y-axis label formatting for exponential data: understood
+- ✓ Y-axis label formatting for exponential data: understood (custom `displayValueToText` callback in AxisTemplate)
 - ✓ Verification methodology: toggle test, visual inspection, performance stress test (100 toggles)
 
 #### Unit Test Updates (Day 6-7)
