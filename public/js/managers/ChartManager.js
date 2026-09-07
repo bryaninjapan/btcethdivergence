@@ -189,6 +189,7 @@ export class ChartManager {
     this._charts = {};
     this._series = {};
     this._cache.clear();
+    this._subscriptions.clear();
     this._chartIds = [];
     for (const entry of charts) {
       this._charts[entry.id] = entry.chart;
@@ -200,10 +201,23 @@ export class ChartManager {
     return this;
   }
 
+  /**
+   * Get a chart by ID.
+   * @param {string} id - chart ID (e.g., 'BTCUSDT')
+   * @returns {object|null} the chart instance, or null if not found
+   */
   getChart(id) {
     return this._charts[id] ?? null;
   }
 
+  /**
+   * Get a series by chart ID.
+   * IMPORTANT: This returns the Series instance, NOT the Chart.
+   * Used for testing and direct series manipulation. In production code,
+   * prefer setData() to update series data.
+   * @param {string} id - chart ID (e.g., 'BTCUSDT')
+   * @returns {object|null} the series instance, or null if not found
+   */
   getSeries(id) {
     return this._series[id] ?? null;
   }
@@ -219,6 +233,9 @@ export class ChartManager {
   /**
    * Apply a logical range to every chart except the source. Re-entrancy safe:
    * while the sync lock is held, both this and syncRanges become no-ops.
+   * IMPORTANT: range.from and range.to are bar indices (logical positions), NOT timestamps.
+   * @param {object} range - { from: barIndex, to: barIndex }
+   * @param {string} sourceId - chart that originated this range
    * @returns {boolean} true when applied, false when ignored (locked/not usable)
    */
   setVisibleRange(range, sourceId) {
@@ -250,8 +267,10 @@ export class ChartManager {
    * Re-entrancy safe via the sync lock. When called from a visible-range-change
    * handler the event's own range is supplied; otherwise it is read from the
    * source chart's time scale (pull model).
-   * @param {string} sourceId
-   * @param {{from:number,to:number}|null} [range] optional event-provided range
+   * IMPORTANT: The range parameter has from/to as bar indices (logical positions), NOT timestamps.
+   * These indices are used directly in setVisibleLogicalRange() — do NOT convert to timestamps.
+   * @param {string} sourceId - chart that should be read/synced from
+   * @param {{from:number,to:number}|null} [range] optional event-provided range (bar indices)
    * @returns {boolean} true when synced, false when locked/unknown/not usable
    */
   syncRanges(sourceId, range) {
@@ -347,6 +366,13 @@ export class ChartManager {
     );
   }
 
+  /**
+   * Set price scale mode (linear or logarithmic) across all charts.
+   * Uses the v10 API: priceScale().applyOptions({ mode: ... }).
+   * @param {string} mode - ScaleMode.LINEAR or ScaleMode.LOGARITHMIC
+   * @returns {string} the newly-active ScaleMode
+   * @throws {Error} if mode is invalid
+   */
   setLogScale(mode) {
     if (mode !== ScaleMode.LINEAR && mode !== ScaleMode.LOGARITHMIC) {
       throw new Error(`Unknown scale mode: ${mode}`);
@@ -357,7 +383,10 @@ export class ChartManager {
     for (const id of this.chartIds()) {
       const chart = this._charts[id];
       const scale = chart && chart.priceScale && chart.priceScale('right');
-      if (scale) scale.applyOptions({ mode: priceMode });
+      if (scale) {
+        // v10 API: applyOptions() accepts a mode (numeric value: 0 = linear, 1 = log)
+        scale.applyOptions({ mode: priceMode });
+      }
     }
     this._emit('scalechange', { mode });
     this._log('info', 'setLogScale', `scale mode → ${mode}`, { mode });
@@ -370,6 +399,8 @@ export class ChartManager {
 
   /**
    * Cache candles for a symbol and push them to the corresponding series.
+   * Ensures chart updates by calling setData() followed by chart.applyOptions()
+   * to trigger a visual refresh after initial empty-data state.
    */
   setData(symbol, candles) {
     if (!Array.isArray(candles)) throw new TypeError('setData requires an array of candles');
@@ -377,6 +408,15 @@ export class ChartManager {
     const series = this._series[symbol];
     if (series && typeof series.setData === 'function') {
       series.setData(candles);
+      // After setting data, trigger a visual refresh by accessing the chart's time scale.
+      // This ensures the chart updates even if it was initially rendered with empty data.
+      const chart = this._charts[symbol];
+      if (chart && typeof chart.timeScale === 'function') {
+        const timeScale = chart.timeScale();
+        if (timeScale && typeof timeScale.fitContent === 'function' && candles.length > 0) {
+          timeScale.fitContent();
+        }
+      }
     }
     this._emit('datachange', { symbol, count: candles.length });
     return this;
