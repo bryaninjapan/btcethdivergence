@@ -6,42 +6,54 @@ import {
   SyncState,
 } from './ChartManager.js';
 
-class FakeTimeScale {
-  constructor() {
-    this.handlers = [];
-    this.range = null;
-    this.applyCount = 0;
+// v10 API mocks (replaces v9 timeScale/priceScale)
+class FakeChartV10 {
+  constructor(id) {
+    this.id = id;
+    this.scrollCount = 0;
+    this.scrollTs = null;
+    this.subscribers = {};
+    this.overrides = null;
+    this.dataLoader = null;
   }
-  subscribeVisibleLogicalRangeChange(fn) {
-    this.handlers.push(fn);
+
+  subscribeAction(actionType, handler) {
+    if (!this.subscribers[actionType]) {
+      this.subscribers[actionType] = [];
+    }
+    this.subscribers[actionType].push(handler);
   }
-  unsubscribeVisibleLogicalRangeChange(fn) {
-    this.handlers = this.handlers.filter((h) => h !== fn);
+
+  unsubscribeAction(actionType, handler) {
+    if (!this.subscribers[actionType]) return;
+    this.subscribers[actionType] = this.subscribers[actionType].filter((h) => h !== handler);
   }
-  setVisibleLogicalRange(range) {
-    this.applyCount += 1;
-    this.range = range;
-    for (const h of [...this.handlers]) h(range);
+
+  scrollToTimestamp(ts) {
+    this.scrollCount += 1;
+    this.scrollTs = ts;
   }
-  fire(range) {
-    this.range = range;
-    for (const h of [...this.handlers]) h(range);
+
+  overrideYAxis(override) {
+    this.overrides = override;
   }
-  getVisibleLogicalRange() {
-    return this.range;
+
+  setDataLoader(loader) {
+    this.dataLoader = loader;
+  }
+
+  // Test helper to fire events
+  fireVisibleRangeChange(range) {
+    if (this.subscribers['onVisibleRangeChange']) {
+      for (const h of this.subscribers['onVisibleRangeChange']) {
+        h(range);
+      }
+    }
   }
 }
 
 function makeChart(id) {
-  const ts = new FakeTimeScale();
-  const scale = { mode: null, applyOptions(opts) { if ('mode' in opts) this.mode = opts.mode; } };
-  return {
-    id,
-    timeScale: () => ts,
-    priceScale: () => scale,
-    _ts: ts,
-    _scale: scale,
-  };
+  return new FakeChartV10(id);
 }
 
 function makeSeries() {
