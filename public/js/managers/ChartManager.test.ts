@@ -13,65 +13,72 @@ import {
   recordToRange,
 } from './ChartManager.js';
 
-class FakeTimeScale {
-  constructor() {
-    this.handlers = [];
-    this.range = null;
-    this.applyCount = 0;
+// v10 API mocks (replaces v9 timeScale/priceScale)
+class FakeChartV10 {
+  constructor(id) {
+    this.id = id;
+    this.scrollCount = 0;
+    this.scrollTs = null;
+    this.subscribers = {};
+    this.overrides = null;
   }
-  subscribeVisibleLogicalRangeChange(fn) {
-    this.handlers.push(fn);
-    return undefined;
+
+  subscribeAction(actionType, handler) {
+    if (!this.subscribers[actionType]) {
+      this.subscribers[actionType] = [];
+    }
+    this.subscribers[actionType].push(handler);
   }
-  unsubscribeVisibleLogicalRangeChange(fn) {
-    this.handlers = this.handlers.filter((h) => h !== fn);
+
+  unsubscribeAction(actionType, handler) {
+    if (!this.subscribers[actionType]) return;
+    this.subscribers[actionType] = this.subscribers[actionType].filter((h) => h !== handler);
   }
-  setVisibleLogicalRange(range) {
-    this.applyCount += 1;
-    this.range = range;
-    for (const h of [...this.handlers]) h(range);
+
+  scrollToTimestamp(ts) {
+    this.scrollCount += 1;
+    this.scrollTs = ts;
   }
-  fire(range) {
-    for (const h of [...this.handlers]) h(range);
+
+  overrideYAxis(override) {
+    this.overrides = override;
   }
-  getVisibleLogicalRange() {
-    return this.range;
+
+  setDataLoader(loader) {
+    this.loader = loader;
+  }
+
+  setSymbol(symbol) {
+    this.symbol = symbol;
+  }
+
+  setPeriod(period) {
+    this.period = period;
+  }
+
+  // Test helper to fire events
+  fireVisibleRangeChange(range) {
+    if (this.subscribers['onVisibleRangeChange']) {
+      for (const h of this.subscribers['onVisibleRangeChange']) {
+        h(range);
+      }
+    }
   }
 }
 
-class ThrowingTimeScale extends FakeTimeScale {
-  setVisibleLogicalRange() {
-    throw new Error('boom');
-  }
-}
-
-function makeChart(id) {
-  const ts = new FakeTimeScale();
-  const scale = { mode: null, applyOptions(opts) { if ('mode' in opts) this.mode = opts.mode; } };
-  return {
-    id,
-    timeScale: () => ts,
-    priceScale: () => scale,
-    _ts: ts,
-    _scale: scale,
-  };
-}
-
-function makeSeries() {
-  return { data: null, calls: [], setData(candles) { this.data = candles; this.calls.push(candles.length); } };
+function makeChartV10(id) {
+  return new FakeChartV10(id);
 }
 
 function makePair(charts = {}) {
-  const btc = makeChart('BTCUSDT');
-  const eth = makeChart('ETHUSDT');
-  const btcSeries = makeSeries();
-  const ethSeries = makeSeries();
+  const btc = makeChartV10('BTCUSDT');
+  const eth = makeChartV10('ETHUSDT');
   const manager = new ChartManager();
   manager.initCharts([
-    { id: 'BTCUSDT', chart: btc, series: btcSeries },
-    { id: 'ETHUSDT', chart: eth, series: ethSeries },
+    { id: 'BTCUSDT', chart: btc },
+    { id: 'ETHUSDT', chart: eth },
   ]);
-  return { manager, btc, eth, btcSeries, ethSeries };
+  return { manager, btc, eth };
 }
 
 describe('ChartManager range math (migrated chart-range.js)', () => {
@@ -359,12 +366,13 @@ describe('ChartManager scale mode', () => {
 });
 
 describe('ChartManager init & accessors', () => {
-  it('returns chart and series by id', () => {
-    const { manager, btc, eth, btcSeries, ethSeries } = makePair();
+  it('returns chart by id (v10: no separate series)', () => {
+    const { manager, btc, eth } = makePair();
     expect(manager.getChart('BTCUSDT')).toBe(btc);
     expect(manager.getChart('ETHUSDT')).toBe(eth);
-    expect(manager.getSeries('BTCUSDT')).toBe(btcSeries);
-    expect(manager.getSeries('ETHUSDT')).toBe(ethSeries);
+    // v10: getSeries returns the chart (no separate series object)
+    expect(manager.getSeries('BTCUSDT')).toBe(btc);
+    expect(manager.getSeries('ETHUSDT')).toBe(eth);
     expect(manager.getChart('NOPE')).toBeNull();
     expect(manager.getSeries('NOPE')).toBeNull();
   });
@@ -382,21 +390,21 @@ describe('ChartManager init & accessors', () => {
   });
 
   it('re-initializing resets cache and chart set', () => {
-    const { manager, btcSeries } = makePair();
-    manager.setData('BTCUSDT', [{ time: 1 }]);
+    const { manager } = makePair();
+    manager.setData('BTCUSDT', [{ timestamp: 1 }]);
     expect(manager.getState().cache.BTCUSDT).toBe(1);
-    manager.initCharts([{ id: 'ETHUSDT', chart: makeChart('ETHUSDT'), series: btcSeries }]);
+    const eth2 = makeChartV10('ETHUSDT');
+    manager.initCharts([{ id: 'ETHUSDT', chart: eth2 }]);
     expect(manager.getState().cache).toEqual({});
     expect(manager.chartIds()).toEqual(['ETHUSDT']);
   });
 });
 
 describe('ChartManager data cache', () => {
-  it('setData pushes to the series and records the cache count', () => {
-    const { manager, btcSeries } = makePair();
-    const candles = [{ time: 1 }, { time: 2 }, { time: 3 }];
+  it('setData caches candles and records the cache count', () => {
+    const { manager } = makePair();
+    const candles = [{ timestamp: 1 }, { timestamp: 2 }, { timestamp: 3 }];
     manager.setData('BTCUSDT', candles);
-    expect(btcSeries.data).toBe(candles);
     expect(manager.getData('BTCUSDT')).toBe(candles);
     expect(manager.getState().cache.BTCUSDT).toBe(3);
   });
@@ -415,7 +423,7 @@ describe('ChartManager data cache', () => {
     const { manager } = makePair();
     const seen = [];
     manager.on('datachange', (e) => seen.push(e));
-    manager.setData('BTCUSDT', [{ time: 1 }]);
+    manager.setData('BTCUSDT', [{ timestamp: 1 }]);
     expect(seen).toEqual([{ symbol: 'BTCUSDT', count: 1 }]);
   });
 });
@@ -425,9 +433,9 @@ describe('ChartManager setVisibleRange & state snapshot', () => {
     const { manager, btc, eth } = makePair();
     const applied = manager.setVisibleRange({ from: 5, to: 45 }, 'BTCUSDT');
     expect(applied).toBe(true);
-    expect(btc._ts.applyCount).toBe(0);
-    expect(eth._ts.applyCount).toBe(1);
-    expect(eth._ts.range).toEqual({ from: 5, to: 45 });
+    expect(btc.scrollCount).toBe(0);  // v10: source chart not scrolled
+    expect(eth.scrollCount).toBe(1);  // v10: other charts scrolled
+    expect(eth.scrollTs).toBe(25);    // v10: scrollToTimestamp called with center (5+45)/2
     expect(manager.getState().visibleRange).toEqual({ from: 5, to: 45 });
   });
 
@@ -435,7 +443,7 @@ describe('ChartManager setVisibleRange & state snapshot', () => {
     const { manager, eth } = makePair();
     expect(manager.setVisibleRange(null)).toBe(false);
     expect(manager.setVisibleRange({ from: NaN, to: 5 })).toBe(false);
-    expect(eth._ts.applyCount).toBe(0);
+    expect(eth.scrollCount).toBe(0);
   });
 
   it('setVisibleRange emits rangechange with origin set', () => {
@@ -540,20 +548,22 @@ describe('ChartManager structured logging (16a-01.4)', () => {
     expect(actions).toContain('setLogScale');
   });
 
-  it('warns via the injected logger when unsubscribing a chart with no timeScale', () => {
+  it('warns via the injected logger when unsubscribing a chart with no unsubscribeAction (v10)', () => {
     const logger = spyLogger();
     const manager = new ChartManager({ logger });
-    const chart = makeChart('BTCUSDT');
-    manager.initCharts([{ id: 'BTCUSDT', chart, series: makeSeries() }]);
+    const chart = makeChartV10('BTCUSDT');
+    manager.initCharts([{ id: 'BTCUSDT', chart }]);
     manager.subscribe('BTCUSDT');
-    chart.timeScale = () => null;
+    // Remove the unsubscribeAction method to trigger the warning
+    chart.unsubscribeAction = null;
     manager.unsubscribe('BTCUSDT');
     expect(logger.calls.some(([level, action]) => level === 'warn' && action === 'unsubscribe')).toBe(true);
   });
 
   it('emits no logs when no logger is injected (dependency-free default)', async () => {
     const manager = new ChartManager({ load: async () => [{ id: 'BTCUSDT', rows: [] }] });
-    manager.initCharts([{ id: 'BTCUSDT', chart: makeChart('BTCUSDT'), series: makeSeries() }]);
+    const chart = makeChartV10('BTCUSDT');
+    manager.initCharts([{ id: 'BTCUSDT', chart }]);
     await manager.loadRange(1000, 2000);
     manager.setVisibleRange({ from: 1, to: 2 });
     manager.unsubscribe('NOPE');

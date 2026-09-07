@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wave 1 ChartManager Test — KLineChart v10 (Single Chart)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f6f8fa;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #24292f;
+    }
+    .status {
+      font-size: 14px;
+      margin-bottom: 20px;
+      padding: 12px;
+      border-radius: 4px;
+      background-color: #ddf4ff;
+      border: 1px solid #54aeff;
+      color: #0969da;
+    }
+    .status.loading {
+      background-color: #fff8c5;
+      border-color: #d1c80b;
+      color: #9e6500;
+    }
+    .status.error {
+      background-color: #ffebe6;
+      border-color: #ff7d7d;
+      color: #ae1205;
+    }
+    .status.success {
+      background-color: #dafbe1;
+      border-color: #34d399;
+      color: #055b3d;
+    }
+    #chart-container {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      background-color: #ffffff;
+    }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #1f883d;
+      color: #ffffff;
+      border: 1px solid #1f883d;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    button:hover {
+      background-color: #188038;
+    }
+    button:disabled {
+      background-color: #8c959f;
+      border-color: #8c959f;
+      cursor: not-allowed;
+    }
+    .console {
+      background-color: #1f2328;
+      color: #c9d1d9;
+      padding: 12px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    .console-line {
+      margin-bottom: 4px;
+      padding: 2px 0;
+    }
+    .console-line.error {
+      color: #f97583;
+    }
+    .console-line.warn {
+      color: #ffd33d;
+    }
+    .console-line.info {
+      color: #79c0ff;
+    }
+    .console-line.success {
+      color: #56d364;
+    }
+    .info-box {
+      background-color: #f6f8fa;
+      border: 1px solid #d0d7de;
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 20px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+  </style>
+  <!-- KLineChart v10.0.3 UMD -->
+  <script src="https://unpkg.com/klinecharts@10.0.3/dist/umd/klinecharts.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Wave 1 Test: ChartManager v10 Rewrite</h1>
+    <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
+      Testing KLineChart v10.0.3 with real Binance BTCUSDT data (1000+ 1h candles)
+    </p>
+
+    <div id="status" class="status">Initializing...</div>
+
+    <div class="controls">
+      <button id="btn-load" disabled>Load BTCUSDT Data</button>
+      <button id="btn-scroll-right">Scroll Right (→)</button>
+      <button id="btn-scroll-left">Scroll Left (←)</button>
+      <button id="btn-zoom-in">Zoom In</button>
+      <button id="btn-zoom-out">Zoom Out</button>
+      <button id="btn-clear-console">Clear Console</button>
+    </div>
+
+    <div id="chart-container"></div>
+
+    <div class="info-box">
+      <strong>Wave 1 Test Objectives:</strong>
+      <ul style="margin-top: 10px; padding-left: 20px;">
+        <li>✓ Initialize KLineChart v10 chart instance</li>
+        <li>✓ Load 1000+ BTCUSDT candles from Binance API</li>
+        <li>✓ Verify timestamp field pass-through (no Math.floor conversion)</li>
+        <li>✓ Confirm candles render without errors</li>
+        <li>✓ Test manual scroll/zoom interactions</li>
+        <li>✓ Monitor console for errors (should be zero)</li>
+      </ul>
+    </div>
+
+    <div class="console" id="console">
+      <div class="console-line info">[info] Wave 1 test initialized...</div>
+    </div>
+  </div>
+
+  <script>
+    // Simple logger to display in the console div
+    const consoleLog = (() => {
+      const el = document.getElementById('console');
+      let lineCount = 0;
+      return {
+        log: (message, type = 'info') => {
+          const line = document.createElement('div');
+          line.className = `console-line ${type}`;
+          line.textContent = `[${type}] ${message}`;
+          el.appendChild(line);
+          lineCount++;
+          // Keep last 50 lines
+          while (el.children.length > 50) {
+            el.removeChild(el.firstChild);
+          }
+          el.scrollTop = el.scrollHeight;
+          console.log(`[${type}] ${message}`);
+        },
+        clear: () => {
+          el.innerHTML = '<div class="console-line info">[info] Console cleared</div>';
+        },
+      };
+    })();
+
+    const statusEl = document.getElementById('status');
+    const setStatus = (message, type = 'info') => {
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    };
+
+    let chart = null;
+    let loadedCandles = [];
+
+    // Initialize chart
+    async function initChart() {
+      try {
+        setStatus('Initializing chart...', 'loading');
+        consoleLog('Checking klinecharts global...', 'info');
+
+        if (!window.klinecharts) {
+          throw new Error('klinecharts global not available (CDN load failed?)');
+        }
+        consoleLog('✓ klinecharts global found', 'success');
+
+        const container = document.getElementById('chart-container');
+        consoleLog(`Creating chart on container: ${container?.id || 'unknown'}`, 'info');
+
+        // v10 style config
+        const styles = {
+          grid: {
+            show: true,
+            horizontal: { show: true, color: '#e8e8e8', style: 'dashed', size: 1 },
+            vertical: { show: true, color: '#e8e8e8', style: 'dashed', size: 1 },
+          },
+          candle: {
+            type: 'candle_solid',
+            bar: {
+              upColor: '#26a69a',
+              downColor: '#ef5350',
+              noChangeColor: '#888888',
+            },
+          },
+          xAxis: {
+            axisLine: { color: '#d0d7de', size: 1 },
+            tickText: { color: '#1f2328' },
+          },
+          yAxis: {
+            axisLine: { color: '#d0d7de', size: 1 },
+            tickText: { color: '#1f2328' },
+          },
+        };
+
+        // Initialize chart using v10 API
+        chart = window.klinecharts.init(container, {
+          locale: 'en-US',
+          timezone: 'UTC',
+          styles,
+        });
+
+        if (!chart) {
+          throw new Error('Chart initialization returned null');
+        }
+
+        consoleLog('✓ Chart instance created', 'success');
+        consoleLog(`Chart API methods: init=${typeof chart.init}, setDataLoader=${typeof chart.setDataLoader}`, 'info');
+
+        // Set symbol and period
+        if (typeof chart.setSymbol === 'function') {
+          chart.setSymbol({
+            ticker: 'BTCUSDT',
+            pricePrecision: 2,
+            volumePrecision: 5,
+          });
+          consoleLog('✓ Symbol set to BTCUSDT', 'success');
+        }
+
+        if (typeof chart.setPeriod === 'function') {
+          chart.setPeriod({ type: 'hour', span: 1 });
+          consoleLog('✓ Period set to 1h', 'success');
+        }
+
+        setStatus('Chart initialized. Ready to load data.', 'success');
+        document.getElementById('btn-load').disabled = false;
+      } catch (error) {
+        consoleLog(`Init failed: ${error.message}`, 'error');
+        setStatus(`Init failed: ${error.message}`, 'error');
+      }
+    }
+
+    // Load data from Binance API
+    async function loadData() {
+      try {
+        setStatus('Loading BTCUSDT data from Binance API...', 'loading');
+        consoleLog('Fetching 1000+ candles...', 'info');
+
+        // Calculate time range: last 60 days
+        const endMs = Date.now();
+        const startMs = endMs - (60 * 24 * 60 * 60 * 1000);
+
+        const response = await fetch(`/api/klines?symbol=BTCUSDT&start=${startMs}&end=${endMs}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const rows = await response.json();
+        consoleLog(`Received ${rows.length} candles from Binance API`, 'info');
+
+        if (rows.length === 0) {
+          throw new Error('Received 0 candles (data source issue?)');
+        }
+
+        // Transform to v10 format
+        // CRITICAL: timestamp field (NOT time), pass through ms unchanged
+        loadedCandles = rows.map((row) => ({
+          timestamp: row.open_time,  // ← CRITICAL: milliseconds, no Math.floor!
+          open: parseFloat(row.open),
+          high: parseFloat(row.high),
+          low: parseFloat(row.low),
+          close: parseFloat(row.close),
+          volume: parseFloat(row.volume),
+        }));
+
+        // Verify timestamp contract
+        const firstCandle = loadedCandles[0];
+        const lastCandle = loadedCandles[loadedCandles.length - 1];
+        consoleLog(`First candle: ${new Date(firstCandle.timestamp).toISOString()} (${firstCandle.timestamp} ms)`, 'info');
+        consoleLog(`Last candle: ${new Date(lastCandle.timestamp).toISOString()} (${lastCandle.timestamp} ms)`, 'info');
+
+        // Verify timestamps are in reasonable range (2020-2030)
+        const MIN_TS = new Date('2020-01-01').getTime();
+        const MAX_TS = new Date('2030-12-31').getTime();
+        const inRange = loadedCandles.every((c) => c.timestamp >= MIN_TS && c.timestamp <= MAX_TS);
+        if (!inRange) {
+          throw new Error('Timestamp values outside 2020-2030 range (possible Math.floor error?)');
+        }
+        consoleLog('✓ Timestamp contract verified (all in 2020-2030 range)', 'success');
+
+        // Render chart with data
+        if (typeof chart.setDataLoader === 'function') {
+          chart.setDataLoader({
+            getBars: ({ callback }) => {
+              callback(loadedCandles);
+            },
+          });
+          consoleLog(`✓ Data loader set with ${loadedCandles.length} candles`, 'success');
+        } else {
+          throw new Error('Chart has no setDataLoader method');
+        }
+
+        setStatus(`✓ Loaded ${loadedCandles.length} candles. Chart ready.`, 'success');
+      } catch (error) {
+        consoleLog(`Load failed: ${error.message}`, 'error');
+        setStatus(`Load failed: ${error.message}`, 'error');
+      }
+    }
+
+    // Interaction handlers
+    document.getElementById('btn-scroll-right').addEventListener('click', () => {
+      if (!chart || typeof chart.scrollToTimestamp !== 'function') return;
+      const lastTs = loadedCandles[loadedCandles.length - 1]?.timestamp;
+      if (lastTs) {
+        chart.scrollToTimestamp(lastTs);
+        consoleLog(`Scrolled to latest: ${new Date(lastTs).toISOString()}`, 'info');
+      }
+    });
+
+    document.getElementById('btn-scroll-left').addEventListener('click', () => {
+      if (!chart || typeof chart.scrollToTimestamp !== 'function') return;
+      const firstTs = loadedCandles[0]?.timestamp;
+      if (firstTs) {
+        chart.scrollToTimestamp(firstTs);
+        consoleLog(`Scrolled to oldest: ${new Date(firstTs).toISOString()}`, 'info');
+      }
+    });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      if (!chart || typeof chart.zoomAtTimestamp !== 'function') return;
+      const midTs = Math.round((loadedCandles[0]?.timestamp + loadedCandles[loadedCandles.length - 1]?.timestamp) / 2);
+      chart.zoomAtTimestamp(2, midTs);  // zoom in 2x
+      consoleLog('Zoomed in 2x', 'info');
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      if (!chart || typeof chart.zoomAtTimestamp !== 'function') return;
+      const midTs = Math.round((loadedCandles[0]?.timestamp + loadedCandles[loadedCandles.length - 1]?.timestamp) / 2);
+      chart.zoomAtTimestamp(0.5, midTs);  // zoom out 2x
+      consoleLog('Zoomed out 2x', 'info');
+    });
+
+    document.getElementById('btn-load').addEventListener('click', loadData);
+    document.getElementById('btn-clear-console').addEventListener('click', () => consoleLog.clear());
+
+    // Global error handler
+    window.addEventListener('error', (e) => {
+      consoleLog(`UNCAUGHT ERROR: ${e.message}`, 'error');
+      setStatus(`Uncaught error: ${e.message}`, 'error');
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      consoleLog(`UNHANDLED REJECTION: ${e.reason}`, 'error');
+      setStatus(`Unhandled rejection: ${e.reason}`, 'error');
+    });
+
+    // Init on load
+    window.addEventListener('load', initChart);
+
+    // Expose globals for debugging
+    window.__test_wave1 = { chart, loadedCandles, consoleLog };
+  </script>
+</body>
+</html>

@@ -11,37 +11,29 @@ import { classifyError, consoleSink, createBeaconSink, createLogger, installGlob
 // Constants
 const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
 
-// v10 KLineChart API surface — replaces lightweight-charts v9
-// Global klinecharts object is available via UMD CDN in charts.html
-// (no imports needed; window.klinecharts is available at runtime)
-const klinecharts = window.klinecharts || {};
-if (!klinecharts.init) {
-  throw new Error('KLineChart v10 library not loaded. Check charts.html <script> tag.');
-}
+// KLineChart v10.0.3 API (CDN UMD global)
+// Note: klinecharts is the global namespace (lowercase)
+const { init: createChart } = window.klinecharts || {};
 
 // Structured logger: dev console (structured JSON) + client-log beacon. The
 // beacon sink is fire-and-forget with a 2s timeout; it never blocks the UI.
 const logger = createLogger('charts', { sinks: [consoleSink(), createBeaconSink()] });
 
-/**
- * Create ChartManager for v10 KLineChart.
- * v10 API: priceScaleMode is no longer Linear/Logarithmic enum; use numeric values directly.
- * PriceScaleMode mapping (from v10 docs):
- *   0 = Normal (linear)
- *   1 = Logarithmic
- */
 const chartManager = new ChartManager({
-  // v10 price scale modes: 0 = normal (linear), 1 = logarithmic
-  priceScaleMode: { linear: 0, logarithmic: 1 },
   logger,
-  // Data transformation: v9 used 'time'; v10 uses 'timestamp' (already in ms from Binance)
-  // No Math.floor() conversion — pass through unchanged.
   toCandle: (row) => ({
-    timestamp: row.open_time,  // v10: timestamp field (ms, not seconds)
-    open: row.open,
-    high: row.high,
-    low: row.low,
-    close: row.close,
+    // CRITICAL TIMESTAMP CONTRACT (v10.0.3):
+    // - Binance `open_time` is milliseconds (13 digits, e.g., 1693526400000)
+    // - KLineChart v10 requires `timestamp` key with milliseconds
+    // - NO conversion: pass timestamp through unchanged
+    // - Wrong: timestamp: Math.floor(row.open_time / 1000)  // Would render 1970 dates!
+    // - Correct: timestamp: row.open_time  // Pass through unchanged (13-digit ms)
+    timestamp: row.open_time,
+    open: parseFloat(row.open),
+    high: parseFloat(row.high),
+    low: parseFloat(row.low),
+    close: parseFloat(row.close),
+    volume: parseFloat(row.volume),
   }),
   load: async (startMs, endMs, signal) => {
     const [btcRows, ethRows] = await Promise.all([
@@ -59,67 +51,133 @@ let activeController = null;
 let inFlight = null;
 
 /**
- * Create a v10 KLineChart and render the candlestick chart.
- * v10 API differs from v9:
- *   - chart = klinecharts.init(dom) — initialize chart on DOM element
- *   - chart.renderChart('kline', { ...options }) — render candlestick series
- *   - No separate series object; indicators/overlays are managed by the chart
- *   - Data is set via chart.setDataLoader() or chart.applyNewData()
+ * Create and configure a v10 KLineChart chart with style config.
  *
- * @param {string} containerId — DOM element ID
- * @param {Array} candles — initial candlestick data (currently unused; data comes from loader)
- * @returns {{ chart, series: null }} — chart object only (v10 has no separate series)
+ * v10 API: klinecharts.init(container, options) where options includes styles nested object
+ * Style config is translated from v9's flat structure to v10's nested structure:
+ * - v9 upColor/downColor → v10 candle.bar.upColor / candle.bar.downColor
+ * - v9 layout background → v10 candle.area.backgroundColor (or grid background)
+ * - v9 textColor → v10 xAxis.tickText.color, yAxis.tickText.color
+ * - v9 timeScale/rightPriceScale borders → v10 xAxis.axisLine / yAxis.axisLine
  */
 function renderChart(containerId, candles) {
-  const dom = document.getElementById(containerId);
-  if (!dom) throw new Error(`Container not found: ${containerId}`);
+  const container = document.getElementById(containerId);
 
-  // v10 API: Initialize chart on the DOM element
-  const chart = klinecharts.init(dom, {
-    layout: {
-      backgroundColor: '#ffffff',
-      textColor: '#1f2328',
+  // v10 style config (nested structure)
+  const styles = {
+    grid: {
+      show: true,
+      horizontal: {
+        show: true,
+        color: '#e8e8e8',
+        style: 'dashed',
+        size: 1,
+      },
+      vertical: {
+        show: true,
+        color: '#e8e8e8',
+        style: 'dashed',
+        size: 1,
+      },
     },
-    // v10 style config uses nested structure (different from v9's flat layout)
-    style: {
-      grid: {
-        horizontal: {
-          color: '#f0f0f0',
-          show: true,
+    candle: {
+      type: 'candle_solid',
+      bar: {
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        noChangeColor: '#888888',
+      },
+      priceMark: {
+        show: true,
+        high: {
+          color: '#999999',
+          textMargin: 5,
         },
-        vertical: {
-          color: '#f0f0f0',
-          show: true,
+        low: {
+          color: '#999999',
+          textMargin: 5,
+        },
+        last: {
+          upColor: '#26a69a',
+          downColor: '#ef5350',
+          noChangeColor: '#888888',
+        },
+      },
+      tooltip: {
+        text: {
+          color: '#ffffff',
+        },
+        box: {
+          backgroundColor: '#1f2328',
+          borderColor: '#666666',
         },
       },
     },
+    xAxis: {
+      axisLine: {
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickLine: {
+        show: true,
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickText: {
+        color: '#1f2328',
+        margin: 5,
+      },
+    },
+    yAxis: {
+      axisLine: {
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickLine: {
+        show: true,
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickText: {
+        color: '#1f2328',
+        margin: 5,
+      },
+    },
+    crosshair: {
+      show: true,
+      horizontal: {
+        show: true,
+        color: '#999999',
+        style: 'dashed',
+        size: 1,
+      },
+      vertical: {
+        show: true,
+        color: '#999999',
+        style: 'dashed',
+        size: 1,
+      },
+    },
+  };
+
+  // v10 API: init() returns a Chart instance directly (no series creation needed)
+  const chart = createChart(container, {
+    locale: 'en-US',
+    timezone: 'UTC',
+    styles,
   });
 
-  // v10 API: Render candlestick indicator
-  chart.renderChart('kline', {
-    styles: {
-      // K-line (candlestick) colors
-      up: {
-        color: '#26a69a',         // green for up
-        borderColor: '#26a69a',
-        wickColor: '#26a69a',
+  // v10 API: Data is provided via setDataLoader(), not series.setData()
+  if (chart && typeof chart.setDataLoader === 'function') {
+    chart.setDataLoader({
+      getBars: ({ callback }) => {
+        // Provide cached candles to the chart
+        callback(candles);
       },
-      down: {
-        color: '#ef5350',         // red for down
-        borderColor: '#ef5350',
-        wickColor: '#ef5350',
-      },
-      // Volume bar (if shown)
-      volume: {
-        up: '#26a69a',
-        down: '#ef5350',
-      },
-    },
-  });
+    });
+  }
 
-  // v10 has no separate series object; return chart only
-  // Caller can use chart methods directly (e.g., chart.applyNewData, chart.setDataLoader)
-  return { chart, series: null };
+  return { chart };  // No series in v10
 }
 
 function setPickersFromMs(startMs, endMs) {
@@ -211,16 +269,11 @@ async function init() {
   const initial = parseRangeParams(window.location.search) ?? nowRange();
   const btc = renderChart('btc-chart', []);
   const eth = renderChart('eth-chart', []);
-
-  // v10 Note: renderChart() returns { chart, series: null } since v10 manages series internally
-  // ChartManager.initCharts expects the chart object; it will use chart methods directly
+  // v10 API: only chart is needed (no separate series object)
   chartManager.initCharts([
-    { id: 'BTCUSDT', chart: btc.chart, series: btc.chart },  // series = chart in v10
-    { id: 'ETHUSDT', chart: eth.chart, series: eth.chart },
+    { id: 'BTCUSDT', chart: btc.chart },
+    { id: 'ETHUSDT', chart: eth.chart },
   ]);
-
-  // Wire up the event-based sync for both charts
-  // v10: Uses chart.subscribeAction('onVisibleRangeChange') internally (see ChartManager.subscribe)
   chartManager.wireSync();
 
   setPickersFromMs(initial.startMs, initial.endMs);
@@ -250,13 +303,12 @@ async function init() {
   });
 }
 
-// Test hook: expose chart references for e2e testing
+// Test hook: expose chart references for e2e testing (v10 API: no series object)
 if (typeof window !== 'undefined') {
   window.__test_charts = {
     get btcChart() { return chartManager.getChart('BTCUSDT'); },
     get ethChart() { return chartManager.getChart('ETHUSDT'); },
-    get btcSeries() { return chartManager.getSeries('BTCUSDT'); },
-    get ethSeries() { return chartManager.getSeries('ETHUSDT'); },
+    get chartManager() { return chartManager; },
   };
 }
 
