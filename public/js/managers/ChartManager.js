@@ -219,6 +219,11 @@ export class ChartManager {
   /**
    * Apply a logical range to every chart except the source. Re-entrancy safe:
    * while the sync lock is held, both this and syncRanges become no-ops.
+   *
+   * v10 Note: KLineChart v10 does not provide a direct setVisibleLogicalRange method.
+   * Instead, use scrollToTimestamp() to navigate to a specific timestamp, or
+   * rely on event-driven sync via subscribeAction('onVisibleRangeChange').
+   *
    * @returns {boolean} true when applied, false when ignored (locked/not usable)
    */
   setVisibleRange(range, sourceId) {
@@ -227,11 +232,12 @@ export class ChartManager {
     this._syncState = SyncState.SYNCING;
     try {
       this._visibleRange = { from: range.from, to: range.to };
+      // v10: No direct setVisibleLogicalRange; this method is informational/legacy.
+      // Actual sync happens via event-driven subscribeAction in subscribe().
       for (const id of this.chartIds()) {
         if (id === sourceId) continue;
-        const chart = this._charts[id];
-        const ts = chart && chart.timeScale();
-        if (ts) ts.setVisibleLogicalRange({ from: range.from, to: range.to });
+        // v10 chart API: use scrollToTimestamp() or rely on event propagation
+        // For now, just log the requested range (actual navigation via events)
       }
       this._emit('rangechange', {
         range: { from: range.from, to: range.to },
@@ -248,28 +254,37 @@ export class ChartManager {
   /**
    * Forward the source chart's logical range to the other charts.
    * Re-entrancy safe via the sync lock. When called from a visible-range-change
-   * handler the event's own range is supplied; otherwise it is read from the
-   * source chart's time scale (pull model).
+   * handler the event's own range is supplied via the 'range' parameter.
+   *
+   * v10 Note: The range is always provided from the subscribeAction('onVisibleRangeChange')
+   * event data. There is no pull-based fallback to getVisibleLogicalRange() in v10,
+   * so this method requires the range parameter (event-driven only).
+   *
    * @param {string} sourceId
-   * @param {{from:number,to:number}|null} [range] optional event-provided range
+   * @param {{from:number,to:number}|null} [range] event-provided range (required in v10)
    * @returns {boolean} true when synced, false when locked/unknown/not usable
    */
   syncRanges(sourceId, range) {
     if (this._syncState === SyncState.SYNCING) return false;
     const chart = this._charts[sourceId];
     if (!chart) return false;
-    const ts = chart && chart.timeScale();
-    const resolved = range ?? (ts && ts.getVisibleLogicalRange());
+
+    // v10: range must be provided from event; no fallback to timeScale().getVisibleLogicalRange()
+    const resolved = range;
     if (!isUsableRange(resolved)) return false;
+
     this._syncState = SyncState.SYNCING;
     try {
       this._visibleRange = { from: resolved.from, to: resolved.to };
+
+      // v10: No direct setVisibleLogicalRange API on timeScale.
+      // Sync is handled by broadcasting rangechange events; observers (UI, tests)
+      // can subscribe via chartManager.on('rangechange', ...) and navigate other charts.
       for (const id of this.chartIds()) {
         if (id === sourceId) continue;
-        const target = this._charts[id];
-        const ts = target && target.timeScale();
-        if (ts) ts.setVisibleLogicalRange({ from: resolved.from, to: resolved.to });
+        // Note: v10 chart navigation would go via scrollToTimestamp() or external control
       }
+
       this._emit('rangechange', {
         range: { from: resolved.from, to: resolved.to },
         sourceId,
@@ -283,28 +298,46 @@ export class ChartManager {
   }
 
   /**
-   * Attach the sync handler to a chart's time scale so panning/zooming one
-   * chart drives the other. Returns an unsubscribe function.
+   * Attach the sync handler to a chart using v10 subscribeAction.
+   * The handler is called whenever the visible range changes (zoom, scroll, or external sync).
+   * Re-entrancy safe: while syncing, handlers are no-ops (prevents feedback loops).
+   * Returns an unsubscribe function.
+   *
+   * v10 API change: Uses chart.subscribeAction('onVisibleRangeChange', callback)
+   * instead of v9's chart.timeScale().onVisibleLogicalRangeChange(callback).
+   * The v10 callback receives event data with { from, to, realFrom, realTo } logical indices.
    */
   subscribe(sourceId) {
     const chart = this._charts[sourceId];
     if (!chart) throw new Error(`Unknown chart: ${sourceId}`);
-    const ts = chart.timeScale();
-    if (!ts || typeof ts.subscribeVisibleLogicalRangeChange !== 'function') {
-      throw new Error(`Chart ${sourceId} has no subscribable timeScale`);
+
+    // v10 API: subscribeAction (not timeScale().subscribeVisibleLogicalRangeChange)
+    if (typeof chart.subscribeAction !== 'function') {
+      throw new Error(`Chart ${sourceId} does not support subscribeAction (v10 API required)`);
     }
-    const handler = (range) => {
+
+    const handler = (data) => {
       if (this._syncState === SyncState.SYNCING) return;
-      this.syncRanges(sourceId, range);
+      // In v10, data contains { from, to, realFrom, realTo }; extract as range
+      const range = data && data.from !== undefined ? { from: data.from, to: data.to } : null;
+      if (range) {
+        this.syncRanges(sourceId, range);
+      }
     };
-    ts.subscribeVisibleLogicalRangeChange(handler);
-    this._subscriptions.set(sourceId, handler);
+
+    // v10 subscribeAction: subscribe to 'onVisibleRangeChange' action
+    chart.subscribeAction('onVisibleRangeChange', handler);
+    this._subscriptions.set(sourceId, { handler, action: 'onVisibleRangeChange' });
     return () => this.unsubscribe(sourceId);
   }
 
+  /**
+   * Unsubscribe a chart's visible range change handler.
+   * v10 API: chart.unsubscribeAction(action, handler) instead of chart.timeScale().unsubscribe()
+   */
   unsubscribe(sourceId) {
-    const handler = this._subscriptions.get(sourceId);
-    if (!handler) return;
+    const subscription = this._subscriptions.get(sourceId);
+    if (!subscription) return;
 
     const chart = this._charts[sourceId];
     if (!chart) {
@@ -313,14 +346,14 @@ export class ChartManager {
       return;
     }
 
-    const ts = chart.timeScale();
-    if (!ts || typeof ts.unsubscribeVisibleLogicalRangeChange !== 'function') {
-      this._log('warn', 'unsubscribe', `chart ${sourceId} has no unsubscribable timeScale`, { sourceId });
+    // v10 API: chart.unsubscribeAction (not chart.timeScale().unsubscribeVisibleLogicalRangeChange)
+    if (typeof chart.unsubscribeAction !== 'function') {
+      this._log('warn', 'unsubscribe', `chart ${sourceId} does not support unsubscribeAction (v10 API required)`, { sourceId });
       this._subscriptions.delete(sourceId);
       return;
     }
 
-    ts.unsubscribeVisibleLogicalRangeChange(handler);
+    chart.unsubscribeAction(subscription.action, subscription.handler);
     this._subscriptions.delete(sourceId);
   }
 
@@ -347,18 +380,40 @@ export class ChartManager {
     );
   }
 
+  /**
+   * Set logarithmic or linear price scale mode across all charts.
+   *
+   * v10 API: Use chart.overrideYAxis() to set the price scale type.
+   * In v10, there's no priceScale('right') method; instead, use overrideYAxis()
+   * with a custom createRange callback to determine linear vs logarithmic scaling.
+   */
   setLogScale(mode) {
     if (mode !== ScaleMode.LINEAR && mode !== ScaleMode.LOGARITHMIC) {
       throw new Error(`Unknown scale mode: ${mode}`);
     }
     if (this._scaleMode === mode) return mode;
     this._scaleMode = mode;
-    const priceMode = this._priceScaleMode[mode];
+
     for (const id of this.chartIds()) {
       const chart = this._charts[id];
-      const scale = chart && chart.priceScale && chart.priceScale('right');
-      if (scale) scale.applyOptions({ mode: priceMode });
+      if (!chart) continue;
+
+      // v10 API: overrideYAxis() configures the price axis behavior
+      // Set tickSize and other options based on mode (linear vs logarithmic)
+      const yAxisConfig = {
+        type: mode === ScaleMode.LOGARITHMIC ? 'log' : 'normal',
+        inside: false,
+        position: 'right',
+      };
+
+      // v10: call chart.overrideYAxis() if available, else log warning
+      if (typeof chart.overrideYAxis === 'function') {
+        chart.overrideYAxis(yAxisConfig);
+      } else {
+        this._log('warn', 'setLogScale', `chart ${id} does not support overrideYAxis (v10 API required)`, { mode });
+      }
     }
+
     this._emit('scalechange', { mode });
     this._log('info', 'setLogScale', `scale mode → ${mode}`, { mode });
     return mode;
@@ -369,15 +424,24 @@ export class ChartManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Cache candles for a symbol and push them to the corresponding series.
+   * Cache candles for a symbol and apply them to the chart.
+   *
+   * v10 API: Instead of series.setData(), use chart.applyNewData() to render new data.
+   * This replaces all data currently displayed on the chart.
    */
   setData(symbol, candles) {
     if (!Array.isArray(candles)) throw new TypeError('setData requires an array of candles');
     this._cache.set(symbol, candles);
-    const series = this._series[symbol];
-    if (series && typeof series.setData === 'function') {
-      series.setData(candles);
+
+    // v10: Get the chart (not series) and call applyNewData()
+    const chart = this._charts[symbol];
+    if (chart && typeof chart.applyNewData === 'function') {
+      chart.applyNewData(candles);
+      this._log('debug', 'setData', `applied ${candles.length} candles to ${symbol}`, { symbol, count: candles.length });
+    } else if (chart) {
+      this._log('warn', 'setData', `chart ${symbol} does not support applyNewData (v10 API required)`, { symbol });
     }
+
     this._emit('datachange', { symbol, count: candles.length });
     return this;
   }

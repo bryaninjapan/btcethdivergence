@@ -11,19 +11,33 @@ import { classifyError, consoleSink, createBeaconSink, createLogger, installGlob
 // Constants
 const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
 
-// Direct Lightweight Charts API surface (2 references; <=5 required by phase).
-const { createChart, CandlestickSeries } = LightweightCharts;
-const { Normal, Logarithmic } = LightweightCharts.PriceScaleMode;
+// v10 KLineChart API surface — replaces lightweight-charts v9
+// Global klinecharts object is available via UMD CDN in charts.html
+// (no imports needed; window.klinecharts is available at runtime)
+const klinecharts = window.klinecharts || {};
+if (!klinecharts.init) {
+  throw new Error('KLineChart v10 library not loaded. Check charts.html <script> tag.');
+}
 
 // Structured logger: dev console (structured JSON) + client-log beacon. The
 // beacon sink is fire-and-forget with a 2s timeout; it never blocks the UI.
 const logger = createLogger('charts', { sinks: [consoleSink(), createBeaconSink()] });
 
+/**
+ * Create ChartManager for v10 KLineChart.
+ * v10 API: priceScaleMode is no longer Linear/Logarithmic enum; use numeric values directly.
+ * PriceScaleMode mapping (from v10 docs):
+ *   0 = Normal (linear)
+ *   1 = Logarithmic
+ */
 const chartManager = new ChartManager({
-  priceScaleMode: { linear: Normal, logarithmic: Logarithmic },
+  // v10 price scale modes: 0 = normal (linear), 1 = logarithmic
+  priceScaleMode: { linear: 0, logarithmic: 1 },
   logger,
+  // Data transformation: v9 used 'time'; v10 uses 'timestamp' (already in ms from Binance)
+  // No Math.floor() conversion — pass through unchanged.
   toCandle: (row) => ({
-    time: row.open_time,
+    timestamp: row.open_time,  // v10: timestamp field (ms, not seconds)
     open: row.open,
     high: row.high,
     low: row.low,
@@ -44,25 +58,68 @@ const chartManager = new ChartManager({
 let activeController = null;
 let inFlight = null;
 
+/**
+ * Create a v10 KLineChart and render the candlestick chart.
+ * v10 API differs from v9:
+ *   - chart = klinecharts.init(dom) — initialize chart on DOM element
+ *   - chart.renderChart('kline', { ...options }) — render candlestick series
+ *   - No separate series object; indicators/overlays are managed by the chart
+ *   - Data is set via chart.setDataLoader() or chart.applyNewData()
+ *
+ * @param {string} containerId — DOM element ID
+ * @param {Array} candles — initial candlestick data (currently unused; data comes from loader)
+ * @returns {{ chart, series: null }} — chart object only (v10 has no separate series)
+ */
 function renderChart(containerId, candles) {
-  const chart = createChart(document.getElementById(containerId), {
-    height: 420,
+  const dom = document.getElementById(containerId);
+  if (!dom) throw new Error(`Container not found: ${containerId}`);
+
+  // v10 API: Initialize chart on the DOM element
+  const chart = klinecharts.init(dom, {
     layout: {
-      background: { type: 'solid', color: '#ffffff' },
+      backgroundColor: '#ffffff',
       textColor: '#1f2328',
     },
-    timeScale: { borderColor: '#d0d7de', rightOffset: 5 },
-    rightPriceScale: { borderColor: '#d0d7de' },
+    // v10 style config uses nested structure (different from v9's flat layout)
+    style: {
+      grid: {
+        horizontal: {
+          color: '#f0f0f0',
+          show: true,
+        },
+        vertical: {
+          color: '#f0f0f0',
+          show: true,
+        },
+      },
+    },
   });
-  const series = chart.addSeries(CandlestickSeries, {
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    borderVisible: false,
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
+
+  // v10 API: Render candlestick indicator
+  chart.renderChart('kline', {
+    styles: {
+      // K-line (candlestick) colors
+      up: {
+        color: '#26a69a',         // green for up
+        borderColor: '#26a69a',
+        wickColor: '#26a69a',
+      },
+      down: {
+        color: '#ef5350',         // red for down
+        borderColor: '#ef5350',
+        wickColor: '#ef5350',
+      },
+      // Volume bar (if shown)
+      volume: {
+        up: '#26a69a',
+        down: '#ef5350',
+      },
+    },
   });
-  series.setData(candles);
-  return { chart, series };
+
+  // v10 has no separate series object; return chart only
+  // Caller can use chart methods directly (e.g., chart.applyNewData, chart.setDataLoader)
+  return { chart, series: null };
 }
 
 function setPickersFromMs(startMs, endMs) {
@@ -154,10 +211,16 @@ async function init() {
   const initial = parseRangeParams(window.location.search) ?? nowRange();
   const btc = renderChart('btc-chart', []);
   const eth = renderChart('eth-chart', []);
+
+  // v10 Note: renderChart() returns { chart, series: null } since v10 manages series internally
+  // ChartManager.initCharts expects the chart object; it will use chart methods directly
   chartManager.initCharts([
-    { id: 'BTCUSDT', chart: btc.chart, series: btc.series },
-    { id: 'ETHUSDT', chart: eth.chart, series: eth.series },
+    { id: 'BTCUSDT', chart: btc.chart, series: btc.chart },  // series = chart in v10
+    { id: 'ETHUSDT', chart: eth.chart, series: eth.chart },
   ]);
+
+  // Wire up the event-based sync for both charts
+  // v10: Uses chart.subscribeAction('onVisibleRangeChange') internally (see ChartManager.subscribe)
   chartManager.wireSync();
 
   setPickersFromMs(initial.startMs, initial.endMs);
