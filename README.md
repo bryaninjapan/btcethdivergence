@@ -48,7 +48,7 @@
 **部署**: 單一 Cloudflare Worker + D1 Database + 靜態資源綁定
 - 無 Pages 專案，無構建步驟
 - 純靜態前端（HTML/CSS/JS），由 Google AI Studio 生成
-- 圖表庫：Lightweight Charts v5（開源，CDN 加載）
+- 圖表庫：KLineChart v10（CDN 加載，支持 1000+ 蠟燭圖）
 
 **技術棧**:
 - **後端**: Cloudflare Workers + TypeScript
