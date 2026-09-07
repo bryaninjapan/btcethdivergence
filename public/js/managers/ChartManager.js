@@ -1,15 +1,23 @@
 /**
  * ChartManager — unified chart state machine for the BTC/ETH divergence tracker.
+ * REWRITTEN for KLineChart v10.0.3
  *
  * Consolidates the previously scattered chart-state.js, chart-range.js, and
  * chart-sync.js modules into a single, testable state machine. It encapsulates:
- *   - the two chart/series instances (BTCUSDT, ETHUSDT)
- *   - the current visible (logical) range
- *   - the log/linear price-scale mode
+ *   - the two chart instances (BTCUSDT, ETHUSDT) using klinecharts v10 API
+ *   - the current visible range (via subscribeAction instead of timeScale)
+ *   - the log/linear price-scale mode (via overrideYAxis instead of priceScale)
  *   - the sync-lock state (re-entrancy guard)
  *   - the data cache
  *
  * No bundler: plain ESM consumed by charts.js at runtime and by vitest.
+ *
+ * CRITICAL TIMESTAMP CONTRACT (v10.0.3):
+ * - Binance `open_time` is milliseconds (13 digits, e.g., 1693526400000)
+ * - KLineChart v10 requires `timestamp` key with milliseconds
+ * - NO conversion: pass timestamp through unchanged
+ * - Wrong: timestamp: Math.floor(open_time / 1000)  // Would render 1970 dates!
+ * - Correct: timestamp: open_time  // Pass through unchanged (13-digit ms)
  */
 
 import { classifyError } from '../logger.js';
@@ -38,7 +46,7 @@ export const CHART_IDS = Object.freeze(['BTCUSDT', 'ETHUSDT']);
 
 /**
  * A logical range is usable only when both bounds are finite numbers.
- * Used to ignore the transient -Infinity/NaN ranges LWC emits at data edges.
+ * Used to ignore the transient -Infinity/NaN ranges emitted at data edges.
  */
 export function isUsableRange(range) {
   return !!range && Number.isFinite(range.from) && Number.isFinite(range.to);
@@ -76,11 +84,6 @@ export function nowRange() {
   return { startMs: endMs - DEFAULT_WINDOW_SECONDS * 1000, endMs };
 }
 
-const DEFAULT_PRICE_SCALE_MODE = Object.freeze({
-  linear: 0,
-  logarithmic: 1,
-});
-
 // Legal lifecycle transitions for the manager state machine.
 const TRANSITIONS = {
   [ManagerState.INIT]: new Set([ManagerState.READY]),
@@ -92,7 +95,6 @@ const TRANSITIONS = {
 export class ChartManager {
   /**
    * @param {object} [options]
-   * @param {object} [options.priceScaleMode] map of ScaleMode -> LWC PriceScaleMode
    * @param {Function} [options.load] async (startMs, endMs, signal) -> [{id, rows}]
    * @param {Function} [options.toCandle] optional (row) -> candle normalizer
    * @param {object} [options.logger] optional structured logger (createLogger from logger.js);
@@ -100,19 +102,9 @@ export class ChartManager {
    */
   constructor(options = {}) {
     this._charts = {};
-    this._series = {};
-    this._priceScaleMode = options.priceScaleMode || DEFAULT_PRICE_SCALE_MODE;
     this._loader = options.load || null;
     this._toCandle = options.toCandle || null;
     this._logger = options.logger || null;
-
-    // Validate required scale modes
-    if (!Number.isFinite(this._priceScaleMode.linear)) {
-      throw new TypeError('priceScaleMode must include linear mode (numeric value)');
-    }
-    if (!Number.isFinite(this._priceScaleMode.logarithmic)) {
-      throw new TypeError('priceScaleMode must include logarithmic mode (numeric value)');
-    }
 
     this._scaleMode = ScaleMode.LINEAR;
     this._syncState = SyncState.IDLE;
@@ -136,8 +128,6 @@ export class ChartManager {
     this._logger[level](action, message, context);
   }
 
-  // Aborts are expected control flow (superseded loads, timeouts); they are
-  // logged at debug level so they never spam Workers Logs as exceptions.
   _logLoadError(action, error, context) {
     if (!this._logger) return;
     const kind = classifyError(error);
@@ -174,25 +164,24 @@ export class ChartManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Register chart/series pairs. Each entry: { id, chart, series }.
+   * Register chart instances. Each entry: { id, chart }.
+   * For v10, we only need the chart instance (no separate series).
    * Transitions INIT -> READY (or READY -> READY for a re-init).
    */
   initCharts(charts) {
     if (!Array.isArray(charts) || charts.length === 0) {
-      throw new TypeError('initCharts requires a non-empty array of { id, chart, series }');
+      throw new TypeError('initCharts requires a non-empty array of { id, chart }');
     }
     for (const entry of charts) {
-      if (!entry || typeof entry.id !== 'string' || !entry.chart || !entry.series) {
-        throw new TypeError('initCharts entries must be { id, chart, series }');
+      if (!entry || typeof entry.id !== 'string' || !entry.chart) {
+        throw new TypeError('initCharts entries must be { id, chart }');
       }
     }
     this._charts = {};
-    this._series = {};
     this._cache.clear();
     this._chartIds = [];
     for (const entry of charts) {
       this._charts[entry.id] = entry.chart;
-      this._series[entry.id] = entry.series;
       this._chartIds.push(entry.id);
     }
     this._log('info', 'initCharts', `registered ${charts.length} charts`, { chartIds: this._chartIds });
@@ -205,7 +194,8 @@ export class ChartManager {
   }
 
   getSeries(id) {
-    return this._series[id] ?? null;
+    // In v10, the chart itself renders the series (no separate series object)
+    return this._charts[id] ?? null;
   }
 
   chartIds() {
@@ -213,12 +203,13 @@ export class ChartManager {
   }
 
   // ---------------------------------------------------------------------------
-  // Visible (logical) range — with re-entrancy guards
+  // Visible range — with re-entrancy guards (v10 API)
   // ---------------------------------------------------------------------------
 
   /**
-   * Apply a logical range to every chart except the source. Re-entrancy safe:
-   * while the sync lock is held, both this and syncRanges become no-ops.
+   * Apply a visible range to every chart except the source. Re-entrancy safe.
+   * v10 Note: Uses scrollToTimestamp() instead of timeScale.setVisibleLogicalRange()
+   *
    * @returns {boolean} true when applied, false when ignored (locked/not usable)
    */
   setVisibleRange(range, sourceId) {
@@ -230,8 +221,10 @@ export class ChartManager {
       for (const id of this.chartIds()) {
         if (id === sourceId) continue;
         const chart = this._charts[id];
-        const ts = chart && chart.timeScale();
-        if (ts) ts.setVisibleLogicalRange({ from: range.from, to: range.to });
+        if (chart && typeof chart.scrollToTimestamp === 'function') {
+          const centerTimestamp = (range.from + range.to) / 2;
+          chart.scrollToTimestamp(centerTimestamp);
+        }
       }
       this._emit('rangechange', {
         range: { from: range.from, to: range.to },
@@ -246,10 +239,10 @@ export class ChartManager {
   }
 
   /**
-   * Forward the source chart's logical range to the other charts.
-   * Re-entrancy safe via the sync lock. When called from a visible-range-change
-   * handler the event's own range is supplied; otherwise it is read from the
-   * source chart's time scale (pull model).
+   * Forward the source chart's visible range to the other charts.
+   * Re-entrancy safe via the sync lock.
+   * v10 Note: Receives range from subscribeAction callback or external source.
+   *
    * @param {string} sourceId
    * @param {{from:number,to:number}|null} [range] optional event-provided range
    * @returns {boolean} true when synced, false when locked/unknown/not usable
@@ -258,17 +251,20 @@ export class ChartManager {
     if (this._syncState === SyncState.SYNCING) return false;
     const chart = this._charts[sourceId];
     if (!chart) return false;
-    const ts = chart && chart.timeScale();
-    const resolved = range ?? (ts && ts.getVisibleLogicalRange());
+
+    const resolved = range;
     if (!isUsableRange(resolved)) return false;
+
     this._syncState = SyncState.SYNCING;
     try {
       this._visibleRange = { from: resolved.from, to: resolved.to };
       for (const id of this.chartIds()) {
         if (id === sourceId) continue;
         const target = this._charts[id];
-        const ts = target && target.timeScale();
-        if (ts) ts.setVisibleLogicalRange({ from: resolved.from, to: resolved.to });
+        if (target && typeof target.scrollToTimestamp === 'function') {
+          const centerTimestamp = (resolved.from + resolved.to) / 2;
+          target.scrollToTimestamp(centerTimestamp);
+        }
       }
       this._emit('rangechange', {
         range: { from: resolved.from, to: resolved.to },
@@ -283,50 +279,50 @@ export class ChartManager {
   }
 
   /**
-   * Attach the sync handler to a chart's time scale so panning/zooming one
-   * chart drives the other. Returns an unsubscribe function.
+   * Attach the sync handler to a chart using v10's subscribeAction API.
+   * v10 API: chart.subscribeAction('onVisibleRangeChange', callback)
+   * Returns an unsubscribe function.
    */
   subscribe(sourceId) {
     const chart = this._charts[sourceId];
     if (!chart) throw new Error(`Unknown chart: ${sourceId}`);
-    const ts = chart.timeScale();
-    if (!ts || typeof ts.subscribeVisibleLogicalRangeChange !== 'function') {
-      throw new Error(`Chart ${sourceId} has no subscribable timeScale`);
+    if (typeof chart.subscribeAction !== 'function') {
+      throw new Error(`Chart ${sourceId} has no subscribeAction method`);
     }
-    const handler = (range) => {
+
+    const handler = (eventData) => {
       if (this._syncState === SyncState.SYNCING) return;
-      this.syncRanges(sourceId, range);
+      if (eventData) {
+        this.syncRanges(sourceId, eventData);
+      }
     };
-    ts.subscribeVisibleLogicalRangeChange(handler);
-    this._subscriptions.set(sourceId, handler);
+
+    chart.subscribeAction('onVisibleRangeChange', handler);
+    this._subscriptions.set(sourceId, { handler, chart });
+
     return () => this.unsubscribe(sourceId);
   }
 
+  /**
+   * Detach the sync handler using v10's unsubscribeAction API.
+   * v10 API: chart.unsubscribeAction('onVisibleRangeChange', callback)
+   */
   unsubscribe(sourceId) {
-    const handler = this._subscriptions.get(sourceId);
-    if (!handler) return;
+    const subscription = this._subscriptions.get(sourceId);
+    if (!subscription) return;
 
-    const chart = this._charts[sourceId];
-    if (!chart) {
-      this._log('warn', 'unsubscribe', `no chart for ${sourceId}`, { sourceId });
-      this._subscriptions.delete(sourceId);
-      return;
+    const { handler, chart } = subscription;
+    if (chart && typeof chart.unsubscribeAction === 'function') {
+      chart.unsubscribeAction('onVisibleRangeChange', handler);
+    } else {
+      this._log('warn', 'unsubscribe', `chart ${sourceId} has no unsubscribeAction method`, { sourceId });
     }
 
-    const ts = chart.timeScale();
-    if (!ts || typeof ts.unsubscribeVisibleLogicalRangeChange !== 'function') {
-      this._log('warn', 'unsubscribe', `chart ${sourceId} has no unsubscribable timeScale`, { sourceId });
-      this._subscriptions.delete(sourceId);
-      return;
-    }
-
-    ts.unsubscribeVisibleLogicalRangeChange(handler);
     this._subscriptions.delete(sourceId);
   }
 
   /**
-   * Wire bidirectional sync across all registered charts. Returns an
-   * unsubscribe function that detaches every subscription.
+   * Wire bidirectional sync across all registered charts.
    */
   wireSync() {
     const unsubs = this.chartIds().map((id) => this.subscribe(id));
@@ -334,11 +330,13 @@ export class ChartManager {
   }
 
   // ---------------------------------------------------------------------------
-  // Price-scale mode
+  // Price-scale mode (v10 API)
   // ---------------------------------------------------------------------------
 
   /**
    * Flip between linear and logarithmic scale across all charts.
+   * v10 API uses overrideYAxis() with custom createRange for log scale.
+   *
    * @returns {string} the newly-active ScaleMode
    */
   toggleLogScale() {
@@ -347,37 +345,61 @@ export class ChartManager {
     );
   }
 
+  /**
+   * Set price scale mode (linear or logarithmic).
+   * v10 API: overrideYAxis() for custom scale, overrideYAxis(null) to reset.
+   */
   setLogScale(mode) {
     if (mode !== ScaleMode.LINEAR && mode !== ScaleMode.LOGARITHMIC) {
       throw new Error(`Unknown scale mode: ${mode}`);
     }
     if (this._scaleMode === mode) return mode;
     this._scaleMode = mode;
-    const priceMode = this._priceScaleMode[mode];
+
     for (const id of this.chartIds()) {
       const chart = this._charts[id];
-      const scale = chart && chart.priceScale && chart.priceScale('right');
-      if (scale) scale.applyOptions({ mode: priceMode });
+      if (!chart) continue;
+
+      if (mode === ScaleMode.LOGARITHMIC) {
+        if (typeof chart.overrideYAxis === 'function') {
+          chart.overrideYAxis({
+            createRange: (params) => {
+              const { high, low } = params || {};
+              if (typeof high !== 'number' || typeof low !== 'number') {
+                return null;
+              }
+              const logHigh = Math.log10(high > 0 ? high : 1);
+              const logLow = Math.log10(low > 0 ? low : 1);
+              return {
+                from: logLow,
+                to: logHigh,
+              };
+            },
+          });
+        }
+      } else {
+        if (typeof chart.overrideYAxis === 'function') {
+          chart.overrideYAxis(null);
+        }
+      }
     }
+
     this._emit('scalechange', { mode });
     this._log('info', 'setLogScale', `scale mode → ${mode}`, { mode });
     return mode;
   }
 
   // ---------------------------------------------------------------------------
-  // Data cache
+  // Data cache (v10 API)
   // ---------------------------------------------------------------------------
 
   /**
-   * Cache candles for a symbol and push them to the corresponding series.
+   * Cache candles for a symbol.
+   * In v10, data is provided via setDataLoader(), not setData() on a series.
    */
   setData(symbol, candles) {
     if (!Array.isArray(candles)) throw new TypeError('setData requires an array of candles');
     this._cache.set(symbol, candles);
-    const series = this._series[symbol];
-    if (series && typeof series.setData === 'function') {
-      series.setData(candles);
-    }
     this._emit('datachange', { symbol, count: candles.length });
     return this;
   }
@@ -391,9 +413,8 @@ export class ChartManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Load a millisecond window via the injected loader, updating the data cache
-   * and series, then transitioning the machine through LOADING -> READY.
-   * Re-entrancy guarded: throws if a load is already in flight.
+   * Load a millisecond window via the injected loader, updating the data cache.
+   * CRITICAL: Binance timestamp is milliseconds, pass through unchanged to v10.
    */
   async loadRange(startMs, endMs, options = {}) {
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs >= endMs) {
@@ -432,8 +453,7 @@ export class ChartManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Frozen, read-only snapshot of the manager state (safe for assertions and
-   * UI rendering; never exposes mutable internals).
+   * Frozen, read-only snapshot of the manager state.
    */
   getState() {
     const cacheSummary = {};

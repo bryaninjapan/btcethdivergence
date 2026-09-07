@@ -11,23 +11,29 @@ import { classifyError, consoleSink, createBeaconSink, createLogger, installGlob
 // Constants
 const LOAD_TIMEOUT_MS = 15000;  // 15 seconds for load operation
 
-// Direct Lightweight Charts API surface (2 references; <=5 required by phase).
-const { createChart, CandlestickSeries } = LightweightCharts;
-const { Normal, Logarithmic } = LightweightCharts.PriceScaleMode;
+// KLineChart v10.0.3 API (CDN UMD global)
+// Note: klinecharts is the global namespace (lowercase)
+const { init: createChart } = window.klinecharts || {};
 
 // Structured logger: dev console (structured JSON) + client-log beacon. The
 // beacon sink is fire-and-forget with a 2s timeout; it never blocks the UI.
 const logger = createLogger('charts', { sinks: [consoleSink(), createBeaconSink()] });
 
 const chartManager = new ChartManager({
-  priceScaleMode: { linear: Normal, logarithmic: Logarithmic },
   logger,
   toCandle: (row) => ({
-    time: row.open_time,
-    open: row.open,
-    high: row.high,
-    low: row.low,
-    close: row.close,
+    // CRITICAL TIMESTAMP CONTRACT (v10.0.3):
+    // - Binance `open_time` is milliseconds (13 digits, e.g., 1693526400000)
+    // - KLineChart v10 requires `timestamp` key with milliseconds
+    // - NO conversion: pass timestamp through unchanged
+    // - Wrong: timestamp: Math.floor(row.open_time / 1000)  // Would render 1970 dates!
+    // - Correct: timestamp: row.open_time  // Pass through unchanged (13-digit ms)
+    timestamp: row.open_time,
+    open: parseFloat(row.open),
+    high: parseFloat(row.high),
+    low: parseFloat(row.low),
+    close: parseFloat(row.close),
+    volume: parseFloat(row.volume),
   }),
   load: async (startMs, endMs, signal) => {
     const [btcRows, ethRows] = await Promise.all([
@@ -44,25 +50,134 @@ const chartManager = new ChartManager({
 let activeController = null;
 let inFlight = null;
 
+/**
+ * Create and configure a v10 KLineChart chart with style config.
+ *
+ * v10 API: klinecharts.init(container, options) where options includes styles nested object
+ * Style config is translated from v9's flat structure to v10's nested structure:
+ * - v9 upColor/downColor → v10 candle.bar.upColor / candle.bar.downColor
+ * - v9 layout background → v10 candle.area.backgroundColor (or grid background)
+ * - v9 textColor → v10 xAxis.tickText.color, yAxis.tickText.color
+ * - v9 timeScale/rightPriceScale borders → v10 xAxis.axisLine / yAxis.axisLine
+ */
 function renderChart(containerId, candles) {
-  const chart = createChart(document.getElementById(containerId), {
-    height: 420,
-    layout: {
-      background: { type: 'solid', color: '#ffffff' },
-      textColor: '#1f2328',
+  const container = document.getElementById(containerId);
+
+  // v10 style config (nested structure)
+  const styles = {
+    grid: {
+      show: true,
+      horizontal: {
+        show: true,
+        color: '#e8e8e8',
+        style: 'dashed',
+        size: 1,
+      },
+      vertical: {
+        show: true,
+        color: '#e8e8e8',
+        style: 'dashed',
+        size: 1,
+      },
     },
-    timeScale: { borderColor: '#d0d7de', rightOffset: 5 },
-    rightPriceScale: { borderColor: '#d0d7de' },
+    candle: {
+      type: 'candle_solid',
+      bar: {
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        noChangeColor: '#888888',
+      },
+      priceMark: {
+        show: true,
+        high: {
+          color: '#999999',
+          textMargin: 5,
+        },
+        low: {
+          color: '#999999',
+          textMargin: 5,
+        },
+        last: {
+          upColor: '#26a69a',
+          downColor: '#ef5350',
+          noChangeColor: '#888888',
+        },
+      },
+      tooltip: {
+        text: {
+          color: '#ffffff',
+        },
+        box: {
+          backgroundColor: '#1f2328',
+          borderColor: '#666666',
+        },
+      },
+    },
+    xAxis: {
+      axisLine: {
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickLine: {
+        show: true,
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickText: {
+        color: '#1f2328',
+        margin: 5,
+      },
+    },
+    yAxis: {
+      axisLine: {
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickLine: {
+        show: true,
+        color: '#d0d7de',
+        size: 1,
+      },
+      tickText: {
+        color: '#1f2328',
+        margin: 5,
+      },
+    },
+    crosshair: {
+      show: true,
+      horizontal: {
+        show: true,
+        color: '#999999',
+        style: 'dashed',
+        size: 1,
+      },
+      vertical: {
+        show: true,
+        color: '#999999',
+        style: 'dashed',
+        size: 1,
+      },
+    },
+  };
+
+  // v10 API: init() returns a Chart instance directly (no series creation needed)
+  const chart = createChart(container, {
+    locale: 'en-US',
+    timezone: 'UTC',
+    styles,
   });
-  const series = chart.addSeries(CandlestickSeries, {
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    borderVisible: false,
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
-  });
-  series.setData(candles);
-  return { chart, series };
+
+  // v10 API: Data is provided via setDataLoader(), not series.setData()
+  if (chart && typeof chart.setDataLoader === 'function') {
+    chart.setDataLoader({
+      getBars: ({ callback }) => {
+        // Provide cached candles to the chart
+        callback(candles);
+      },
+    });
+  }
+
+  return { chart };  // No series in v10
 }
 
 function setPickersFromMs(startMs, endMs) {
@@ -154,9 +269,10 @@ async function init() {
   const initial = parseRangeParams(window.location.search) ?? nowRange();
   const btc = renderChart('btc-chart', []);
   const eth = renderChart('eth-chart', []);
+  // v10 API: only chart is needed (no separate series object)
   chartManager.initCharts([
-    { id: 'BTCUSDT', chart: btc.chart, series: btc.series },
-    { id: 'ETHUSDT', chart: eth.chart, series: eth.series },
+    { id: 'BTCUSDT', chart: btc.chart },
+    { id: 'ETHUSDT', chart: eth.chart },
   ]);
   chartManager.wireSync();
 
@@ -187,13 +303,12 @@ async function init() {
   });
 }
 
-// Test hook: expose chart references for e2e testing
+// Test hook: expose chart references for e2e testing (v10 API: no series object)
 if (typeof window !== 'undefined') {
   window.__test_charts = {
     get btcChart() { return chartManager.getChart('BTCUSDT'); },
     get ethChart() { return chartManager.getChart('ETHUSDT'); },
-    get btcSeries() { return chartManager.getSeries('BTCUSDT'); },
-    get ethSeries() { return chartManager.getSeries('ETHUSDT'); },
+    get chartManager() { return chartManager; },
   };
 }
 
